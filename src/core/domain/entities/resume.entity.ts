@@ -13,6 +13,7 @@ export class Resume {
     }[] = [],
     public education: {
       institution: string;
+      level: 'Primaria' | 'Secundaria' | 'Superior';
       degree: string;
       startDate: Date;
       endDate?: Date;
@@ -22,7 +23,7 @@ export class Resume {
     public certifications: string[] = [],
     public languages: {
       name: string;
-      proficiency: 'basic' | 'intermediate' | 'advanced' | 'native';
+      proficiency: 'Principiante' | 'Intermedio' | 'Avanzado' | 'Nativo';
     }[] = [],
     public links: string[] = [],
     public createdAt: Date = new Date(),

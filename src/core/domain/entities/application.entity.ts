@@ -1,4 +1,4 @@
-export class JobApplication {
+export class Application {
   constructor(
     public id: string,
     public jobPostId: string,
@@ -6,10 +6,10 @@ export class JobApplication {
     public createdAt: Date = new Date(),
     public updatedAt: Date = new Date(),
     public status:
-      | 'pending'
-      | 'reviewed'
-      | 'interview'
-      | 'rejected'
-      | 'hired' = 'pending',
+      | 'pendiente'
+      | 'oferta'
+      | 'entrevista'
+      | 'rechazado'
+      | 'contratado' = 'pendiente',
   ) {}
 }
