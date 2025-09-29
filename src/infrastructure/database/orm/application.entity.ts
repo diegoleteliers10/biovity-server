@@ -4,18 +4,30 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
+  ManyToOne,
+  JoinColumn,
 } from 'typeorm';
+import { JobEntity } from './job.entity';
+import { UserEntity } from './user.entity';
 
 @Entity('application')
 export class ApplicationEntity {
   @PrimaryGeneratedColumn('uuid')
   public id: string;
 
-  @Column()
+  @Column({ nullable: false })
   public jobId: string;
 
-  @Column()
+  @ManyToOne(() => JobEntity)
+  @JoinColumn({ name: 'jobId' })
+  public job: JobEntity;
+
+  @Column({ nullable: false })
   public candidateId: string;
+
+  @ManyToOne(() => UserEntity)
+  @JoinColumn({ name: 'candidateId' })
+  public candidate: UserEntity;
 
   @CreateDateColumn()
   public createdAt: Date = new Date();
