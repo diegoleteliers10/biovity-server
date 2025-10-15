@@ -1,0 +1,75 @@
+---
+description: Regla para desarrollo backend (NestJS, Clean Architecture, Supabase, TypeORM, Node.js, TypeScript)
+globs: ["src/**", "main.ts"]
+alwaysApply: true
+---
+
+# Backend Clean Architecture Rule
+
+## Contexto del Proyecto
+
+Este proyecto usa NestJS 11.x, TypeScript 5.7, Node.js+Bun, TypeORM y Supabase/PostgreSQL. Sigue Clean Architecture y Domain-Driven Design (DDD) con fuerte separación de capas, uso de patrones de repositorio y mapeo, y persistencia vía migraciones, no sincronización automática.
+
+### Estructura del código
+
+- `src/core/domain/entities/`: Entidades del dominio
+- `src/core/domain/services/`: Servicios de dominio puro
+- `src/core/domain/value-objects/`: Value objects
+- `src/core/repositories/`: Interfaces de repositorio
+- `src/core/use-cases/`: Casos de uso de negocio
+- `src/infrastructure/config/`: Configuración centralizada y variables
+- `src/infrastructure/database/migrations/`: Migraciones SQL (no sync automático)
+- `src/infrastructure/database/orm/`: Entidades/Modelos TypeORM
+- `src/infrastructure/framework/`: Adaptadores de framework
+- `src/infrastructure/persistence/`: Repositorios concretos
+- `src/infrastructure/services/`: Servicios externos/integraciones
+- `src/interfaces/controllers/`: Controladores REST
+- `src/interfaces/dtos/`: DTOs contractuales
+- `src/interfaces/routes/`: Routing por módulo
+- `src/interfaces/validators/`: Validadores
+- `src/shared/`: Constantes, DTOs, errores, mapeadores y utilidades
+- `main.ts`: Entry point
+
+## Principios y Patagonia Arquitectónica
+
+- Dominar Clean Architecture: Sólo dependencias hacia capas internas
+- Dominar DDD: Mantener la lógica de negocio aislada y desacoplada
+- Repository Pattern: Ningún caso de uso o controlador accede directamente a ORM, usa interfaces de repositorio
+- Mapper Pattern: Todos los saltos entre dominio/infraestructura y presentación usan mapeadores explícitos
+- Entidades Puramente de Dominio: Sin decoradores/frameworks en core/domain
+- DTOs en interfaces/dtos usados en entrada/salida HTTP; no propagar entidades internas
+- Todos los servicios externos/config se abstraen vía interfaces y servicios de infraestructura
+
+## Entidades principales
+
+- **User**: email, name, tipo ('organización'|'persona'), verificación, activo
+- **Organization**: nombre, website, teléfono, dirección, referencia a User y Subscription
+- **Job**: título, descripción, salario, ubicación, tipo, nivel
+- **Application**: vínculo User–Job
+- **Resume**: CV de candidatos
+- **Subscription**: planes de organizaciones
+
+## Normas técnicas y convenciones
+
+- Migraciones obligatorias: No usar synchronize de TypeORM
+- Configuración vía `@nestjs/config` y variables de entorno
+- Logging centralizado (Nest Logger)
+- Manejo de errores: Excepciones globales capturadas por filters, formatos JSON
+- Inputs y DTOs validados con class-validator
+- En TypeORM usar entidades separadas del dominio
+- Compartir utilidades y modelos genéricos solo via `shared/`
+
+## IA y Autocompletado
+
+- Sugerir código que respete siempre separación de capas, patrones de arquitectura y nombres semánticos
+- Nada de lógica de negocio en controladores o infrastructura
+- Comentar funciones públicas en inglés; explicativos en español permitidos solo para aclarar decisiones de diseño
+
+## Ejemplo de estructura y flujo
+
+1. Request entra por controlador → valida DTO → llama caso de uso (use-case)  
+2. Use-case orquesta lógica, interactúa solo con interfaces de repositorios y servicios  
+3. Infraestructura implementa repositorios accediendo a Supabase vía TypeORM  
+4. Entidades del dominio no conocen ORM ni infraestructura  
+5. Salidas transformadas a DTO por mappers
+
