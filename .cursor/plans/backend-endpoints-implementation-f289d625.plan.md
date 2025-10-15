@@ -207,8 +207,8 @@ Cada módulo:
 ### To-dos
 
 - [x] Instalar dependencias: JWT, Passport, class-validator, bcrypt
-- [ ] Crear .env.example y configuración de variables de entorno
-- [ ] Crear excepciones de dominio y filtro global de errores
+- [x] Crear .env.example y configuración de variables de entorno
+- [x] Crear excepciones de dominio y filtro global de errores
 - [ ] Crear utilidades (password hash, etc.)
 - [ ] Agregar campo password a entidades User (dominio y ORM)
 - [ ] Implementar repositorios concretos para todas las entidades
