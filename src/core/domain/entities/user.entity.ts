@@ -10,6 +10,7 @@ export class User {
     public id: string,
     public email: string,
     public name: string,
+    public password: string,
     public type: 'organización' | 'persona',
     public isEmailVerified: boolean = false,
     public isActive: boolean = false,

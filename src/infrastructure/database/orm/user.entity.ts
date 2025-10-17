@@ -21,6 +21,9 @@ export class UserEntity {
   @Column({ nullable: false })
   public name: string;
 
+  @Column({ nullable: false })
+  public password: string;
+
   @Column({
     type: 'enum',
     enum: ['organización', 'persona'],

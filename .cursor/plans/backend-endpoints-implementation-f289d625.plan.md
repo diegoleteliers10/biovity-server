@@ -209,14 +209,14 @@ Cada módulo:
 - [x] Instalar dependencias: JWT, Passport, class-validator, bcrypt
 - [x] Crear .env.example y configuración de variables de entorno
 - [x] Crear excepciones de dominio y filtro global de errores
-- [ ] Crear utilidades (password hash, etc.)
-- [ ] Agregar campo password a entidades User (dominio y ORM)
-- [ ] Implementar repositorios concretos para todas las entidades
-- [ ] Crear todos los DTOs con validaciones class-validator
-- [ ] Implementar casos de uso de User (register, login, CRUD)
-- [ ] Implementar casos de uso de Organization
-- [ ] Implementar casos de uso de Job
-- [ ] Implementar casos de uso de Application y Resume
+- [x] Crear utilidades (password hash, etc.)
+- [x] Agregar campo password a entidades User (dominio y ORM)
+- [x] Implementar repositorios concretos para todas las entidades
+- [x] Crear todos los DTOs con validaciones class-validator
+- [x] Implementar casos de uso de User (register, login, CRUD)
+- [x] Implementar casos de uso de Organization
+- [x] Implementar casos de uso de Job
+- [x] Implementar casos de uso de Application y Resume
 - [ ] Implementar autenticación JWT (strategy, guard, module)
 - [ ] Crear todos los controladores con rutas y guards
 - [ ] Crear módulos NestJS para cada funcionalidad
