@@ -1,7 +1,6 @@
 import { Job } from '../../../core/domain/entities/index';
 import { JobEntity } from '../../../infrastructure/database/orm/index';
 
-// src/shared/mappers/job/job-domain-orm.mapper.ts
 export class JobDomainOrmMapper {
   static toOrm(domain: Job): JobEntity {
     const jobOrm = new JobEntity();
