@@ -15,9 +15,9 @@ export class SubscriptionEntity {
   @Column({ nullable: false })
   public organizationId: string;
 
-  @ManyToOne(() => OrganizationEntity)
+  @ManyToOne(() => OrganizationEntity, { nullable: true })
   @JoinColumn({ name: 'organizationId' })
-  public organization: OrganizationEntity;
+  organization?: OrganizationEntity;
 
   @Column({ nullable: false })
   public planName: string;
