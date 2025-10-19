@@ -1,7 +1,7 @@
 // domain-orm.mapper.ts
 import { User } from '../../../core/domain/entities/index';
 import { UserEntity } from '../../../infrastructure/database/orm/index';
-import { OrganizationDomainOrmMapper } from '../organization/organizationdomain-orm.mapper';
+import { OrganizationDomainOrmMapper } from '../../mappers/organization/organizationDomain-orm.mapper';
 
 export class UserDomainOrmMapper {
   static toOrm(domain: User): UserEntity {
