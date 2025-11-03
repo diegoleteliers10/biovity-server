@@ -42,8 +42,8 @@ export class OrganizationEntity {
   public jobs: JobEntity[];
 
   @CreateDateColumn()
-  public createdAt: Date;
+  public createdAt: Date = new Date();
 
   @UpdateDateColumn()
-  public updatedAt: Date;
+  public updatedAt: Date = new Date();
 }

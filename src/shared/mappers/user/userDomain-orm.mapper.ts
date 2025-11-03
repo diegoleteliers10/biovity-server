@@ -8,11 +8,13 @@ export class UserDomainOrmMapper {
     userOrm.id = domain.id;
     userOrm.email = domain.email;
     userOrm.name = domain.name;
-    userOrm.password = domain.password;
     userOrm.type = domain.type;
     userOrm.isEmailVerified = domain.isEmailVerified;
     userOrm.isActive = domain.isActive;
     userOrm.verificationToken = domain.verificationToken;
+    userOrm.avatar = domain.avatar;
+    userOrm.createdAt = domain.createdAt;
+    userOrm.updatedAt = domain.updatedAt;
 
     // Convert organization if it exists
     if (domain.organization) {
@@ -24,12 +26,17 @@ export class UserDomainOrmMapper {
     return userOrm;
   }
 
+  static toOrmWithPassword(domain: User, hashedPassword: string): UserEntity {
+    const userOrm = this.toOrm(domain);
+    userOrm.password = hashedPassword;
+    return userOrm;
+  }
+
   static toDomain(entity: UserEntity): User {
     return new User(
       entity.id,
       entity.email,
       entity.name,
-      entity.password,
       entity.type,
       entity.isEmailVerified,
       entity.isActive,
@@ -37,6 +44,9 @@ export class UserDomainOrmMapper {
       entity.organization
         ? OrganizationDomainOrmMapper.toDomain(entity.organization)
         : undefined,
+      entity.createdAt,
+      entity.updatedAt,
+      entity.avatar,
     );
   }
 }

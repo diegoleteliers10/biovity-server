@@ -2,12 +2,47 @@ import {
   Entity,
   PrimaryGeneratedColumn,
   Column,
-  CreateDateColumn,
-  UpdateDateColumn,
   ManyToOne,
   JoinColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
 } from 'typeorm';
 import { UserEntity } from './user.entity';
+
+interface Certificates {
+  name: string;
+  issuer: string;
+  dateIssued: Date;
+  expirationDate?: Date;
+  credentialId?: string;
+  credentialUrl?: string;
+}
+
+interface Languages {
+  name: string;
+  proficiency: 'Principiante' | 'Intermedio' | 'Avanzado' | 'Nativo';
+}
+
+interface Links {
+  url: string;
+}
+
+export interface FileInfo {
+  url: string;
+  originalName: string;
+  mimeType: string;
+  size: number; // bytes
+  uploadedAt: Date;
+}
+
+interface Education {
+  institution: string;
+  level: 'Primaria' | 'Secundaria' | 'Superior';
+  degree: string;
+  startDate: Date;
+  endDate?: Date;
+  description?: string;
+}
 
 @Entity('resume')
 export class ResumeEntity {
@@ -24,17 +59,10 @@ export class ResumeEntity {
   @Column({ type: 'text', nullable: true })
   public summary?: string;
 
-  @Column({ type: 'json', default: '[]' })
-  public experiences: {
-    jobTitle: string;
-    company: string;
-    startDate: Date;
-    endDate?: Date;
-    description?: string;
-    achievements?: string[];
-  }[];
+  @Column({ type: 'json', nullable: true })
+  public experiences: Education[];
 
-  @Column({ type: 'json', default: '[]' })
+  @Column({ type: 'json', nullable: true })
   public education: {
     institution: string;
     level: 'Primaria' | 'Secundaria' | 'Superior';
@@ -44,24 +72,29 @@ export class ResumeEntity {
     description?: string;
   }[];
 
-  @Column({ type: 'json', default: '[]' })
+  @Column({ type: 'json', nullable: true })
   public skills: string[];
 
-  @Column({ type: 'json', default: '[]' })
-  public certifications: string[];
+  @Column({ type: 'json', nullable: true })
+  public certifications: Certificates[];
 
-  @Column({ type: 'json', default: '[]' })
-  public languages: {
-    name: string;
-    proficiency: 'Principiante' | 'Intermedio' | 'Avanzado' | 'Nativo';
-  }[];
+  @Column({ type: 'json', nullable: true })
+  public languages: Languages[];
 
-  @Column({ type: 'json', default: '[]' })
-  public links: string[];
+  @Column({ type: 'json', nullable: true })
+  public links: Links[];
+
+  @Column({ type: 'json', nullable: true })
+  public cvFile?: FileInfo;
 
   @CreateDateColumn()
-  public createdAt: Date;
+  public createdAt: Date = new Date();
 
   @UpdateDateColumn()
-  public updatedAt: Date;
+  public updatedAt: Date = new Date();
+
+  // Método de dominio útil
+  public hasCvFile(): boolean {
+    return !!this.cvFile?.url;
+  }
 }

@@ -5,6 +5,8 @@ import {
   OneToOne,
   OneToMany,
   JoinColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
 } from 'typeorm';
 import { OrganizationEntity } from './organization.entity';
 import { ResumeEntity } from './resume.entity';
@@ -34,7 +36,7 @@ export class UserEntity {
   @Column({ default: false })
   public isEmailVerified: boolean;
 
-  @Column({ default: false })
+  @Column({ default: true })
   public isActive: boolean;
 
   @Column({ nullable: true })
@@ -43,6 +45,15 @@ export class UserEntity {
   @OneToOne(() => OrganizationEntity, { nullable: true, cascade: true })
   @JoinColumn()
   public organization?: OrganizationEntity;
+
+  @Column({ nullable: true })
+  public avatar?: string;
+
+  @CreateDateColumn()
+  public createdAt: Date = new Date();
+
+  @UpdateDateColumn()
+  public updatedAt: Date = new Date();
 
   @OneToMany(() => ResumeEntity, resume => resume.user)
   public resumes: ResumeEntity[];

@@ -1,11 +1,14 @@
 import { TypeOrmModule } from '@nestjs/typeorm';
 import {
+  AccountEntity,
   UserEntity,
   ApplicationEntity,
   OrganizationEntity,
   SubscriptionEntity,
   JobEntity,
   ResumeEntity,
+  SessionEntity,
+  VerificationEntity,
 } from '../database/orm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 
@@ -26,12 +29,15 @@ export const DatabaseConfig = TypeOrmModule.forRootAsync({
       type: 'postgres',
       ...dbConfig,
       entities: [
+        AccountEntity,
         UserEntity,
         OrganizationEntity,
         ApplicationEntity,
         SubscriptionEntity,
         JobEntity,
         ResumeEntity,
+        SessionEntity,
+        VerificationEntity,
       ],
       synchronize: false,
       logging: true,

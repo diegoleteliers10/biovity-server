@@ -6,33 +6,65 @@ import {
   IsEnum,
   IsUUID,
   ValidateNested,
+  IsNumber,
+  IsUrl,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
-export class ExperienceDto {
+export class CertificateDto {
   @IsString()
-  jobTitle: string;
+  name: string;
 
   @IsString()
-  company: string;
+  issuer: string;
 
   @IsDate()
   @Type(() => Date)
-  startDate: Date;
+  dateIssued: Date;
 
   @IsOptional()
   @IsDate()
   @Type(() => Date)
-  endDate?: Date;
+  expirationDate?: Date;
 
   @IsOptional()
   @IsString()
-  description?: string;
+  credentialId?: string;
 
   @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
-  achievements?: string[];
+  @IsUrl()
+  credentialUrl?: string;
+}
+
+export class LanguageDto {
+  @IsString()
+  name: string;
+
+  @IsEnum(['Principiante', 'Intermedio', 'Avanzado', 'Nativo'])
+  proficiency: 'Principiante' | 'Intermedio' | 'Avanzado' | 'Nativo';
+}
+
+export class LinkDto {
+  @IsUrl()
+  url: string;
+}
+
+export class FileInfoDto {
+  @IsUrl()
+  url: string;
+
+  @IsString()
+  originalName: string;
+
+  @IsString()
+  mimeType: string;
+
+  @IsNumber()
+  size: number;
+
+  @IsDate()
+  @Type(() => Date)
+  uploadedAt: Date;
 }
 
 export class EducationDto {
@@ -59,14 +91,6 @@ export class EducationDto {
   description?: string;
 }
 
-export class LanguageDto {
-  @IsString()
-  name: string;
-
-  @IsEnum(['Principiante', 'Intermedio', 'Avanzado', 'Nativo'])
-  proficiency: 'Principiante' | 'Intermedio' | 'Avanzado' | 'Nativo';
-}
-
 export class ResumeResponseDto {
   @IsUUID()
   id: string;
@@ -80,8 +104,8 @@ export class ResumeResponseDto {
 
   @IsArray()
   @ValidateNested({ each: true })
-  @Type(() => ExperienceDto)
-  experiences: ExperienceDto[];
+  @Type(() => EducationDto)
+  experiences: EducationDto[];
 
   @IsArray()
   @ValidateNested({ each: true })
@@ -93,8 +117,9 @@ export class ResumeResponseDto {
   skills: string[];
 
   @IsArray()
-  @IsString({ each: true })
-  certifications: string[];
+  @ValidateNested({ each: true })
+  @Type(() => CertificateDto)
+  certifications: CertificateDto[];
 
   @IsArray()
   @ValidateNested({ each: true })
@@ -102,8 +127,14 @@ export class ResumeResponseDto {
   languages: LanguageDto[];
 
   @IsArray()
-  @IsString({ each: true })
-  links: string[];
+  @ValidateNested({ each: true })
+  @Type(() => LinkDto)
+  links: LinkDto[];
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => FileInfoDto)
+  cvFile?: FileInfoDto;
 
   @IsDate()
   @Type(() => Date)

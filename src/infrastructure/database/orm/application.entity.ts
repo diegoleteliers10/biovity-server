@@ -10,6 +10,14 @@ import {
 import { JobEntity } from './job.entity';
 import { UserEntity } from './user.entity';
 
+export enum ApplicationStatus {
+  PENDING = 'pendiente',
+  OFFER = 'oferta',
+  INTERVIEW = 'entrevista',
+  REJECTED = 'rechazado',
+  HIRED = 'contratado',
+}
+
 @Entity('application')
 export class ApplicationEntity {
   @PrimaryGeneratedColumn('uuid')
@@ -30,16 +38,15 @@ export class ApplicationEntity {
   public candidate: UserEntity;
 
   @CreateDateColumn()
-  public createdAt: Date = new Date();
+  public createdAt: Date;
 
   @UpdateDateColumn()
-  public updatedAt: Date = new Date();
+  public updatedAt: Date;
 
-  @Column()
-  public status:
-    | 'pendiente'
-    | 'oferta'
-    | 'entrevista'
-    | 'rechazado'
-    | 'contratado' = 'pendiente';
+  @Column({
+    type: 'enum',
+    enum: ApplicationStatus,
+    default: ApplicationStatus.PENDING,
+  })
+  public status: ApplicationStatus;
 }

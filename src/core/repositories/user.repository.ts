@@ -7,6 +7,5 @@ export interface IUserRepository {
   findAll(): Promise<User[]>;
   update(id: string, entity: Partial<User>): Promise<User | null>;
   delete(id: string): Promise<boolean>;
-  /** Verify user credentials without exposing password hashes */
   verifyUserCredentials(email: string, password: string): Promise<User | null>;
 }

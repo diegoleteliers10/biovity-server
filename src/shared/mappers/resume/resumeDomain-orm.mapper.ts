@@ -7,12 +7,13 @@ export class ResumeDomainOrmMapper {
     resumeOrm.id = domain.id;
     resumeOrm.userId = domain.userId;
     resumeOrm.summary = domain.summary;
-    resumeOrm.experiences = domain.experiences;
-    resumeOrm.education = domain.education;
-    resumeOrm.skills = domain.skills;
-    resumeOrm.certifications = domain.certifications;
-    resumeOrm.languages = domain.languages;
-    resumeOrm.links = domain.links;
+    resumeOrm.experiences = domain.experiences || [];
+    resumeOrm.education = domain.education || [];
+    resumeOrm.skills = domain.skills || [];
+    resumeOrm.certifications = domain.certifications || [];
+    resumeOrm.languages = domain.languages || [];
+    resumeOrm.links = domain.links || [];
+    resumeOrm.cvFile = domain.cvFile;
     resumeOrm.createdAt = domain.createdAt;
     resumeOrm.updatedAt = domain.updatedAt;
 
@@ -24,12 +25,13 @@ export class ResumeDomainOrmMapper {
       entity.id,
       entity.userId,
       entity.summary,
-      entity.experiences,
-      entity.education,
-      entity.skills,
-      entity.certifications,
-      entity.languages,
-      entity.links,
+      entity.experiences || [],
+      entity.education || [],
+      entity.skills || [],
+      entity.certifications || [],
+      entity.languages || [],
+      entity.links || [],
+      entity.cvFile,
       entity.createdAt,
       entity.updatedAt,
     );

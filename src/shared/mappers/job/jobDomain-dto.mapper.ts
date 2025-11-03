@@ -8,11 +8,14 @@ export class JobDomainDtoMapper {
     dto.organizationId = domain.organizationId;
     dto.title = domain.title;
     dto.description = domain.description;
-    dto.amount = domain.amount;
+    dto.salary = domain.salary;
     dto.location = domain.location;
     dto.employmentType = domain.employmentType;
     dto.experienceLevel = domain.experienceLevel;
     dto.benefits = domain.benefits;
+    dto.status = domain.status;
+    dto.applicationsCount = domain.applicationsCount;
+    dto.expiresAt = domain.expiresAt;
     dto.createdAt = domain.createdAt;
     dto.updatedAt = domain.updatedAt;
     return dto;

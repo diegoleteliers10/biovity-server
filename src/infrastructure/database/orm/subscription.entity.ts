@@ -7,6 +7,23 @@ import {
 } from 'typeorm';
 import { OrganizationEntity } from './organization.entity';
 
+export enum SubscriptionFeature {
+  JOB_POSTING = 'job_posting',
+  CANDIDATE_SEARCH = 'candidate_search',
+  ADVANCED_FILTERS = 'advanced_filters',
+  ANALYTICS = 'analytics',
+  BULK_MESSAGING = 'bulk_messaging',
+  CUSTOM_BRANDING = 'custom_branding',
+  PRIORITY_SUPPORT = 'priority_support',
+}
+
+export enum SubscriptionPlan {
+  FREE = 'free',
+  BASIC = 'basic',
+  PREMIUM = 'premium',
+  ENTERPRISE = 'enterprise',
+}
+
 @Entity('subscription')
 export class SubscriptionEntity {
   @PrimaryGeneratedColumn('uuid')
@@ -19,8 +36,12 @@ export class SubscriptionEntity {
   @JoinColumn({ name: 'organizationId' })
   organization?: OrganizationEntity;
 
-  @Column({ nullable: false })
-  public planName: string;
+  @Column({
+    type: 'enum',
+    enum: SubscriptionPlan,
+    nullable: false,
+  })
+  public planName: SubscriptionPlan;
 
   @Column({ type: 'timestamp', nullable: false })
   public startedAt: Date;
@@ -29,8 +50,13 @@ export class SubscriptionEntity {
   public expiresAt: Date;
 
   @Column({ type: 'json', nullable: false })
-  public features: string[];
+  public features: SubscriptionFeature[];
 
   @Column({ default: true })
   public isActive: boolean;
+
+  // Método de dominio útil
+  public hasFeature(feature: SubscriptionFeature): boolean {
+    return this.isActive && this.features.includes(feature);
+  }
 }

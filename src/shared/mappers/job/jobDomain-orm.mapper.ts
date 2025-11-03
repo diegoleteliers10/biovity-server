@@ -5,19 +5,19 @@ export class JobDomainOrmMapper {
   static toOrm(domain: Job): JobEntity {
     const jobOrm = new JobEntity();
     jobOrm.id = domain.id;
+    jobOrm.organizationId = domain.organizationId;
     jobOrm.title = domain.title;
     jobOrm.description = domain.description;
-    jobOrm.amount = domain.amount;
+    jobOrm.salary = domain.salary;
     jobOrm.location = domain.location;
     jobOrm.employmentType = domain.employmentType;
     jobOrm.experienceLevel = domain.experienceLevel;
     jobOrm.benefits = domain.benefits;
+    jobOrm.status = domain.status;
+    jobOrm.applicationsCount = domain.applicationsCount;
+    jobOrm.expiresAt = domain.expiresAt;
     jobOrm.createdAt = domain.createdAt;
     jobOrm.updatedAt = domain.updatedAt;
-
-    if (domain.organizationId) {
-      jobOrm.organizationId = domain.organizationId;
-    }
 
     return jobOrm;
   }
@@ -28,11 +28,14 @@ export class JobDomainOrmMapper {
       entity.organizationId,
       entity.title,
       entity.description,
-      entity.amount,
+      entity.salary,
       entity.location,
       entity.employmentType,
       entity.experienceLevel,
       entity.benefits,
+      entity.status,
+      entity.applicationsCount,
+      entity.expiresAt,
       entity.createdAt,
       entity.updatedAt,
     );

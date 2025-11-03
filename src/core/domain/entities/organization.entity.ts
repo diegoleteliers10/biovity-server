@@ -1,4 +1,4 @@
-import { Subscription } from './subscription.entity';
+import type { Subscription } from './subscription.entity';
 
 export class Organization {
   constructor(
