@@ -4,30 +4,49 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
+  ManyToOne,
+  JoinColumn,
 } from 'typeorm';
+import { JobEntity } from './job.entity';
+import { UserEntity } from './user.entity';
+
+export enum ApplicationStatus {
+  PENDIENTE = 'pendiente',
+  OFERTA = 'oferta',
+  ENTREVISTA = 'entrevista',
+  RECHAZADO = 'rechazado',
+  CONTRATADO = 'contratado',
+}
 
 @Entity('application')
 export class ApplicationEntity {
   @PrimaryGeneratedColumn('uuid')
   public id: string;
 
-  @Column()
+  @Column({ nullable: false })
   public jobId: string;
 
-  @Column()
+  @ManyToOne(() => JobEntity)
+  @JoinColumn({ name: 'jobId' })
+  public job: JobEntity;
+
+  @Column({ nullable: false })
   public candidateId: string;
 
+  @ManyToOne(() => UserEntity)
+  @JoinColumn({ name: 'candidateId' })
+  public candidate: UserEntity;
+
   @CreateDateColumn()
-  public createdAt: Date = new Date();
+  public createdAt: Date;
 
   @UpdateDateColumn()
-  public updatedAt: Date = new Date();
+  public updatedAt: Date;
 
-  @Column()
-  public status:
-    | 'pendiente'
-    | 'oferta'
-    | 'entrevista'
-    | 'rechazado'
-    | 'contratado' = 'pendiente';
+  @Column({
+    type: 'enum',
+    enum: ApplicationStatus,
+    default: ApplicationStatus.PENDIENTE,
+  })
+  public status: ApplicationStatus;
 }

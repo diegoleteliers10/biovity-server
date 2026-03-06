@@ -1,98 +1,157 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Biovity Server
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+API backend para la plataforma de empleo y aplicaciones Biovity. Construido con NestJS y arquitectura Domain-Driven Design (DDD).
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## Características
 
-## Description
+- **Plataforma de empleo:** Publicación de ofertas, aplicaciones y gestión de candidatos
+- **Organizaciones:** Perfiles de empresas y gestión de vacantes
+- **Usuarios:** Profesionales con currículums y perfiles
+- **Chat:** Sistema de mensajería entre usuarios
+- **Autenticación:** JWT con cookies y Passport
+- **Validación:** DTOs con class-validator y class-transformer
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## Stack tecnológico
 
-## Project setup
+| Tecnología | Versión |
+|------------|---------|
+| NestJS | v11 |
+| TypeScript | v5.7 |
+| PostgreSQL | - |
+| TypeORM | v0.3 |
+| Bun / npm | - |
+| Jest | - |
+| ESLint + Prettier | - |
 
-```bash
-$ npm install
-```
+## Requisitos previos
 
-## Compile and run the project
+- [Bun](https://bun.sh) o Node.js 18+
+- PostgreSQL
+- Variables de entorno configuradas (ver sección [Variables de entorno](#variables-de-entorno))
+
+## Instalación
 
 ```bash
-# development
-$ npm run start
+# Con Bun
+bun install
 
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+# Con npm
+npm install
 ```
 
-## Run tests
+## Ejecución
 
 ```bash
-# unit tests
-$ npm run test
+# Desarrollo (con hot reload)
+bun run start:dev
+# o
+npm run start:dev
 
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+# Producción
+bun run build && bun run start:prod
 ```
 
-## Deployment
+La API estará disponible en `http://localhost:3001` con el prefijo `/api/v1`.
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+## Estructura del proyecto
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+```
+src/
+├── core/                      # Capa de dominio
+│   ├── domain/entities/       # Entidades de dominio
+│   ├── repositories/          # Interfaces de repositorios
+│   ├── services/              # Servicios de negocio
+│   └── use-cases/             # Casos de uso
+│
+├── infrastructure/            # Capa de infraestructura
+│   ├── config/                # Configuración
+│   ├── database/orm/          # Entidades TypeORM
+│   └── persistence/           # Implementación de repositorios
+│
+├── interfaces/                # Capa de presentación
+│   ├── controllers/           # Controladores REST
+│   └── dtos/                  # Objetos de transferencia
+│
+└── shared/                    # Utilidades compartidas
+    ├── errors/                # Excepciones personalizadas
+    └── mappers/               # Mapeadores ORM ↔ Domain ↔ DTO
+```
+
+## Entidades del dominio
+
+| Entidad | Descripción |
+|---------|-------------|
+| User | Usuarios (profesionales y organizaciones) |
+| Organization | Perfiles de empresas |
+| Job | Ofertas de empleo |
+| Application | Candidaturas a ofertas |
+| Resume | Currículums de usuarios |
+| Subscription | Planes de suscripción |
+| Chat | Conversaciones |
+| Message | Mensajes de chat |
+| Waitlist | Lista de espera |
+
+## Endpoints API
+
+Base URL: `/api/v1`
+
+| Recurso | Ruta |
+|---------|------|
+| Usuarios | `/users` |
+| Organizaciones | `/organizations` |
+| Ofertas de empleo | `/jobs` |
+| Chat | `/chat` |
+| Mensajes | `/messages` |
+
+## Variables de entorno
+
+Crea un archivo `.env` en la raíz del proyecto:
+
+```env
+# Base de datos
+DB_HOST=localhost
+DB_PORT=5432
+DB_USERNAME=postgres
+DB_PASSWORD=tu_password
+DB_NAME=biovity
+
+# JWT
+JWT_SECRET=tu_secreto_jwt
+
+# Opcional: Supabase
+# SUPABASE_URL=
+# SUPABASE_ANON_KEY=
+```
+
+## Comandos disponibles
+
+| Comando | Descripción |
+|---------|-------------|
+| `bun run start:dev` | Inicia en modo desarrollo |
+| `bun run build` | Compila para producción |
+| `bun run test` | Ejecuta tests unitarios |
+| `bun run test:e2e` | Ejecuta tests end-to-end |
+| `bun run test:cov` | Tests con cobertura |
+| `bun run lint` | Linter y corrección automática |
+| `bun run format` | Formatea el código con Prettier |
+
+### Migraciones de base de datos
 
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+bun run migration:generate  # Genera migración desde entidades
+bun run migration:create   # Crea migración vacía
+bun run migration:run      # Ejecuta migraciones pendientes
+bun run migration:revert   # Revierte la última migración
+bun run migration:show     # Muestra estado de migraciones
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+## Patrones utilizados
 
-## Resources
+- **Repository Pattern:** Acceso a datos abstraído mediante interfaces
+- **Mapper Pattern:** Conversiones entre ORM, dominio y DTOs
+- **DTO Pattern:** Validación de request/response con class-validator
+- **Excepciones de dominio:** Errores específicos en `src/shared/errors/`
 
-Check out a few resources that may come in handy when working with NestJS:
+## Licencia
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+UNLICENSED - Uso privado.
