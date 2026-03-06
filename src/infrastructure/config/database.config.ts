@@ -1,14 +1,14 @@
 import { TypeOrmModule } from '@nestjs/typeorm';
 import {
-  AccountEntity,
   UserEntity,
   ApplicationEntity,
   OrganizationEntity,
   SubscriptionEntity,
   JobEntity,
   ResumeEntity,
-  SessionEntity,
-  VerificationEntity,
+  WaitlistEntity,
+  ChatEntity,
+  MessageEntity,
 } from '../database/orm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 
@@ -16,7 +16,6 @@ export const DatabaseConfig = TypeOrmModule.forRootAsync({
   imports: [ConfigModule],
   inject: [ConfigService],
   useFactory: (config: ConfigService) => {
-    // Debug rápido de todas las variables
     const dbConfig = {
       host: config.get<string>('DB_HOST'),
       port: config.get<number>('DB_PORT'),
@@ -29,15 +28,15 @@ export const DatabaseConfig = TypeOrmModule.forRootAsync({
       type: 'postgres',
       ...dbConfig,
       entities: [
-        AccountEntity,
         UserEntity,
         OrganizationEntity,
         ApplicationEntity,
         SubscriptionEntity,
         JobEntity,
         ResumeEntity,
-        SessionEntity,
-        VerificationEntity,
+        WaitlistEntity,
+        ChatEntity,
+        MessageEntity,
       ],
       synchronize: false,
       logging: true,

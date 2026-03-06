@@ -1,7 +1,6 @@
 import { Organization } from '../../../core/domain/entities/index';
 import { OrganizationEntity } from '../../../infrastructure/database/orm/index';
 
-// src/shared/mappers/organization/organization-domain-orm.mapper.ts
 export class OrganizationDomainOrmMapper {
   static toOrm(domain: Organization): OrganizationEntity {
     const orgOrm = new OrganizationEntity();
@@ -12,11 +11,8 @@ export class OrganizationDomainOrmMapper {
     orgOrm.address = domain.address;
     orgOrm.createdAt = domain.createdAt;
     orgOrm.updatedAt = domain.updatedAt;
+    orgOrm.subscriptionId = domain.subscriptionId;
     orgOrm.jobs = [];
-
-    if (domain.subscription) {
-      orgOrm.subscription = domain.subscription;
-    }
 
     return orgOrm;
   }
@@ -28,9 +24,9 @@ export class OrganizationDomainOrmMapper {
       entity.website,
       entity.phone,
       entity.address,
-      entity.subscription,
       entity.createdAt,
       entity.updatedAt,
+      entity.subscriptionId,
     );
   }
 }

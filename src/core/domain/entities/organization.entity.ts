@@ -13,8 +13,9 @@ export class Organization {
       country?: string;
       zipCode?: string;
     },
-    public subscription?: Subscription,
     public createdAt: Date = new Date(),
     public updatedAt: Date = new Date(),
+    public subscriptionId?: string,
+    public subscription?: Subscription,
   ) {}
 }

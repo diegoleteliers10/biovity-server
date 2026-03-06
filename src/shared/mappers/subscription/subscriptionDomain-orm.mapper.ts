@@ -6,11 +6,11 @@ export class SubscriptionDomainOrmMapper {
     const subscriptionOrm = new SubscriptionEntity();
     subscriptionOrm.id = domain.id;
     subscriptionOrm.organizationId = domain.organizationId;
-    subscriptionOrm.planName = domain.planName;
     subscriptionOrm.startedAt = domain.startedAt;
     subscriptionOrm.expiresAt = domain.expiresAt;
     subscriptionOrm.features = domain.features;
     subscriptionOrm.isActive = domain.isActive;
+    subscriptionOrm.planName = domain.planName;
 
     return subscriptionOrm;
   }
@@ -19,11 +19,11 @@ export class SubscriptionDomainOrmMapper {
     return new Subscription(
       entity.id,
       entity.organizationId,
-      entity.planName,
       entity.startedAt,
       entity.expiresAt,
       entity.features,
       entity.isActive,
+      entity.planName,
     );
   }
 }

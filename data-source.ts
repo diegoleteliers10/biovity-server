@@ -1,15 +1,15 @@
 import { DataSource } from 'typeorm';
 import { config } from 'dotenv';
 import {
-  AccountEntity,
   UserEntity,
   ApplicationEntity,
   OrganizationEntity,
   SubscriptionEntity,
   JobEntity,
   ResumeEntity,
-  SessionEntity,
-  VerificationEntity,
+  WaitlistEntity,
+  ChatEntity,
+  MessageEntity,
 } from './src/infrastructure/database/orm';
 
 config();
@@ -22,15 +22,15 @@ export const AppDataSource = new DataSource({
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
   entities: [
-    AccountEntity,
     UserEntity,
     ApplicationEntity,
     OrganizationEntity,
     SubscriptionEntity,
     JobEntity,
     ResumeEntity,
-    SessionEntity,
-    VerificationEntity,
+    WaitlistEntity,
+    ChatEntity,
+    MessageEntity,
   ],
   migrations: ['src/infrastructure/database/migrations/*.ts'],
   migrationsTableName: 'migrations',

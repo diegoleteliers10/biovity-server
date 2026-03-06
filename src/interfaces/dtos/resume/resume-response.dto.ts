@@ -3,93 +3,11 @@ import {
   IsOptional,
   IsArray,
   IsDate,
-  IsEnum,
   IsUUID,
   ValidateNested,
-  IsNumber,
-  IsUrl,
+  IsObject,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-
-export class CertificateDto {
-  @IsString()
-  name: string;
-
-  @IsString()
-  issuer: string;
-
-  @IsDate()
-  @Type(() => Date)
-  dateIssued: Date;
-
-  @IsOptional()
-  @IsDate()
-  @Type(() => Date)
-  expirationDate?: Date;
-
-  @IsOptional()
-  @IsString()
-  credentialId?: string;
-
-  @IsOptional()
-  @IsUrl()
-  credentialUrl?: string;
-}
-
-export class LanguageDto {
-  @IsString()
-  name: string;
-
-  @IsEnum(['Principiante', 'Intermedio', 'Avanzado', 'Nativo'])
-  proficiency: 'Principiante' | 'Intermedio' | 'Avanzado' | 'Nativo';
-}
-
-export class LinkDto {
-  @IsUrl()
-  url: string;
-}
-
-export class FileInfoDto {
-  @IsUrl()
-  url: string;
-
-  @IsString()
-  originalName: string;
-
-  @IsString()
-  mimeType: string;
-
-  @IsNumber()
-  size: number;
-
-  @IsDate()
-  @Type(() => Date)
-  uploadedAt: Date;
-}
-
-export class EducationDto {
-  @IsString()
-  institution: string;
-
-  @IsEnum(['Primaria', 'Secundaria', 'Superior'])
-  level: 'Primaria' | 'Secundaria' | 'Superior';
-
-  @IsString()
-  degree: string;
-
-  @IsDate()
-  @Type(() => Date)
-  startDate: Date;
-
-  @IsOptional()
-  @IsDate()
-  @Type(() => Date)
-  endDate?: Date;
-
-  @IsOptional()
-  @IsString()
-  description?: string;
-}
 
 export class ResumeResponseDto {
   @IsUUID()
@@ -103,38 +21,40 @@ export class ResumeResponseDto {
   summary?: string;
 
   @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => EducationDto)
-  experiences: EducationDto[];
+  @IsObject({ each: true })
+  experiences: Record<string, unknown>[];
 
   @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => EducationDto)
-  education: EducationDto[];
+  @IsObject({ each: true })
+  education: Record<string, unknown>[];
 
   @IsArray()
   @IsString({ each: true })
   skills: string[];
 
   @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => CertificateDto)
-  certifications: CertificateDto[];
+  @IsObject({ each: true })
+  certifications: Record<string, unknown>[];
 
   @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => LanguageDto)
-  languages: LanguageDto[];
+  @IsObject({ each: true })
+  languages: Record<string, unknown>[];
 
   @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => LinkDto)
-  links: LinkDto[];
+  @IsObject({ each: true })
+  links: { url: string }[];
 
   @IsOptional()
+  @IsObject()
   @ValidateNested()
-  @Type(() => FileInfoDto)
-  cvFile?: FileInfoDto;
+  @Type(() => Object)
+  cvFile?: {
+    url: string;
+    originalName?: string;
+    mimeType?: string;
+    size?: number;
+    uploadedAt?: Date;
+  };
 
   @IsDate()
   @Type(() => Date)

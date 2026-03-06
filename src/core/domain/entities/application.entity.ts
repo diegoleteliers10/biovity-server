@@ -1,9 +1,9 @@
 export enum ApplicationStatus {
-  PENDING = 'pendiente',
-  OFFER = 'oferta',
-  INTERVIEW = 'entrevista',
-  REJECTED = 'rechazado',
-  HIRED = 'contratado',
+  PENDIENTE = 'pendiente',
+  OFERTA = 'oferta',
+  ENTREVISTA = 'entrevista',
+  RECHAZADO = 'rechazado',
+  CONTRATADO = 'contratado',
 }
 
 export class Application {
@@ -13,6 +13,6 @@ export class Application {
     public candidateId: string,
     public createdAt: Date = new Date(),
     public updatedAt: Date = new Date(),
-    public status: ApplicationStatus = ApplicationStatus.PENDING,
+    public status: ApplicationStatus = ApplicationStatus.PENDIENTE,
   ) {}
 }

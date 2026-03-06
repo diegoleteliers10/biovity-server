@@ -1,4 +1,4 @@
-import { IsString, IsArray, IsDate, IsBoolean, IsUUID } from 'class-validator';
+import { IsString, IsObject, IsDate, IsBoolean, IsUUID } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class SubscriptionResponseDto {
@@ -8,9 +8,6 @@ export class SubscriptionResponseDto {
   @IsUUID()
   organizationId: string;
 
-  @IsString()
-  planName: string;
-
   @IsDate()
   @Type(() => Date)
   startedAt: Date;
@@ -19,10 +16,12 @@ export class SubscriptionResponseDto {
   @Type(() => Date)
   expiresAt: Date;
 
-  @IsArray()
-  @IsString({ each: true })
-  features: string[];
+  @IsObject()
+  features: Record<string, boolean>;
 
   @IsBoolean()
   isActive: boolean;
+
+  @IsString()
+  planName: string;
 }

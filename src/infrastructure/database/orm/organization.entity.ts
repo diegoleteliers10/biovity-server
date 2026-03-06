@@ -10,6 +10,7 @@ import {
 } from 'typeorm';
 import { SubscriptionEntity } from './subscription.entity';
 import { JobEntity } from './job.entity';
+import { UserEntity } from './user.entity';
 
 @Entity('organization')
 export class OrganizationEntity {
@@ -34,16 +35,22 @@ export class OrganizationEntity {
     zipCode?: string;
   };
 
-  @OneToOne(() => SubscriptionEntity, { nullable: true, cascade: true })
-  @JoinColumn()
-  public subscription?: SubscriptionEntity;
-
-  @OneToMany(() => JobEntity, job => job.organization)
-  public jobs: JobEntity[];
-
   @CreateDateColumn()
   public createdAt: Date = new Date();
 
   @UpdateDateColumn()
   public updatedAt: Date = new Date();
+
+  @Column({ nullable: true, unique: true })
+  public subscriptionId?: string;
+
+  @OneToOne(() => SubscriptionEntity, { nullable: true })
+  @JoinColumn({ name: 'subscriptionId' })
+  public subscription?: SubscriptionEntity;
+
+  @OneToMany(() => JobEntity, job => job.organization)
+  public jobs: JobEntity[];
+
+  @OneToMany(() => UserEntity, user => user.organization)
+  public users: UserEntity[];
 }

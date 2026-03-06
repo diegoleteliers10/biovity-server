@@ -7,22 +7,23 @@ import {
   IsArray,
   ValidateNested,
   IsBoolean,
+  IsObject,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
-export enum EmploymentType {
+export enum JobEmploymentType {
   FULL_TIME = 'Full-time',
   PART_TIME = 'Part-time',
-  CONTRACT = 'Contrato',
-  INTERNSHIP = 'Practica',
+  CONTRATO = 'Contrato',
+  PRACTICA = 'Practica',
 }
 
-export enum ExperienceLevel {
-  ENTRY = 'Entrante',
+export enum JobExperienceLevel {
+  ENTRANTE = 'Entrante',
   JUNIOR = 'Junior',
   MID_SENIOR = 'Mid-Senior',
   SENIOR = 'Senior',
-  EXECUTIVE = 'Ejecutivo',
+  EJECUTIVO = 'Ejecutivo',
 }
 
 export enum JobStatus {
@@ -33,30 +34,29 @@ export enum JobStatus {
   EXPIRED = 'expired',
 }
 
-export enum Currency {
-  USD = 'USD',
-  CLP = 'CLP',
-}
-
-export class SalaryDto {
+export class JobSalaryDto {
   @IsNumber()
-  min: number;
+  @IsOptional()
+  min?: number;
 
   @IsNumber()
-  max: number;
+  @IsOptional()
+  max?: number;
 
-  @IsEnum(Currency)
-  currency: Currency;
+  @IsString()
+  @IsOptional()
+  currency?: string;
 
-  @IsEnum(['hourly', 'monthly', 'yearly'])
-  period: 'hourly' | 'monthly' | 'yearly';
+  @IsString()
+  @IsOptional()
+  period?: string;
 
   @IsBoolean()
   @IsOptional()
   isNegotiable?: boolean;
 }
 
-export class LocationDto {
+export class JobLocationDto {
   @IsString()
   @IsOptional()
   city?: string;
@@ -66,60 +66,25 @@ export class LocationDto {
   state?: string;
 
   @IsString()
-  country: string;
+  @IsOptional()
+  country?: string;
 
   @IsBoolean()
-  isRemote: boolean;
+  @IsOptional()
+  isRemote?: boolean;
 
   @IsBoolean()
   @IsOptional()
   isHybrid?: boolean;
 }
 
-export enum BenefitType {
-  HEALTH = 'health',
-  FINANCIAL = 'financial',
-  TIME_OFF = 'time_off',
-  PROFESSIONAL = 'professional',
-  LIFESTYLE = 'lifestyle',
-  TECHNOLOGY = 'technology',
-  TRANSPORTATION = 'transportation',
-  FAMILY = 'family',
-  OTHER = 'other',
-}
-
-export class BenefitMetadataDto {
-  @IsEnum(BenefitType)
-  type: BenefitType;
-
-  @IsString()
-  icon: string;
-
-  @IsString()
-  @IsOptional()
-  color?: string;
-
-  @IsNumber()
-  @IsOptional()
-  priority?: number;
-}
-
-export class BenefitDto {
+export class JobBenefitsDto {
   @IsString()
   title: string;
 
   @IsString()
   @IsOptional()
   description?: string;
-
-  @ValidateNested()
-  @Type(() => BenefitMetadataDto)
-  @IsOptional()
-  metadata?: BenefitMetadataDto;
-
-  @IsBoolean()
-  @IsOptional()
-  isCustom?: boolean;
 }
 
 export class JobResponseDto {
@@ -135,29 +100,27 @@ export class JobResponseDto {
   @IsString()
   description: string;
 
-  @ValidateNested()
-  @Type(() => SalaryDto)
-  salary: SalaryDto;
+  @IsEnum(JobEmploymentType)
+  employmentType: JobEmploymentType;
 
-  @ValidateNested()
-  @Type(() => LocationDto)
-  location: LocationDto;
-
-  @IsEnum(EmploymentType)
-  employmentType: 'Full-time' | 'Part-time' | 'Contrato' | 'Practica';
-
-  @IsEnum(ExperienceLevel)
-  experienceLevel:
-    | 'Entrante'
-    | 'Junior'
-    | 'Mid-Senior'
-    | 'Senior'
-    | 'Ejecutivo';
+  @IsEnum(JobExperienceLevel)
+  experienceLevel: JobExperienceLevel;
 
   @IsArray()
   @ValidateNested({ each: true })
-  @Type(() => BenefitDto)
-  benefits: BenefitDto[];
+  @Type(() => JobBenefitsDto)
+  benefits: JobBenefitsDto[];
+
+  @IsDateString()
+  createdAt: Date;
+
+  @IsDateString()
+  updatedAt: Date;
+
+  @IsObject()
+  @ValidateNested()
+  @Type(() => JobSalaryDto)
+  salary: JobSalaryDto;
 
   @IsEnum(JobStatus)
   status: JobStatus;
@@ -169,9 +132,8 @@ export class JobResponseDto {
   @IsOptional()
   expiresAt?: Date;
 
-  @IsDateString()
-  createdAt: Date;
-
-  @IsDateString()
-  updatedAt: Date;
+  @IsObject()
+  @ValidateNested()
+  @Type(() => JobLocationDto)
+  location: JobLocationDto;
 }

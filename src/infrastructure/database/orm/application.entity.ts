@@ -11,11 +11,11 @@ import { JobEntity } from './job.entity';
 import { UserEntity } from './user.entity';
 
 export enum ApplicationStatus {
-  PENDING = 'pendiente',
-  OFFER = 'oferta',
-  INTERVIEW = 'entrevista',
-  REJECTED = 'rechazado',
-  HIRED = 'contratado',
+  PENDIENTE = 'pendiente',
+  OFERTA = 'oferta',
+  ENTREVISTA = 'entrevista',
+  RECHAZADO = 'rechazado',
+  CONTRATADO = 'contratado',
 }
 
 @Entity('application')
@@ -46,7 +46,7 @@ export class ApplicationEntity {
   @Column({
     type: 'enum',
     enum: ApplicationStatus,
-    default: ApplicationStatus.PENDING,
+    default: ApplicationStatus.PENDIENTE,
   })
   public status: ApplicationStatus;
 }

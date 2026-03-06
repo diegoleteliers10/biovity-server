@@ -1,4 +1,8 @@
-import { Job } from '../../../core/domain/entities/index';
+import {
+  Job,
+  JobEmploymentType,
+  JobExperienceLevel,
+} from '../../../core/domain/entities/index';
 import { JobEntity } from '../../../infrastructure/database/orm/index';
 
 export class JobDomainOrmMapper {
@@ -8,16 +12,16 @@ export class JobDomainOrmMapper {
     jobOrm.organizationId = domain.organizationId;
     jobOrm.title = domain.title;
     jobOrm.description = domain.description;
-    jobOrm.salary = domain.salary;
-    jobOrm.location = domain.location;
-    jobOrm.employmentType = domain.employmentType;
-    jobOrm.experienceLevel = domain.experienceLevel;
+    jobOrm.employmentType = domain.employmentType as JobEmploymentType;
+    jobOrm.experienceLevel = domain.experienceLevel as JobExperienceLevel;
     jobOrm.benefits = domain.benefits;
+    jobOrm.createdAt = domain.createdAt;
+    jobOrm.updatedAt = domain.updatedAt;
+    jobOrm.salary = domain.salary;
     jobOrm.status = domain.status;
     jobOrm.applicationsCount = domain.applicationsCount;
     jobOrm.expiresAt = domain.expiresAt;
-    jobOrm.createdAt = domain.createdAt;
-    jobOrm.updatedAt = domain.updatedAt;
+    jobOrm.location = domain.location;
 
     return jobOrm;
   }
@@ -28,16 +32,16 @@ export class JobDomainOrmMapper {
       entity.organizationId,
       entity.title,
       entity.description,
-      entity.salary,
-      entity.location,
       entity.employmentType,
       entity.experienceLevel,
       entity.benefits,
+      entity.createdAt,
+      entity.updatedAt,
+      entity.salary,
       entity.status,
       entity.applicationsCount,
       entity.expiresAt,
-      entity.createdAt,
-      entity.updatedAt,
+      entity.location,
     );
   }
 }

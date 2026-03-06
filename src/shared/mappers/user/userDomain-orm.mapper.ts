@@ -1,4 +1,4 @@
-import { User } from '../../../core/domain/entities/index';
+import { User, UserType } from '../../../core/domain/entities/index';
 import { UserEntity } from '../../../infrastructure/database/orm/index';
 import { OrganizationDomainOrmMapper } from '../organization/organizationDomain-orm.mapper';
 
@@ -8,11 +8,13 @@ export class UserDomainOrmMapper {
     userOrm.id = domain.id;
     userOrm.email = domain.email;
     userOrm.name = domain.name;
-    userOrm.type = domain.type;
+    userOrm.type = domain.type as UserType;
     userOrm.isEmailVerified = domain.isEmailVerified;
     userOrm.isActive = domain.isActive;
     userOrm.verificationToken = domain.verificationToken;
+    userOrm.organizationId = domain.organizationId;
     userOrm.avatar = domain.avatar;
+    userOrm.profession = domain.profession;
     userOrm.createdAt = domain.createdAt;
     userOrm.updatedAt = domain.updatedAt;
 
@@ -26,12 +28,6 @@ export class UserDomainOrmMapper {
     return userOrm;
   }
 
-  static toOrmWithPassword(domain: User, hashedPassword: string): UserEntity {
-    const userOrm = this.toOrm(domain);
-    userOrm.password = hashedPassword;
-    return userOrm;
-  }
-
   static toDomain(entity: UserEntity): User {
     return new User(
       entity.id,
@@ -41,12 +37,14 @@ export class UserDomainOrmMapper {
       entity.isEmailVerified,
       entity.isActive,
       entity.verificationToken,
+      entity.organizationId ?? undefined,
       entity.organization
         ? OrganizationDomainOrmMapper.toDomain(entity.organization)
         : undefined,
       entity.createdAt,
       entity.updatedAt,
       entity.avatar,
+      entity.profession,
     );
   }
 }

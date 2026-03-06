@@ -7,6 +7,11 @@ import {
 } from 'class-validator';
 import { OrganizationResponseDto } from '../organization/organization-response.dto';
 
+export enum UserType {
+  PROFESSIONAL = 'professional',
+  ORGANIZATION = 'organization',
+}
+
 export class UserResponseDto {
   @IsUUID()
   id: string;
@@ -17,8 +22,8 @@ export class UserResponseDto {
   @IsString()
   name: string;
 
-  @IsEnum(['organización', 'persona'])
-  type: 'organización' | 'persona';
+  @IsEnum(UserType)
+  type: UserType;
 
   @IsBoolean()
   isEmailVerified: boolean;
@@ -27,7 +32,17 @@ export class UserResponseDto {
   isActive: boolean;
 
   @IsOptional()
+  @IsUUID()
+  organizationId?: string;
+
+  @IsOptional()
   organization?: OrganizationResponseDto;
 
-  // No incluimos password, verificationToken por seguridad
+  @IsOptional()
+  @IsString()
+  avatar?: string;
+
+  @IsOptional()
+  @IsString()
+  profession?: string;
 }

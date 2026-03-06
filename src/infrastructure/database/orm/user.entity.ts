@@ -12,6 +12,11 @@ import { OrganizationEntity } from './organization.entity';
 import { ResumeEntity } from './resume.entity';
 import { ApplicationEntity } from './application.entity';
 
+export enum UserType {
+  PROFESSIONAL = 'professional',
+  ORGANIZATION = 'organization',
+}
+
 @Entity('user')
 export class UserEntity {
   @PrimaryGeneratedColumn('uuid')
@@ -23,15 +28,12 @@ export class UserEntity {
   @Column({ nullable: false })
   public name: string;
 
-  @Column({ nullable: false })
-  public password: string;
-
   @Column({
     type: 'enum',
-    enum: ['organización', 'persona'],
+    enum: UserType,
     nullable: false,
   })
-  public type: 'organización' | 'persona';
+  public type: UserType;
 
   @Column({ default: false })
   public isEmailVerified: boolean;
@@ -42,12 +44,18 @@ export class UserEntity {
   @Column({ nullable: true })
   public verificationToken?: string;
 
-  @OneToOne(() => OrganizationEntity, { nullable: true, cascade: true })
-  @JoinColumn()
+  @Column({ nullable: true, unique: true })
+  public organizationId?: string;
+
+  @OneToOne(() => OrganizationEntity, { nullable: true })
+  @JoinColumn({ name: 'organizationId' })
   public organization?: OrganizationEntity;
 
   @Column({ nullable: true })
   public avatar?: string;
+
+  @Column({ nullable: true })
+  public profession?: string;
 
   @CreateDateColumn()
   public createdAt: Date = new Date();

@@ -5,7 +5,6 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from '../../core/domain/entities/user.entity';
 import { UserDomainOrmMapper } from '../../shared/mappers/user/userDomain-orm.mapper';
-import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class UserRepositoryImpl implements IUserRepository {
@@ -58,21 +57,5 @@ export class UserRepositoryImpl implements IUserRepository {
   async delete(id: string): Promise<boolean> {
     const result = await this.userRepository.delete(id);
     return result.affected != null && result.affected > 0;
-  }
-
-  async verifyUserCredentials(
-    email: string,
-    password: string,
-  ): Promise<User | null> {
-    const userOrm = await this.userRepository.findOne({
-      where: { email },
-      relations: ['organization'],
-    });
-
-    if (!userOrm || !(await bcrypt.compare(password, userOrm.password))) {
-      return null;
-    }
-
-    return UserDomainOrmMapper.toDomain(userOrm);
   }
 }
