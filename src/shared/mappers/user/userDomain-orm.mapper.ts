@@ -15,6 +15,9 @@ export class UserDomainOrmMapper {
     userOrm.organizationId = domain.organizationId;
     userOrm.avatar = domain.avatar;
     userOrm.profession = domain.profession;
+    userOrm.birthday = domain.birthday;
+    userOrm.phone = domain.phone;
+    userOrm.location = domain.location;
     userOrm.createdAt = domain.createdAt;
     userOrm.updatedAt = domain.updatedAt;
 
@@ -45,6 +48,9 @@ export class UserDomainOrmMapper {
       entity.updatedAt,
       entity.avatar,
       entity.profession,
+      entity.birthday,
+      entity.phone,
+      entity.location,
     );
   }
 }

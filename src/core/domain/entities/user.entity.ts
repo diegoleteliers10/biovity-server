@@ -20,5 +20,11 @@ export class User {
     public updatedAt: Date = new Date(),
     public avatar?: string,
     public profession?: string,
+    public birthday?: string,
+    public phone?: string,
+    public location?: {
+      city?: string;
+      country?: string;
+    },
   ) {}
 }

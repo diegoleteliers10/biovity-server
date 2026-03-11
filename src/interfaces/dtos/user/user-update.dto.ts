@@ -4,10 +4,24 @@ import {
   IsEnum,
   IsBoolean,
   IsUUID,
+  IsDate,
+  ValidateNested,
+  IsObject,
 } from 'class-validator';
+import { Type } from 'class-transformer';
 import { UserType } from './user-response.dto';
 
 export { UserType };
+
+export class UserLocationDto {
+  @IsOptional()
+  @IsString()
+  city?: string;
+
+  @IsOptional()
+  @IsString()
+  country?: string;
+}
 
 export class UserUpdateDto {
   @IsOptional()
@@ -37,4 +51,18 @@ export class UserUpdateDto {
   @IsOptional()
   @IsString()
   profession?: string;
+
+  @IsOptional()
+  @IsString()
+  birthday?: string;
+
+  @IsOptional()
+  @IsString()
+  phone?: string;
+
+  @IsOptional()
+  @IsObject()
+  @ValidateNested()
+  @Type(() => UserLocationDto)
+  location?: UserLocationDto;
 }

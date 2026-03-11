@@ -9,6 +9,60 @@ import {
 } from 'typeorm';
 import { UserEntity } from './user.entity';
 
+export enum SkillLevel {
+  ADVANCED = 'advanced',
+  INTERMEDIATE = 'intermediate',
+  ENTRY = 'entry',
+}
+
+export enum LanguageLevel {
+  ADVANCED = 'advanced',
+  INTERMEDIATE = 'intermediate',
+  ENTRY = 'entry',
+}
+
+export class ResumeExperienceEntity {
+  title: string;
+  startYear: string;
+  endYear?: string;
+  stillWorking?: boolean;
+  company?: string;
+  description?: string;
+}
+
+export class ResumeEducationEntity {
+  title: string;
+  startYear: string;
+  endYear?: string;
+  stillStudying?: boolean;
+  institute?: string;
+}
+
+export class ResumeSkillEntity {
+  name: string;
+  level?: SkillLevel;
+}
+
+export class ResumeLanguageEntity {
+  name: string;
+  level?: LanguageLevel;
+}
+
+export class ResumeCertificationEntity {
+  title: string;
+  date?: string;
+  link?: string;
+  company?: string;
+}
+
+export class CvFileEntity {
+  url: string;
+  originalName?: string;
+  mimeType?: string;
+  size?: number;
+  uploadedAt?: Date;
+}
+
 @Entity('resume')
 export class ResumeEntity {
   @PrimaryGeneratedColumn('uuid')
@@ -25,31 +79,25 @@ export class ResumeEntity {
   public summary?: string;
 
   @Column({ type: 'json', nullable: true })
-  public experiences: Record<string, unknown>[];
+  public experiences: ResumeExperienceEntity[];
 
   @Column({ type: 'json', nullable: true })
-  public education: Record<string, unknown>[];
+  public education: ResumeEducationEntity[];
 
   @Column({ type: 'json', nullable: true })
-  public skills: string[];
+  public skills: ResumeSkillEntity[];
 
   @Column({ type: 'json', nullable: true })
-  public certifications: Record<string, unknown>[];
+  public certifications: ResumeCertificationEntity[];
 
   @Column({ type: 'json', nullable: true })
-  public languages: Record<string, unknown>[];
+  public languages: ResumeLanguageEntity[];
 
   @Column({ type: 'json', nullable: true })
   public links: { url: string }[];
 
   @Column({ type: 'json', nullable: true })
-  public cvFile?: {
-    url: string;
-    originalName?: string;
-    mimeType?: string;
-    size?: number;
-    uploadedAt?: Date;
-  };
+  public cvFile?: CvFileEntity;
 
   @CreateDateColumn()
   public createdAt: Date = new Date();

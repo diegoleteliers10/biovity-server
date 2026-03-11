@@ -5,7 +5,10 @@ export interface IChatUseCase {
   getChatById(id: string): Promise<Chat | null>;
   getChatsByRecruiter(recruiterId: string): Promise<Chat[]>;
   getChatsByProfessional(professionalId: string): Promise<Chat[]>;
-  getChatByParticipants(recruiterId: string, professionalId: string): Promise<Chat | null>;
+  getChatByParticipants(
+    recruiterId: string,
+    professionalId: string,
+  ): Promise<Chat | null>;
   updateChat(id: string, data: UpdateChatInput): Promise<Chat | null>;
   deleteChat(id: string): Promise<boolean>;
 }
@@ -13,7 +16,6 @@ export interface IChatUseCase {
 export interface CreateChatInput {
   recruiterId: string;
   professionalId: string;
-  jobId?: string;
   lastMessage?: string;
 }
 

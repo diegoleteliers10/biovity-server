@@ -6,8 +6,118 @@ import {
   IsUUID,
   ValidateNested,
   IsObject,
+  IsEnum,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+
+export enum SkillLevel {
+  ADVANCED = 'advanced',
+  INTERMEDIATE = 'intermediate',
+  ENTRY = 'entry',
+}
+
+export enum LanguageLevel {
+  ADVANCED = 'advanced',
+  INTERMEDIATE = 'intermediate',
+  ENTRY = 'entry',
+}
+
+export class ResumeExperienceDto {
+  @IsString()
+  title: string;
+
+  @IsString()
+  startYear: string;
+
+  @IsOptional()
+  @IsString()
+  endYear?: string;
+
+  @IsOptional()
+  stillWorking?: boolean;
+
+  @IsOptional()
+  @IsString()
+  company?: string;
+
+  @IsOptional()
+  @IsString()
+  description?: string;
+}
+
+export class ResumeEducationDto {
+  @IsString()
+  title: string;
+
+  @IsString()
+  startYear: string;
+
+  @IsOptional()
+  @IsString()
+  endYear?: string;
+
+  @IsOptional()
+  stillStudying?: boolean;
+
+  @IsOptional()
+  @IsString()
+  institute?: string;
+}
+
+export class ResumeSkillDto {
+  @IsString()
+  name: string;
+
+  @IsOptional()
+  @IsEnum(SkillLevel)
+  level?: SkillLevel;
+}
+
+export class ResumeLanguageDto {
+  @IsString()
+  name: string;
+
+  @IsOptional()
+  @IsEnum(LanguageLevel)
+  level?: LanguageLevel;
+}
+
+export class ResumeCertificationDto {
+  @IsString()
+  title: string;
+
+  @IsOptional()
+  @IsString()
+  date?: string;
+
+  @IsOptional()
+  @IsString()
+  link?: string;
+
+  @IsOptional()
+  @IsString()
+  company?: string;
+}
+
+export class CvFileDto {
+  @IsString()
+  url: string;
+
+  @IsOptional()
+  @IsString()
+  originalName?: string;
+
+  @IsOptional()
+  @IsString()
+  mimeType?: string;
+
+  @IsOptional()
+  size?: number;
+
+  @IsOptional()
+  @Type(() => Date)
+  uploadedAt?: Date;
+}
 
 export class ResumeResponseDto {
   @IsUUID()
@@ -21,24 +131,29 @@ export class ResumeResponseDto {
   summary?: string;
 
   @IsArray()
-  @IsObject({ each: true })
-  experiences: Record<string, unknown>[];
+  @ValidateNested({ each: true })
+  @Type(() => ResumeExperienceDto)
+  experiences: ResumeExperienceDto[];
 
   @IsArray()
-  @IsObject({ each: true })
-  education: Record<string, unknown>[];
+  @ValidateNested({ each: true })
+  @Type(() => ResumeEducationDto)
+  education: ResumeEducationDto[];
 
   @IsArray()
-  @IsString({ each: true })
-  skills: string[];
+  @ValidateNested({ each: true })
+  @Type(() => ResumeSkillDto)
+  skills: ResumeSkillDto[];
 
   @IsArray()
-  @IsObject({ each: true })
-  certifications: Record<string, unknown>[];
+  @ValidateNested({ each: true })
+  @Type(() => ResumeCertificationDto)
+  certifications: ResumeCertificationDto[];
 
   @IsArray()
-  @IsObject({ each: true })
-  languages: Record<string, unknown>[];
+  @ValidateNested({ each: true })
+  @Type(() => ResumeLanguageDto)
+  languages: ResumeLanguageDto[];
 
   @IsArray()
   @IsObject({ each: true })
@@ -47,14 +162,8 @@ export class ResumeResponseDto {
   @IsOptional()
   @IsObject()
   @ValidateNested()
-  @Type(() => Object)
-  cvFile?: {
-    url: string;
-    originalName?: string;
-    mimeType?: string;
-    size?: number;
-    uploadedAt?: Date;
-  };
+  @Type(() => CvFileDto)
+  cvFile?: CvFileDto;
 
   @IsDate()
   @Type(() => Date)

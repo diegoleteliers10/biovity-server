@@ -4,6 +4,7 @@ import {
   Put,
   Body,
   Param,
+  Query,
   ParseUUIDPipe,
 } from '@nestjs/common';
 import { UserService } from '../../../core/services/user.service';
@@ -11,6 +12,8 @@ import { UserDtoDomainMapper } from '../../../shared/mappers/user/userDto-domain
 import { UserUpdateDto } from '../../dtos/user/user-update.dto';
 import { UserResponseDto } from '../../dtos/user/user-response.dto';
 import { UserDomainDtoMapper } from '../../../shared/mappers/user/userDomain-dto.mapper';
+import { UserQueryDto } from '../../dtos/user/user-query.dto';
+import { UserPaginatedResponseDto } from '../../dtos/user/user-paginated.dto';
 
 @Controller('users')
 export class UserController {
@@ -33,9 +36,29 @@ export class UserController {
   }
 
   @Get()
-  async getAllUsers(): Promise<UserResponseDto[]> {
-    const users = await this.userService.getAllUsers();
-    return users.map(user => UserDomainDtoMapper.toDto(user));
+  async getAllUsers(
+    @Query() query: UserQueryDto,
+  ): Promise<UserPaginatedResponseDto> {
+    const filters = {
+      type: query.type,
+      isActive: query.isActive,
+      search: query.search,
+    };
+
+    const pagination = {
+      page: query.page,
+      limit: query.limit,
+    };
+
+    const result = await this.userService.getAllUsers(filters, pagination);
+
+    return {
+      data: result.data.map(user => UserDomainDtoMapper.toDto(user)),
+      total: result.total,
+      page: result.page,
+      limit: result.limit,
+      totalPages: result.totalPages,
+    };
   }
 
   @Put(':id')

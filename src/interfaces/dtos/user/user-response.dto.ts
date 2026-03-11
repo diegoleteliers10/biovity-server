@@ -4,12 +4,26 @@ import {
   IsOptional,
   IsEnum,
   IsUUID,
+  IsDate,
+  ValidateNested,
+  IsObject,
 } from 'class-validator';
+import { Type } from 'class-transformer';
 import { OrganizationResponseDto } from '../organization/organization-response.dto';
 
 export enum UserType {
   PROFESSIONAL = 'professional',
   ORGANIZATION = 'organization',
+}
+
+export class UserLocationDto {
+  @IsOptional()
+  @IsString()
+  city?: string;
+
+  @IsOptional()
+  @IsString()
+  country?: string;
 }
 
 export class UserResponseDto {
@@ -45,4 +59,18 @@ export class UserResponseDto {
   @IsOptional()
   @IsString()
   profession?: string;
+
+  @IsOptional()
+  @IsString()
+  birthday?: string;
+
+  @IsOptional()
+  @IsString()
+  phone?: string;
+
+  @IsOptional()
+  @IsObject()
+  @ValidateNested()
+  @Type(() => UserLocationDto)
+  location?: UserLocationDto;
 }

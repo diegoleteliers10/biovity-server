@@ -30,9 +30,6 @@ export class ChatEntity {
   public professional: UserEntity;
 
   @Column({ nullable: true })
-  public jobId?: string;
-
-  @Column({ nullable: true })
   public lastMessage?: string;
 
   @Column({ default: 0 })

@@ -10,6 +10,27 @@ export class ApplicationDomainDtoMapper {
     dto.status = domain.status;
     dto.createdAt = domain.createdAt;
     dto.updatedAt = domain.updatedAt;
+
+    // Map job relation if exists
+    if ((domain as any).job) {
+      dto.job = {
+        id: (domain as any).job.id,
+        title: (domain as any).job.title,
+        organizationId: (domain as any).job.organizationId,
+      };
+    }
+
+    // Map candidate relation if exists
+    if ((domain as any).candidate) {
+      dto.candidate = {
+        id: (domain as any).candidate.id,
+        name: (domain as any).candidate.name,
+        email: (domain as any).candidate.email,
+        avatar: (domain as any).candidate.avatar,
+        profession: (domain as any).candidate.profession,
+      };
+    }
+
     return dto;
   }
 }

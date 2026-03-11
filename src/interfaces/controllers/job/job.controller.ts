@@ -6,6 +6,7 @@ import {
   Delete,
   Body,
   Param,
+  Query,
   HttpCode,
   HttpStatus,
   ParseUUIDPipe,
@@ -15,6 +16,7 @@ import { JobDtoDomainMapper } from '../../../shared/mappers/job/jobDto-domain.ma
 import { JobCreateDto } from '../../dtos/job/job-create.dto';
 import { JobResponseDto } from '../../dtos/job/job-response.dto';
 import { JobDomainDtoMapper } from '../../../shared/mappers/job/jobDomain-dto.mapper';
+import { JobQueryDto } from '../../dtos/job/job-query.dto';
 
 @Controller('jobs')
 export class JobController {
@@ -36,10 +38,67 @@ export class JobController {
     return job ? JobDomainDtoMapper.toDto(job) : null;
   }
 
+  @Get(':id/with-applications')
+  async getJobByIdWithApplications(
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<any | null> {
+    const result = await this.jobService.getJobByIdWithApplications(id);
+    if (!result) return null;
+    return {
+      ...JobDomainDtoMapper.toDto(result.job),
+      applicationsCount: result.applicationsCount,
+    };
+  }
+
   @Get()
-  async getAllJobs(): Promise<JobResponseDto[]> {
-    const jobs = await this.jobService.getAllJobs();
-    return jobs.map(job => JobDomainDtoMapper.toDto(job));
+  async getAllJobs(@Query() query: JobQueryDto): Promise<any> {
+    const filters = {
+      organizationId: query.organizationId,
+      status: query.status,
+      search: query.search,
+    };
+
+    const pagination = {
+      page: query.page,
+      limit: query.limit,
+    };
+
+    const result = await this.jobService.getAllJobs(filters, pagination);
+
+    return {
+      data: result.data.map(job => JobDomainDtoMapper.toDto(job)),
+      total: result.total,
+      page: result.page,
+      limit: result.limit,
+      totalPages: result.totalPages,
+    };
+  }
+
+  @Get('organization/:organizationId')
+  async getJobsByOrganization(
+    @Param('organizationId', ParseUUIDPipe) organizationId: string,
+    @Query() query: JobQueryDto,
+  ): Promise<any> {
+    const pagination = {
+      page: query.page,
+      limit: query.limit,
+    };
+
+    const result = await this.jobService.getAllJobsWithApplicationCounts(
+      organizationId,
+      pagination,
+    );
+
+    return {
+      data: result.data.map(item => ({
+        ...JobDomainDtoMapper.toDto(item.job),
+        applicationsCount: item.applicationsCount,
+      })),
+      total: result.total,
+      page: result.page,
+      limit: result.limit,
+      totalPages: result.totalPages,
+    };
   }
 
   @Put(':id')
@@ -54,9 +113,7 @@ export class JobController {
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  async deleteJob(
-    @Param('id', ParseUUIDPipe) id: string,
-  ): Promise<void> {
+  async deleteJob(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
     await this.jobService.deleteJob(id);
   }
 }

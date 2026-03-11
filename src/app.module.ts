@@ -6,6 +6,8 @@ import { UserModule } from './interfaces/controllers/user/user.module';
 import { OrganizationModule } from './interfaces/controllers/organization/organization.module';
 import { ChatModule } from './interfaces/controllers/chat/chat.module';
 import { MessageModule } from './interfaces/controllers/message/message.module';
+import { ResumeModule } from './interfaces/controllers/resume/resume.module';
+import { ApplicationModule } from './interfaces/controllers/application/application.module';
 
 @Module({
   imports: [
@@ -16,6 +18,8 @@ import { MessageModule } from './interfaces/controllers/message/message.module';
     OrganizationModule,
     ChatModule,
     MessageModule,
+    ResumeModule,
+    ApplicationModule,
   ],
   controllers: [],
   providers: [],

@@ -57,6 +57,18 @@ export class UserEntity {
   @Column({ nullable: true })
   public profession?: string;
 
+  @Column({ type: 'varchar', length: 10, nullable: true })
+  public birthday?: string;
+
+  @Column({ nullable: true })
+  public phone?: string;
+
+  @Column({ type: 'jsonb', nullable: true })
+  public location?: {
+    city?: string;
+    country?: string;
+  };
+
   @CreateDateColumn()
   public createdAt: Date = new Date();
 

@@ -1,12 +1,12 @@
 import {
   IsString,
-  IsDateString,
   IsOptional,
   IsEnum,
+  IsUUID,
   IsNumber,
-  IsArray,
   ValidateNested,
-  IsBoolean,
+  IsDateString,
+  IsArray,
   IsObject,
 } from 'class-validator';
 import { Type } from 'class-transformer';
@@ -35,63 +35,57 @@ export enum JobStatus {
 }
 
 export class JobSalaryDto {
-  @IsNumber()
   @IsOptional()
   min?: number;
 
-  @IsNumber()
   @IsOptional()
   max?: number;
 
-  @IsString()
   @IsOptional()
+  @IsString()
   currency?: string;
 
-  @IsString()
   @IsOptional()
+  @IsString()
   period?: string;
 
-  @IsBoolean()
   @IsOptional()
   isNegotiable?: boolean;
 }
 
 export class JobLocationDto {
-  @IsString()
   @IsOptional()
+  @IsString()
   city?: string;
 
-  @IsString()
   @IsOptional()
+  @IsString()
   state?: string;
 
-  @IsString()
   @IsOptional()
+  @IsString()
   country?: string;
 
-  @IsBoolean()
   @IsOptional()
   isRemote?: boolean;
 
-  @IsBoolean()
   @IsOptional()
   isHybrid?: boolean;
 }
 
 export class JobBenefitsDto {
   @IsString()
-  title: string;
+  tipo: string;
 
   @IsString()
-  @IsOptional()
-  description?: string;
+  title: string;
 }
 
 export class JobResponseDto {
-  @IsString()
+  @IsUUID()
   id: string;
 
-  @IsString()
+  @IsUUID()
   organizationId: string;
 
   @IsString()
@@ -106,21 +100,22 @@ export class JobResponseDto {
   @IsEnum(JobExperienceLevel)
   experienceLevel: JobExperienceLevel;
 
+  @IsOptional()
+  @IsObject()
+  @ValidateNested()
+  @Type(() => JobSalaryDto)
+  salary?: JobSalaryDto;
+
+  @IsOptional()
+  @IsObject()
+  @ValidateNested()
+  @Type(() => JobLocationDto)
+  location?: JobLocationDto;
+
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => JobBenefitsDto)
   benefits: JobBenefitsDto[];
-
-  @IsDateString()
-  createdAt: Date;
-
-  @IsDateString()
-  updatedAt: Date;
-
-  @IsObject()
-  @ValidateNested()
-  @Type(() => JobSalaryDto)
-  salary: JobSalaryDto;
 
   @IsEnum(JobStatus)
   status: JobStatus;
@@ -128,12 +123,13 @@ export class JobResponseDto {
   @IsNumber()
   applicationsCount: number;
 
-  @IsDateString()
   @IsOptional()
+  @IsDateString()
   expiresAt?: Date;
 
-  @IsObject()
-  @ValidateNested()
-  @Type(() => JobLocationDto)
-  location: JobLocationDto;
+  @IsDateString()
+  createdAt: Date;
+
+  @IsDateString()
+  updatedAt: Date;
 }
