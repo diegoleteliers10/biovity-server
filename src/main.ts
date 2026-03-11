@@ -1,10 +1,13 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe, Logger } from '@nestjs/common';
 import * as cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const logger = new Logger('Bootstrap');
+  const app = await NestFactory.create(AppModule, {
+    logger: ['error', 'warn', 'log', 'debug', 'verbose'],
+  });
 
   // Configure CORS
   app.enableCors({
@@ -27,7 +30,9 @@ async function bootstrap() {
     }),
   );
 
-  await app.listen(3001);
+  const port = process.env.PORT || 3001;
+  await app.listen(port);
+  logger.log(`Application is running on: http://localhost:${port}/api/v1`);
 }
 
 bootstrap().catch(error => {

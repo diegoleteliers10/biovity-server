@@ -66,6 +66,86 @@ All API endpoints use the global prefix `api/v1`:
 - `/api/v1/resumes` - Resume endpoints
 - `/api/v1/subscriptions` - Subscription endpoints
 
+## Yaak CLI Integration
+
+This project uses **Yaak** (API client) for testing endpoints. The workspace ID is `wk_znJBX8zwZo`.
+
+### Adding New Endpoints to Yaak
+
+When creating a new module with endpoints, follow these steps to add them to Yaak:
+
+#### Step 1: Create the Folder
+
+```bash
+yaak folder create wk_znJBX8zwZo --json '{"name": "FolderName"}'
+```
+
+#### Step 2: Create the Requests
+
+For each endpoint, create a request:
+
+```bash
+# GET request
+yaak request create wk_znJBX8zwZo --json '{
+  "name": "Request Name",
+  "method": "GET",
+  "url": "http://localhost:3001/api/v1/endpoint",
+  "folderId": "fl_XXXXX"
+}'
+
+# POST request
+yaak request create wk_znJBX8zwZo --json '{
+  "name": "Create Resource",
+  "method": "POST",
+  "url": "http://localhost:3001/api/v1/resource",
+  "folderId": "fl_XXXXX"
+}'
+
+# PUT request
+yaak request create wk_znJBX8zwZo --json '{
+  "name": "Update Resource",
+  "method": "PUT",
+  "url": "http://localhost:3001/api/v1/resource/:id",
+  "folderId": "fl_XXXXX"
+}'
+
+# DELETE request
+yaak request create wk_znJBX8zwZo --json '{
+  "name": "Delete Resource",
+  "method": "DELETE",
+  "url": "http://localhost:3001/api/v1/resource/:id",
+  "folderId": "fl_XXXXX"
+}'
+```
+
+#### Step 3: List Folders (to get folder IDs)
+
+```bash
+yaak folder list wk_znJBX8zwZo
+```
+
+#### Common Yaak Commands
+
+```bash
+# List all workspaces
+yaak workspace list
+
+# List folders in a workspace
+yaak folder list wk_znJBX8zwZo
+
+# Send a request
+yaak send rq_XXXXX
+
+# View request schema
+yaak request schema http
+
+# Create a folder
+yaak folder create wk_znJBX8zwZo --json '{"name": "FolderName"}'
+
+# Create a request
+yaak request create wk_znJBX8zwZo --json '{...}'
+```
+
 ## Commands
 
 ```bash
