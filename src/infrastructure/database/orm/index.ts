@@ -11,7 +11,17 @@ export {
 } from './job.entity';
 export { MessageEntity } from './message.entity';
 export { OrganizationEntity } from './organization.entity';
-export { ResumeEntity } from './resume.entity';
+export {
+  ResumeEntity,
+  SkillLevel,
+  LanguageLevel,
+  ResumeExperienceEntity,
+  ResumeEducationEntity,
+  ResumeSkillEntity,
+  ResumeLanguageEntity,
+  ResumeCertificationEntity,
+  CvFileEntity,
+} from './resume.entity';
 export { SubscriptionEntity, SubscriptionPlan } from './subscription.entity';
 export { UserEntity, UserType } from './user.entity';
 export { WaitlistEntity, WaitlistRole } from './waitlist.entity';

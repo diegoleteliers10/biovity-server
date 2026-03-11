@@ -51,8 +51,8 @@ export interface JobLocation {
 }
 
 export interface JobBenefits {
+  tipo: string;
   title: string;
-  description?: string;
 }
 
 @Entity('job')

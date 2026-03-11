@@ -50,8 +50,7 @@ export class JobSalaryDto {
   period?: string;
 
   @IsOptional()
-  @IsNumber()
-  isNegotiable?: number;
+  isNegotiable?: boolean;
 }
 
 export class JobLocationDto {
@@ -68,21 +67,18 @@ export class JobLocationDto {
   country?: string;
 
   @IsOptional()
-  @IsNumber()
-  isRemote?: number;
+  isRemote?: boolean;
 
   @IsOptional()
-  @IsNumber()
-  isHybrid?: number;
+  isHybrid?: boolean;
 }
 
 export class JobBenefitsDto {
   @IsString()
-  title: string;
+  tipo: string;
 
-  @IsOptional()
   @IsString()
-  description?: string;
+  title: string;
 }
 
 export class JobCreateDto {

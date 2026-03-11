@@ -21,10 +21,11 @@ export class ChatService implements IChatUseCase {
 
   async createChat(data: CreateChatInput): Promise<Chat> {
     // Check if chat already exists between these participants
-    const existingChat = await this.chatRepository.findByRecruiterAndProfessional(
-      data.recruiterId,
-      data.professionalId,
-    );
+    const existingChat =
+      await this.chatRepository.findByRecruiterAndProfessional(
+        data.recruiterId,
+        data.professionalId,
+      );
 
     if (existingChat) {
       return existingChat;
@@ -34,7 +35,6 @@ export class ChatService implements IChatUseCase {
       this.generateId(),
       data.recruiterId,
       data.professionalId,
-      data.jobId,
       data.lastMessage,
       0,
       0,
@@ -66,10 +66,7 @@ export class ChatService implements IChatUseCase {
     );
   }
 
-  async updateChat(
-    id: string,
-    data: UpdateChatInput,
-  ): Promise<Chat | null> {
+  async updateChat(id: string, data: UpdateChatInput): Promise<Chat | null> {
     const existingChat = await this.chatRepository.findById(id);
     if (!existingChat) {
       throw new NotFoundException(`Chat with id ${id} not found`);

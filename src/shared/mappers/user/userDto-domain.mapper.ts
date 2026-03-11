@@ -14,6 +14,9 @@ export class UserDtoDomainMapper {
       organizationId: dto.organizationId,
       avatar: dto.avatar,
       profession: dto.profession,
+      birthday: dto.birthday,
+      phone: dto.phone,
+      location: dto.location,
     };
   }
 

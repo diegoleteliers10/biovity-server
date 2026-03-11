@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import {
   JobEntity,
   OrganizationEntity,
+  ApplicationEntity,
 } from '../../../infrastructure/database/orm';
 import { JobController } from './job.controller';
 import { JobService } from '../../../core/services/job.service';
@@ -10,7 +11,13 @@ import { JobRepositoryImpl } from '../../../infrastructure/persistence/job.repos
 import { OrganizationRepositoryImpl } from '../../../infrastructure/persistence/organization.repository.impl';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([JobEntity, OrganizationEntity])],
+  imports: [
+    TypeOrmModule.forFeature([
+      JobEntity,
+      OrganizationEntity,
+      ApplicationEntity,
+    ]),
+  ],
   controllers: [JobController],
   providers: [
     JobService,

@@ -23,6 +23,13 @@ export class ResumeRepositoryImpl {
     return resumeOrm ? ResumeDomainOrmMapper.toDomain(resumeOrm) : null;
   }
 
+  async findByUserId(userId: string): Promise<Resume | null> {
+    const resumeOrm = await this.resumeRepository.findOne({
+      where: { userId },
+    });
+    return resumeOrm ? ResumeDomainOrmMapper.toDomain(resumeOrm) : null;
+  }
+
   async findAll(): Promise<Resume[]> {
     const resumesOrm = await this.resumeRepository.find();
     return resumesOrm.map(resumeOrm =>

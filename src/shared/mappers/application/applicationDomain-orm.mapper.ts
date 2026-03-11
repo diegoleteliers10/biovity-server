@@ -15,7 +15,7 @@ export class ApplicationDomainOrmMapper {
   }
 
   static toDomain(entity: ApplicationEntity): Application {
-    return new Application(
+    const application = new Application(
       entity.id,
       entity.jobId,
       entity.candidateId,
@@ -23,5 +23,27 @@ export class ApplicationDomainOrmMapper {
       entity.updatedAt,
       entity.status,
     );
+
+    // Map job relation if exists
+    if (entity.job) {
+      (application as any).job = {
+        id: entity.job.id,
+        title: entity.job.title,
+        organizationId: entity.job.organizationId,
+      };
+    }
+
+    // Map candidate relation if exists
+    if (entity.candidate) {
+      (application as any).candidate = {
+        id: entity.candidate.id,
+        name: entity.candidate.name,
+        email: entity.candidate.email,
+        avatar: entity.candidate.avatar,
+        profession: entity.candidate.profession,
+      };
+    }
+
+    return application;
   }
 }

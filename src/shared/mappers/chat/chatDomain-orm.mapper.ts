@@ -7,7 +7,6 @@ export class ChatDomainOrmMapper {
     chatOrm.id = domain.id;
     chatOrm.recruiterId = domain.recruiterId;
     chatOrm.professionalId = domain.professionalId;
-    chatOrm.jobId = domain.jobId;
     chatOrm.lastMessage = domain.lastMessage;
     chatOrm.unreadCountRecruiter = domain.unreadCountRecruiter;
     chatOrm.unreadCountProfessional = domain.unreadCountProfessional;
@@ -22,7 +21,6 @@ export class ChatDomainOrmMapper {
       entity.id,
       entity.recruiterId,
       entity.professionalId,
-      entity.jobId,
       entity.lastMessage,
       entity.unreadCountRecruiter,
       entity.unreadCountProfessional,

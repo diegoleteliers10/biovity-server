@@ -1,5 +1,10 @@
 import { Injectable, NotFoundException, Inject } from '@nestjs/common';
-import { IUserRepository } from '../repositories/user.repository';
+import {
+  IUserRepository,
+  UserFilters,
+  PaginationOptions,
+  PaginatedResult,
+} from '../repositories/user.repository';
 import { IUserUseCase, UpdateUserInput } from '../use-cases/user/user.use-case';
 import { User, UserType } from '../domain/entities/user.entity';
 
@@ -18,8 +23,11 @@ export class UserService implements IUserUseCase {
     return this.userRepository.findByEmail(email);
   }
 
-  async getAllUsers(): Promise<User[]> {
-    return this.userRepository.findAll();
+  async getAllUsers(
+    filters?: UserFilters,
+    pagination?: PaginationOptions,
+  ): Promise<PaginatedResult<User>> {
+    return this.userRepository.findAll(filters, pagination);
   }
 
   async updateUser(id: string, data: UpdateUserInput): Promise<User | null> {
@@ -37,6 +45,9 @@ export class UserService implements IUserUseCase {
       organizationId: data.organizationId ?? existingUser.organizationId,
       avatar: data.avatar ?? existingUser.avatar,
       profession: data.profession ?? existingUser.profession,
+      birthday: data.birthday ?? existingUser.birthday,
+      phone: data.phone ?? existingUser.phone,
+      location: data.location ?? existingUser.location,
     };
 
     return this.userRepository.update(id, updatedUser);

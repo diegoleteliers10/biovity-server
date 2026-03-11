@@ -60,8 +60,29 @@ export class JobService implements IJobUseCase {
     return this.jobRepository.findById(id);
   }
 
-  async getAllJobs(): Promise<Job[]> {
-    return this.jobRepository.findAll();
+  async getAllJobs(filters?: any, pagination?: any): Promise<any> {
+    return this.jobRepository.findAll(filters, pagination);
+  }
+
+  async getJobsByOrganizationId(
+    organizationId: string,
+    pagination?: any,
+  ): Promise<any> {
+    return this.jobRepository.findByOrganizationId(organizationId, pagination);
+  }
+
+  async getJobByIdWithApplications(id: string): Promise<any> {
+    return this.jobRepository.findByIdWithApplications(id);
+  }
+
+  async getAllJobsWithApplicationCounts(
+    organizationId: string,
+    pagination?: any,
+  ): Promise<any> {
+    return this.jobRepository.findAllWithApplicationCounts(
+      organizationId,
+      pagination,
+    );
   }
 
   async updateJob(
@@ -109,8 +130,8 @@ export class JobService implements IJobUseCase {
   ): JobBenefits[] {
     if (!data) return [];
     return data.map(b => ({
+      tipo: (b.tipo as string) || '',
       title: (b.title as string) || '',
-      description: b.description as string | undefined,
     }));
   }
 
