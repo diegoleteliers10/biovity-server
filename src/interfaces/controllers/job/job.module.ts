@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
+import { ConditionalDatabaseModule } from '../../../infrastructure/config/conditional-database.module';
 import {
   JobEntity,
   OrganizationEntity,
@@ -12,7 +12,7 @@ import { OrganizationRepositoryImpl } from '../../../infrastructure/persistence/
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([
+    ConditionalDatabaseModule.forFeature([
       JobEntity,
       OrganizationEntity,
       ApplicationEntity,

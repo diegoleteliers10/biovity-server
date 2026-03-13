@@ -8,7 +8,7 @@ export class UserDomainOrmMapper {
     userOrm.id = domain.id;
     userOrm.email = domain.email;
     userOrm.name = domain.name;
-    userOrm.type = domain.type as UserType;
+    userOrm.type = domain.type;
     userOrm.isEmailVerified = domain.isEmailVerified;
     userOrm.isActive = domain.isActive;
     userOrm.verificationToken = domain.verificationToken;

@@ -67,9 +67,7 @@ export class MessageController {
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  async deleteMessage(
-    @Param('id', ParseUUIDPipe) id: string,
-  ): Promise<void> {
+  async deleteMessage(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
     await this.messageService.deleteMessage(id);
   }
 }

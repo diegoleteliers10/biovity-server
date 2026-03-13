@@ -1,12 +1,12 @@
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
+import { ConditionalDatabaseModule } from '../../../infrastructure/config/conditional-database.module';
 import { ChatEntity } from '../../../infrastructure/database/orm';
 import { ChatController } from './chat.controller';
 import { ChatService } from '../../../core/services/chat.service';
 import { ChatRepositoryImpl } from '../../../infrastructure/persistence/chat.repository.impl';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([ChatEntity])],
+  imports: [ConditionalDatabaseModule.forFeature([ChatEntity])],
   controllers: [ChatController],
   providers: [
     ChatService,

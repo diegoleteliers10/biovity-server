@@ -21,6 +21,7 @@ export class ChatDomainOrmMapper {
       entity.id,
       entity.recruiterId,
       entity.professionalId,
+      undefined, // jobId
       entity.lastMessage,
       entity.unreadCountRecruiter,
       entity.unreadCountProfessional,

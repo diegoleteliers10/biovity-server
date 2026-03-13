@@ -35,6 +35,7 @@ export class ChatService implements IChatUseCase {
       this.generateId(),
       data.recruiterId,
       data.professionalId,
+      data.jobId,
       data.lastMessage,
       0,
       0,

@@ -75,9 +75,7 @@ export class ChatController {
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  async deleteChat(
-    @Param('id', ParseUUIDPipe) id: string,
-  ): Promise<void> {
+  async deleteChat(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
     await this.chatService.deleteChat(id);
   }
 }

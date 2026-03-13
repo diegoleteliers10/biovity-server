@@ -8,6 +8,10 @@ export class ChatCreateDto {
   professionalId: string;
 
   @IsOptional()
+  @IsUUID()
+  jobId?: string;
+
+  @IsOptional()
   @IsString()
   lastMessage?: string;
 }

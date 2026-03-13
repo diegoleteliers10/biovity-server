@@ -1,9 +1,4 @@
-import {
-  IsString,
-  IsUUID,
-  IsBoolean,
-  IsDate,
-} from 'class-validator';
+import { IsString, IsUUID, IsBoolean, IsDate } from 'class-validator';
 
 export class MessageResponseDto {
   @IsUUID()

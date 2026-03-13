@@ -16,6 +16,7 @@ export interface IChatUseCase {
 export interface CreateChatInput {
   recruiterId: string;
   professionalId: string;
+  jobId?: string;
   lastMessage?: string;
 }
 

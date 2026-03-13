@@ -16,17 +16,40 @@ export const DatabaseConfig = TypeOrmModule.forRootAsync({
   imports: [ConfigModule],
   inject: [ConfigService],
   useFactory: (config: ConfigService) => {
-    const dbConfig = {
-      host: config.get<string>('DB_HOST'),
-      port: config.get<number>('DB_PORT'),
-      username: config.get<string>('DB_USERNAME'),
-      password: config.get<string>('DB_PASSWORD'),
-      database: config.get<string>('DB_NAME'),
-    };
+    // Verificar si hay configuración de base de datos local disponible
+    const dbHost = config.get<string>('DB_HOST');
+    const dbPort = config.get<number>('DB_PORT');
+    const dbUsername = config.get<string>('DB_USERNAME');
+    const dbPassword = config.get<string>('DB_PASSWORD');
+    const dbName = config.get<string>('DB_NAME');
+
+    // Si no hay configuración de base de datos local, usar configuración vacía para evitar errores
+    if (!dbHost || !dbPort || !dbUsername || !dbPassword || !dbName) {
+      console.log('⚠️  No se encontró configuración de base de datos local. Usando solo Supabase.');
+      return {
+        type: 'postgres',
+        host: 'localhost',
+        port: 5432,
+        username: 'dummy',
+        password: 'dummy',
+        database: 'dummy',
+        entities: [],
+        synchronize: false,
+        logging: false,
+        // Desactivar la conexión real
+        retryAttempts: 1,
+        retryDelay: 1000,
+        keepConnectionAlive: false,
+      };
+    }
 
     return {
       type: 'postgres',
-      ...dbConfig,
+      host: dbHost,
+      port: dbPort,
+      username: dbUsername,
+      password: dbPassword,
+      database: dbName,
       entities: [
         UserEntity,
         OrganizationEntity,

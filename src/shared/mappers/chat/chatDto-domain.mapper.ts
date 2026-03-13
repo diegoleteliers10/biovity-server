@@ -6,6 +6,7 @@ export class ChatDtoDomainMapper {
     return {
       recruiterId: dto.recruiterId,
       professionalId: dto.professionalId,
+      jobId: dto.jobId,
       lastMessage: dto.lastMessage,
     };
   }

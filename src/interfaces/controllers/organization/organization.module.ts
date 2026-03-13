@@ -1,12 +1,12 @@
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
+import { ConditionalDatabaseModule } from '../../../infrastructure/config/conditional-database.module';
 import { OrganizationEntity } from '../../../infrastructure/database/orm';
 import { OrganizationController } from './organization.controller';
 import { OrganizationService } from '../../../core/services/organization.service';
 import { OrganizationRepositoryImpl } from '../../../infrastructure/persistence/organization.repository.impl';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([OrganizationEntity])],
+  imports: [ConditionalDatabaseModule.forFeature([OrganizationEntity])],
   controllers: [OrganizationController],
   providers: [
     OrganizationService,

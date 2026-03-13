@@ -5,7 +5,9 @@ import {
 import { UpdateOrganizationInput } from '../../../core/use-cases/organization/organization.use-case';
 
 export class OrganizationDtoDomainMapper {
-  static toCreateOrganizationInput(dto: OrganizationCreateDto): UpdateOrganizationInput {
+  static toCreateOrganizationInput(
+    dto: OrganizationCreateDto,
+  ): UpdateOrganizationInput {
     return {
       name: dto.name,
       website: dto.website,
@@ -14,7 +16,9 @@ export class OrganizationDtoDomainMapper {
     };
   }
 
-  static toCreateInputFromDto(dto: OrganizationCreateDto): UpdateOrganizationInput {
+  static toCreateInputFromDto(
+    dto: OrganizationCreateDto,
+  ): UpdateOrganizationInput {
     return {
       name: dto.name,
       website: dto.website,
