@@ -1,8 +1,4 @@
-import {
-  IsString,
-  IsOptional,
-  IsObject,
-} from 'class-validator';
+import { IsString, IsOptional, IsObject } from 'class-validator';
 import { OrganizationAddressDto } from './organization-create.dto';
 
 export class OrganizationUpdateDto {

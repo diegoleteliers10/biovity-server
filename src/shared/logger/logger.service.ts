@@ -69,18 +69,13 @@ export class AppLogger implements LoggerService {
     return `${timestamp}${correlation} ${message}`;
   }
 
-  logRequest(request: Request, extraContext?: LogContext): void {
+  logRequest(request: Request): void {
     const logger = new Logger('HTTP');
     const message = `${request.method} ${request.url}`;
     logger.log(message);
   }
 
-  logResponse(
-    request: Request,
-    statusCode: number,
-    duration: number,
-    extraContext?: LogContext,
-  ): void {
+  logResponse(request: Request, statusCode: number, duration: number): void {
     const logger = new Logger('HTTP');
     const message = `${request.method} ${request.url} ${statusCode} ${duration}ms`;
 

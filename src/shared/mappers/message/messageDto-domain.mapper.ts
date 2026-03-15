@@ -2,7 +2,10 @@ import { MessageCreateDto } from '../../../interfaces/dtos/message/message-creat
 import { CreateMessageInput } from '../../../core/use-cases/message/message.use-case';
 
 export class MessageDtoDomainMapper {
-  static toCreateMessageInput(dto: MessageCreateDto, senderId: string): CreateMessageInput {
+  static toCreateMessageInput(
+    dto: MessageCreateDto,
+    senderId: string,
+  ): CreateMessageInput {
     return {
       chatId: dto.chatId,
       senderId: senderId,

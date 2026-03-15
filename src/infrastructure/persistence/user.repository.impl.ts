@@ -2,7 +2,7 @@ import { IUserRepository } from '../../core/repositories/user.repository';
 import { Injectable } from '@nestjs/common';
 import { UserEntity } from '../database/orm';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Like, ILike } from 'typeorm';
+import { Repository } from 'typeorm';
 import { User } from '../../core/domain/entities/user.entity';
 import { UserDomainOrmMapper } from '../../shared/mappers/user/userDomain-orm.mapper';
 import {

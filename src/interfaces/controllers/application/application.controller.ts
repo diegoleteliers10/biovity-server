@@ -47,12 +47,6 @@ export class ApplicationController {
   async getAllApplications(
     @Query() query: ApplicationQueryDto,
   ): Promise<ApplicationPaginatedResponseDto> {
-    const filters = {
-      jobId: query.jobId,
-      candidateId: query.candidateId,
-      status: query.status,
-    };
-
     const pagination = {
       page: query.page,
       limit: query.limit,

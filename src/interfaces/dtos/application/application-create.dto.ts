@@ -1,8 +1,4 @@
-import {
-  IsString,
-  IsOptional,
-  IsUUID,
-} from 'class-validator';
+import { IsUUID } from 'class-validator';
 
 export class ApplicationCreateDto {
   @IsUUID()

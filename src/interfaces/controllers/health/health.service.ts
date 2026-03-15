@@ -5,10 +5,16 @@ import { DataSource } from 'typeorm';
 export class HealthService {
   constructor(private readonly dataSource: DataSource) {}
 
-  async check(): Promise<{ status: string; timestamp: string; checks: HealthCheckResult }> {
+  async check(): Promise<{
+    status: string;
+    timestamp: string;
+    checks: HealthCheckResult;
+  }> {
     const checks = await this.performHealthChecks();
 
-    const isHealthy = Object.values(checks).every((check) => check.status === 'up');
+    const isHealthy = Object.values(checks).every(
+      (check: HealthCheckResponse) => check.status === 'up',
+    );
 
     return {
       status: isHealthy ? 'ok' : 'degraded',
@@ -24,11 +30,12 @@ export class HealthService {
         status: 'up',
         message: 'Database connection is healthy',
       };
-    } catch (error) {
+    } catch (error: unknown) {
+      const err = error as { message?: string };
       return {
         status: 'down',
         message: 'Database connection failed',
-        error: error.message,
+        error: err.message,
       };
     }
   }

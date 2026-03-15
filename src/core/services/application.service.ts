@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException, ConflictException, Inject } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+  Inject,
+} from '@nestjs/common';
 import * as crypto from 'crypto';
 import { IApplicationRepository } from '../repositories/application.respository';
 import { IJobRepository } from '../repositories/job.repository';
@@ -7,7 +12,10 @@ import {
   IApplicationUseCase,
   CreateApplicationInput,
 } from '../use-cases/application/application.use-case';
-import { Application, ApplicationStatus } from '../domain/entities/application.entity';
+import {
+  Application,
+  ApplicationStatus,
+} from '../domain/entities/application.entity';
 
 @Injectable()
 export class ApplicationService implements IApplicationUseCase {
@@ -38,10 +46,11 @@ export class ApplicationService implements IApplicationUseCase {
     }
 
     // Check if user already applied to this job
-    const existingApplication = await this.applicationRepository.findByJobAndCandidate(
-      data.jobId,
-      data.candidateId,
-    );
+    const existingApplication =
+      await this.applicationRepository.findByJobAndCandidate(
+        data.jobId,
+        data.candidateId,
+      );
     if (existingApplication) {
       throw new ConflictException(
         `User with id ${data.candidateId} already applied to job ${data.jobId}`,
@@ -67,15 +76,30 @@ export class ApplicationService implements IApplicationUseCase {
   async getApplicationsByJobId(
     jobId: string,
     pagination?: { page?: number; limit?: number },
-  ): Promise<{ data: Application[]; total: number; page: number; limit: number; totalPages: number }> {
+  ): Promise<{
+    data: Application[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  }> {
     return this.applicationRepository.findByJobId(jobId, pagination);
   }
 
   async getApplicationsByCandidateId(
     candidateId: string,
     pagination?: { page?: number; limit?: number },
-  ): Promise<{ data: Application[]; total: number; page: number; limit: number; totalPages: number }> {
-    return this.applicationRepository.findByCandidateId(candidateId, pagination);
+  ): Promise<{
+    data: Application[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  }> {
+    return this.applicationRepository.findByCandidateId(
+      candidateId,
+      pagination,
+    );
   }
 
   async updateApplicationStatus(
@@ -103,10 +127,11 @@ export class ApplicationService implements IApplicationUseCase {
     jobId: string,
     candidateId: string,
   ): Promise<boolean> {
-    const existingApplication = await this.applicationRepository.findByJobAndCandidate(
-      jobId,
-      candidateId,
-    );
+    const existingApplication =
+      await this.applicationRepository.findByJobAndCandidate(
+        jobId,
+        candidateId,
+      );
     return !!existingApplication;
   }
 }

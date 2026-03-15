@@ -12,7 +12,9 @@ import { JobRepositoryImpl } from '../../../infrastructure/persistence/job.repos
 import { UserRepositoryImpl } from '../../../infrastructure/persistence/user.repository.impl';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([ApplicationEntity, JobEntity, UserEntity])],
+  imports: [
+    TypeOrmModule.forFeature([ApplicationEntity, JobEntity, UserEntity]),
+  ],
   controllers: [ApplicationController],
   providers: [
     ApplicationService,

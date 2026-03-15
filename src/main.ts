@@ -2,6 +2,11 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import * as cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
+import {
+  LoggingInterceptor,
+  TransformInterceptor,
+} from './shared/interceptors';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
@@ -30,9 +35,32 @@ async function bootstrap() {
     }),
   );
 
+  // Configure global interceptors
+  app.useGlobalInterceptors(
+    new LoggingInterceptor(),
+    new TransformInterceptor(),
+  );
+
+  // Configure Swagger
+  const config = new DocumentBuilder()
+    .setTitle('Biovity API')
+    .setDescription('API para plataforma de empleos en biotecnología')
+    .setVersion('1.0')
+    .addBearerAuth()
+    .addTag('jobs', 'Operaciones de ofertas de trabajo')
+    .addTag('users', 'Operaciones de usuarios')
+    .addTag('organizations', 'Operaciones de organizaciones')
+    .addTag('applications', 'Operaciones de postulaciones')
+    .addTag('health', 'Verificación de estado de la API')
+    .build();
+
+  const document = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('api/docs', app, document);
+
   const port = process.env.PORT || 3001;
   await app.listen(port);
   logger.log(`Application is running on: http://localhost:${port}/api/v1`);
+  logger.log(`Swagger docs available at: http://localhost:${port}/api/docs`);
 }
 
 bootstrap().catch(error => {
