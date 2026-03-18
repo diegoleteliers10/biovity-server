@@ -2,6 +2,7 @@ import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { DatabaseConfig } from './infrastructure/config/database.config';
 import { LoggerModule, LoggerMiddleware } from './shared/logger';
+import { InterceptorsModule } from './shared/interceptors/interceptors.module';
 import { JobModule } from './interfaces/controllers/job/job.module';
 import { UserModule } from './interfaces/controllers/user/user.module';
 import { OrganizationModule } from './interfaces/controllers/organization/organization.module';
@@ -15,6 +16,7 @@ import { HealthModule } from './interfaces/controllers/health/health.module';
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     LoggerModule,
+    InterceptorsModule,
     DatabaseConfig,
     JobModule,
     UserModule,
