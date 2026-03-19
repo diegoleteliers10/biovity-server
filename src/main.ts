@@ -51,6 +51,10 @@ async function bootstrap() {
     .addTag('users', 'Operaciones de usuarios')
     .addTag('organizations', 'Operaciones de organizaciones')
     .addTag('applications', 'Operaciones de postulaciones')
+    .addTag('saved-jobs', 'Operaciones de empleos guardados')
+    .addTag('chat', 'Operaciones de chats')
+    .addTag('message', 'Operaciones de mensajes')
+    .addTag('resume', 'Operaciones de currículums')
     .addTag('health', 'Verificación de estado de la API')
     .build();
 

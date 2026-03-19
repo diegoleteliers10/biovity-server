@@ -10,6 +10,7 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
 import { OrganizationService } from '../../../core/services/organization.service';
 import { OrganizationCreateDto } from '../../dtos/organization/organization-create.dto';
 import { OrganizationUpdateDto } from '../../dtos/organization/organization-update.dto';
@@ -20,6 +21,7 @@ import {
   UpdateOrganizationInput,
 } from '../../../core/use-cases/organization/organization.use-case';
 
+@ApiTags('organizations')
 @Controller('organizations')
 export class OrganizationController {
   constructor(private readonly organizationService: OrganizationService) {}

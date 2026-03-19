@@ -10,12 +10,14 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
 import { ChatService } from '../../../core/services/chat.service';
 import { ChatDtoDomainMapper } from '../../../shared/mappers/chat/chatDto-domain.mapper';
 import { ChatCreateDto } from '../../dtos/chat/chat-create.dto';
 import { ChatResponseDto } from '../../dtos/chat/chat-response.dto';
 import { ChatDomainDtoMapper } from '../../../shared/mappers/chat/chatDomain-dto.mapper';
 
+@ApiTags('chat')
 @Controller('chats')
 export class ChatController {
   constructor(private readonly chatService: ChatService) {}

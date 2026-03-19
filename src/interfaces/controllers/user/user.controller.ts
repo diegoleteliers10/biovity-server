@@ -7,6 +7,7 @@ import {
   Query,
   ParseUUIDPipe,
 } from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
 import { UserService } from '../../../core/services/user.service';
 import { UserDtoDomainMapper } from '../../../shared/mappers/user/userDto-domain.mapper';
 import { UserUpdateDto } from '../../dtos/user/user-update.dto';
@@ -15,6 +16,7 @@ import { UserDomainDtoMapper } from '../../../shared/mappers/user/userDomain-dto
 import { UserQueryDto } from '../../dtos/user/user-query.dto';
 import { UserPaginatedResponseDto } from '../../dtos/user/user-paginated.dto';
 
+@ApiTags('users')
 @Controller('users')
 export class UserController {
   constructor(private readonly userService: UserService) {}

@@ -10,12 +10,14 @@ import {
   HttpStatus,
   ParseUUIDPipe,
 } from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
 import { ResumeService } from '../../../core/services/resume.service';
 import { ResumeDtoDomainMapper } from '../../../shared/mappers/resume/resumeDto-domain.mapper';
 import { ResumeCreateDto } from '../../dtos/resume/resume-create.dto';
 import { ResumeResponseDto } from '../../dtos/resume/resume-response.dto';
 import { ResumeDomainDtoMapper } from '../../../shared/mappers/resume/resumeDomain-dto.mapper';
 
+@ApiTags('resume')
 @Controller('resumes')
 export class ResumeController {
   constructor(private readonly resumeService: ResumeService) {}

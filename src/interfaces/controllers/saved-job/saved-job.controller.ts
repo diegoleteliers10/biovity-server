@@ -10,6 +10,7 @@ import {
   HttpStatus,
   ParseUUIDPipe,
 } from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
 import { SavedJobService } from '../../../core/services/saved-job.service';
 import { SavedJobDtoDomainMapper } from '../../../shared/mappers/saved-job/savedJobDto-domain.mapper';
 import { SavedJobCreateDto } from '../../dtos/saved-job/saved-job-create.dto';
@@ -17,15 +18,14 @@ import { SavedJobResponseDto } from '../../dtos/saved-job/saved-job-response.dto
 import { SavedJobDomainDtoMapper } from '../../../shared/mappers/saved-job/savedJobDomain-dto.mapper';
 import { SavedJobPaginatedResponseDto } from '../../dtos/saved-job/saved-job-paginated.dto';
 
+@ApiTags('saved-jobs')
 @Controller('saved-jobs')
 export class SavedJobController {
   constructor(private readonly savedJobService: SavedJobService) {}
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  async saveJob(
-    @Body() dto: SavedJobCreateDto,
-  ): Promise<SavedJobResponseDto> {
+  async saveJob(@Body() dto: SavedJobCreateDto): Promise<SavedJobResponseDto> {
     const input = SavedJobDtoDomainMapper.toCreateSavedJobInput(dto);
     const savedJob = await this.savedJobService.saveJob(input);
     return SavedJobDomainDtoMapper.toDto(savedJob);
@@ -47,7 +47,9 @@ export class SavedJobController {
     );
 
     return {
-      data: result.data.map(savedJob => SavedJobDomainDtoMapper.toDto(savedJob)),
+      data: result.data.map(savedJob =>
+        SavedJobDomainDtoMapper.toDto(savedJob),
+      ),
       total: result.total,
       page: result.page,
       limit: result.limit,
@@ -71,7 +73,9 @@ export class SavedJobController {
     );
 
     return {
-      data: result.data.map(savedJob => SavedJobDomainDtoMapper.toDto(savedJob)),
+      data: result.data.map(savedJob =>
+        SavedJobDomainDtoMapper.toDto(savedJob),
+      ),
       total: result.total,
       page: result.page,
       limit: result.limit,
@@ -98,9 +102,7 @@ export class SavedJobController {
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  async deleteSavedJob(
-    @Param('id', ParseUUIDPipe) id: string,
-  ): Promise<void> {
+  async deleteSavedJob(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
     await this.savedJobService.deleteSavedJob(id);
   }
 
