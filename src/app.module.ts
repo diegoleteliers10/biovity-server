@@ -10,6 +10,7 @@ import { ChatModule } from './interfaces/controllers/chat/chat.module';
 import { MessageModule } from './interfaces/controllers/message/message.module';
 import { ResumeModule } from './interfaces/controllers/resume/resume.module';
 import { ApplicationModule } from './interfaces/controllers/application/application.module';
+import { SavedJobModule } from './interfaces/controllers/saved-job/saved-job.module';
 import { HealthModule } from './interfaces/controllers/health/health.module';
 
 @Module({
@@ -25,6 +26,7 @@ import { HealthModule } from './interfaces/controllers/health/health.module';
     MessageModule,
     ResumeModule,
     ApplicationModule,
+    SavedJobModule,
     HealthModule,
   ],
   controllers: [],
