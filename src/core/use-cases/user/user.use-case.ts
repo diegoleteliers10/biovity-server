@@ -1,4 +1,4 @@
-import { User, UserType } from '../../domain/entities/user.entity';
+import { User } from '../../domain/entities/user.entity';
 
 export interface UserFilters {
   type?: 'professional' | 'organization';

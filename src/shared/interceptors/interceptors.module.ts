@@ -1,11 +1,13 @@
-import { Module } from '@nestjs/common';
+import { Global, Module } from '@nestjs/common';
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { LoggingInterceptor } from './logging.interceptor';
 import { TransformInterceptor } from './transform.interceptor';
 import { ErrorFormatInterceptor } from './error-format.interceptor';
 import { TimeoutInterceptor } from './timeout.interceptor';
+import { CacheInterceptor } from './cache.interceptor';
 import { AppLogger } from '../logger/logger.service';
 
+@Global()
 @Module({
   providers: [
     AppLogger,
@@ -13,6 +15,7 @@ import { AppLogger } from '../logger/logger.service';
     TransformInterceptor,
     ErrorFormatInterceptor,
     TimeoutInterceptor,
+    CacheInterceptor,
     {
       provide: APP_INTERCEPTOR,
       useClass: LoggingInterceptor,
@@ -35,6 +38,7 @@ import { AppLogger } from '../logger/logger.service';
     TransformInterceptor,
     ErrorFormatInterceptor,
     TimeoutInterceptor,
+    CacheInterceptor,
     AppLogger,
   ],
 })

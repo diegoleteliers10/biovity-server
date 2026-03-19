@@ -11,7 +11,6 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { OrganizationService } from '../../../core/services/organization.service';
-import { OrganizationDtoDomainMapper } from '../../../shared/mappers/organization/organizationDto-domain.mapper';
 import { OrganizationCreateDto } from '../../dtos/organization/organization-create.dto';
 import { OrganizationUpdateDto } from '../../dtos/organization/organization-update.dto';
 import { OrganizationResponseDto } from '../../dtos/organization/organization-response.dto';

@@ -4,7 +4,6 @@ import {
   IsEnum,
   IsBoolean,
   IsUUID,
-  IsDate,
   ValidateNested,
   IsObject,
 } from 'class-validator';

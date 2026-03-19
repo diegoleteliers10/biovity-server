@@ -1,4 +1,7 @@
-import { Application, ApplicationStatus } from '../../domain/entities/application.entity';
+import {
+  Application,
+  ApplicationStatus,
+} from '../../domain/entities/application.entity';
 
 export interface ApplicationFilters {
   jobId?: string;

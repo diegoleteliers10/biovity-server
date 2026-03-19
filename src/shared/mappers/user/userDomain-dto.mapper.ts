@@ -1,4 +1,4 @@
-import { User, UserType } from '../../../core/domain/entities/user.entity';
+import { User } from '../../../core/domain/entities/user.entity';
 import {
   UserResponseDto,
   UserType as UserTypeDto,

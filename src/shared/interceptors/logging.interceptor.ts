@@ -3,11 +3,12 @@ import {
   NestInterceptor,
   ExecutionContext,
   CallHandler,
+  Logger,
 } from '@nestjs/common';
-import { Observable } from 'rxjs';
+import type { Observable } from 'rxjs';
 import { tap } from 'rxjs/operators';
-import { Request } from 'express';
-import { Logger } from '@nestjs/common';
+import type { Request, Response } from 'express';
+import { randomUUID } from 'crypto';
 
 @Injectable()
 export class LoggingInterceptor implements NestInterceptor {
@@ -15,23 +16,34 @@ export class LoggingInterceptor implements NestInterceptor {
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
     const request = context.switchToHttp().getRequest<Request>();
-    const { method, url, route } = request;
-    const handlerName = route?.path || 'HTTP';
+    const response = context.switchToHttp().getResponse<Response>();
+    const { method, url } = request;
+    const headers = request.headers;
+
+    // Get or generate correlation ID
+    const correlationId =
+      (headers['x-correlation-id'] as string) || randomUUID();
     const startTime = Date.now();
 
-    // Log request
-    this.logger.log(`${method} ${url}`);
+    // Log incoming request
+    this.logger.log(`--> ${method} ${url} [corr:${correlationId}]`);
 
     return next.handle().pipe(
       tap({
         next: () => {
           const duration = Date.now() - startTime;
-          const response = context.switchToHttp().getResponse();
-          this.logger.log(`${method} ${url} ${response.statusCode} - ${duration}ms`);
+          const statusCode = response.statusCode;
+          this.logger.log(
+            `<-- ${method} ${url} ${statusCode} ${duration}ms [corr:${correlationId}]`,
+          );
         },
-        error: (error: Error) => {
+        error: (error: { status?: number; stack?: string }) => {
           const duration = Date.now() - startTime;
-          this.logger.error(`${method} ${url} - ${error.message} - ${duration}ms`, error.stack);
+          const statusCode = error.status || 500;
+          this.logger.error(
+            `<-- ${method} ${url} ${statusCode} ${duration}ms [corr:${correlationId}]`,
+            error.stack,
+          );
         },
       }),
     );

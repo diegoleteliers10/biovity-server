@@ -1,9 +1,4 @@
-import {
-  LoggerService,
-  Injectable,
-  Optional,
-  Inject,
-} from '@nestjs/common';
+import { LoggerService, Injectable, Optional, Inject } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { randomUUID } from 'crypto';
 
@@ -137,7 +132,8 @@ export class AppLogger implements LoggerService {
       ip:
         (request.headers['x-forwarded-for'] as string)?.split(',')[0] ||
         request.ip,
-      contentLength: parseInt(request.headers['content-length'] || '0', 10) || undefined,
+      contentLength:
+        parseInt(request.headers['content-length'] || '0', 10) || undefined,
 
       // Timestamp
       timestamp: new Date().toISOString(),
@@ -160,14 +156,22 @@ export class AppLogger implements LoggerService {
     method: string,
     path: string,
     request: Request,
-  ): (outcome: 'success' | 'error', statusCode?: number, error?: Error) => void {
+  ): (
+    outcome: 'success' | 'error',
+    statusCode?: number,
+    error?: Error,
+  ) => void {
     const startTime = Date.now();
     const wideEvent = this.createWideEvent(method, path, request);
 
     // Merge business context
     Object.assign(wideEvent, this.businessContext);
 
-    return (outcome: 'success' | 'error', statusCode?: number, error?: Error) => {
+    return (
+      outcome: 'success' | 'error',
+      statusCode?: number,
+      error?: Error,
+    ) => {
       wideEvent.durationMs = Date.now() - startTime;
       wideEvent.outcome = outcome;
       wideEvent.statusCode = statusCode;
@@ -219,9 +223,9 @@ export class AppLogger implements LoggerService {
       requestId: this.requestId,
       correlationId: this.correlationId,
       ...(trace && { trace }),
-      ...Object.keys(this.businessContext).length > 0 && {
+      ...(Object.keys(this.businessContext).length > 0 && {
         business: this.businessContext,
-      },
+      }),
     };
 
     if (level === 'error') {
@@ -239,7 +243,11 @@ export class AppLogger implements LoggerService {
     this.correlationId =
       (request.headers['x-correlation-id'] as string) || this.requestId;
 
-    const wideEvent = this.createWideEvent(request.method, request.url, request);
+    const wideEvent = this.createWideEvent(
+      request.method,
+      request.url,
+      request,
+    );
     if (extraContext) {
       Object.assign(wideEvent, extraContext);
     }
@@ -253,7 +261,11 @@ export class AppLogger implements LoggerService {
     duration: number,
     extraContext?: LogContext,
   ): void {
-    const wideEvent = this.createWideEvent(request.method, request.url, request);
+    const wideEvent = this.createWideEvent(
+      request.method,
+      request.url,
+      request,
+    );
     wideEvent.statusCode = statusCode;
     wideEvent.durationMs = duration;
     wideEvent.outcome = statusCode >= 400 ? 'error' : 'success';

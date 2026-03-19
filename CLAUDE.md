@@ -2,6 +2,41 @@
 
 NestJS-based backend API server for a job posting and application platform.
 
+## Research & Implementation Workflow
+
+Before implementing any new feature or making significant code changes, follow this workflow to leverage existing open source solutions and best practices.
+
+### Research Workflow
+
+Before implementing any new feature, follow this process:
+
+1. **Search** - Use Deep Wiki to find existing implementations
+2. **Analyze** - Check source code of relevant dependencies
+3. **Plan** - Break down the task into steps
+4. **Implement** - Write the code following project conventions
+5. **Test** - Verify the implementation works
+6. **Document** - Update CLAUDE.md if needed
+
+### MCP Tools Usage
+
+#### Deep Wiki - Search GitHub Repos
+
+```bash
+# Deep Wiki - Search GitHub repos for implementations
+mcp_code__deepwiki_search_repos query="nestjs health check best practices" language="typescript"
+mcp_code__deepwiki_search_repos query="nestjs typeorm pagination" language="typescript"
+
+# OpenSrc MCP - View dependency source code
+mcp_code__opensrc_get_source package="@nestjs/common" symbol="Logger"
+mcp_code__opensrc_get_package package="@nestjs/typeorm"
+
+# Sequential Thinking - Plan complex tasks
+mcp_code__sequential-thinking_start problem="Implement JWT authentication" context='{"project": "biovity-server"}'
+mcp_code__sequential-thinking_continue thought="Use @nestjs/jwt and @nestjs/passport" thoughtNumber=1 totalThoughts=3
+mcp_code__sequential-thinking_finish thoughtNumber=3 solution="1. Install packages 2. Create auth module 3. Add guards"
+```
+
+
 ## Tech Stack
 
 - **Framework:** NestJS v11

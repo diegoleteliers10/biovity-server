@@ -55,16 +55,16 @@ export class ResumeController {
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: Partial<ResumeCreateDto>,
   ): Promise<ResumeResponseDto | null> {
-    const input = ResumeDtoDomainMapper.toCreateResumeInput(dto as ResumeCreateDto);
+    const input = ResumeDtoDomainMapper.toCreateResumeInput(
+      dto as ResumeCreateDto,
+    );
     const resume = await this.resumeService.updateResume(id, input);
     return resume ? ResumeDomainDtoMapper.toDto(resume) : null;
   }
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  async deleteResume(
-    @Param('id', ParseUUIDPipe) id: string,
-  ): Promise<void> {
+  async deleteResume(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
     await this.resumeService.deleteResume(id);
   }
 }

@@ -19,7 +19,9 @@ export class OrganizationService implements IOrganizationUseCase {
     return crypto.randomUUID();
   }
 
-  async createOrganization(data: CreateOrganizationInput): Promise<Organization> {
+  async createOrganization(
+    data: CreateOrganizationInput,
+  ): Promise<Organization> {
     const organization = new Organization(
       this.generateId(),
       data.name,
@@ -56,7 +58,8 @@ export class OrganizationService implements IOrganizationUseCase {
       website: data.website ?? existingOrganization.website,
       phone: data.phone ?? existingOrganization.phone,
       address: data.address ?? existingOrganization.address,
-      subscriptionId: data.subscriptionId ?? existingOrganization.subscriptionId,
+      subscriptionId:
+        data.subscriptionId ?? existingOrganization.subscriptionId,
     };
 
     return this.organizationRepository.update(id, updatedOrganization);
