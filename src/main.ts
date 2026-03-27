@@ -14,10 +14,12 @@ async function bootstrap() {
     logger: ['error', 'warn', 'log', 'debug', 'verbose'],
   });
 
-  // Configure CORS
+  // Configure CORS - Allow all origins, methods, and headers
   app.enableCors({
-    origin: true, // Allow all origins in development
+    origin: '*',
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
+    allowedHeaders: 'Content-Type, Accept, Authorization, Origin',
   });
 
   // Configure cookie parser
