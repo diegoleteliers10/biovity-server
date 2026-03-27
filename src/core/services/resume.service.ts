@@ -2,7 +2,10 @@ import { Injectable, NotFoundException, Inject } from '@nestjs/common';
 import * as crypto from 'crypto';
 import { IResumeRepository } from '../repositories/resume.repository';
 import { IUserRepository } from '../repositories/user.repository';
-import { IResumeUseCase, CreateResumeInput } from '../use-cases/resume/resume.use-case';
+import {
+  IResumeUseCase,
+  CreateResumeInput,
+} from '../use-cases/resume/resume.use-case';
 import { Resume } from '../domain/entities/resume.entity';
 
 @Injectable()
@@ -25,9 +28,13 @@ export class ResumeService implements IResumeUseCase {
     }
 
     // Check if user already has a resume
-    const existingResume = await this.resumeRepository.findByUserId(data.userId);
+    const existingResume = await this.resumeRepository.findByUserId(
+      data.userId,
+    );
     if (existingResume) {
-      throw new NotFoundException(`User with id ${data.userId} already has a resume`);
+      throw new NotFoundException(
+        `User with id ${data.userId} already has a resume`,
+      );
     }
 
     const resume = new Resume(

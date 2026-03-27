@@ -1,6 +1,20 @@
 import { Application } from '../../../core/domain/entities/application.entity';
 import { ApplicationResponseDto } from '../../../interfaces/dtos/application/application-response.dto';
 
+interface JobRelation {
+  id: string;
+  title: string;
+  organizationId: string;
+}
+
+interface CandidateRelation {
+  id: string;
+  name: string;
+  email: string;
+  avatar?: string;
+  profession?: string;
+}
+
 export class ApplicationDomainDtoMapper {
   static toDto(domain: Application): ApplicationResponseDto {
     const dto = new ApplicationResponseDto();
@@ -12,22 +26,25 @@ export class ApplicationDomainDtoMapper {
     dto.updatedAt = domain.updatedAt;
 
     // Map job relation if exists
-    if ((domain as any).job) {
+    const job = (domain as unknown as { job?: JobRelation }).job;
+    if (job) {
       dto.job = {
-        id: (domain as any).job.id,
-        title: (domain as any).job.title,
-        organizationId: (domain as any).job.organizationId,
+        id: job.id,
+        title: job.title,
+        organizationId: job.organizationId,
       };
     }
 
     // Map candidate relation if exists
-    if ((domain as any).candidate) {
+    const candidate = (domain as unknown as { candidate?: CandidateRelation })
+      .candidate;
+    if (candidate) {
       dto.candidate = {
-        id: (domain as any).candidate.id,
-        name: (domain as any).candidate.name,
-        email: (domain as any).candidate.email,
-        avatar: (domain as any).candidate.avatar,
-        profession: (domain as any).candidate.profession,
+        id: candidate.id,
+        name: candidate.name,
+        email: candidate.email,
+        avatar: candidate.avatar,
+        profession: candidate.profession,
       };
     }
 

@@ -1,8 +1,4 @@
-import {
-  Job,
-  JobEmploymentType,
-  JobExperienceLevel,
-} from '../../../core/domain/entities/index';
+import { Job } from '../../../core/domain/entities/index';
 import { JobEntity } from '../../../infrastructure/database/orm/index';
 
 export class JobDomainOrmMapper {
@@ -12,8 +8,8 @@ export class JobDomainOrmMapper {
     jobOrm.organizationId = domain.organizationId;
     jobOrm.title = domain.title;
     jobOrm.description = domain.description;
-    jobOrm.employmentType = domain.employmentType as JobEmploymentType;
-    jobOrm.experienceLevel = domain.experienceLevel as JobExperienceLevel;
+    jobOrm.employmentType = domain.employmentType;
+    jobOrm.experienceLevel = domain.experienceLevel;
     jobOrm.benefits = domain.benefits;
     jobOrm.createdAt = domain.createdAt;
     jobOrm.updatedAt = domain.updatedAt;

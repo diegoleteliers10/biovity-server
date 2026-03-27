@@ -1,6 +1,20 @@
 import { Application } from '../../../core/domain/entities/index';
 import { ApplicationEntity } from '../../../infrastructure/database/orm/index';
 
+interface JobRelation {
+  id: string;
+  title: string;
+  organizationId: string;
+}
+
+interface CandidateRelation {
+  id: string;
+  name: string;
+  email: string;
+  avatar?: string;
+  profession?: string;
+}
+
 export class ApplicationDomainOrmMapper {
   static toOrm(domain: Application): ApplicationEntity {
     const appOrm = new ApplicationEntity();
@@ -25,22 +39,24 @@ export class ApplicationDomainOrmMapper {
     );
 
     // Map job relation if exists
-    if (entity.job) {
-      (application as any).job = {
-        id: entity.job.id,
-        title: entity.job.title,
-        organizationId: entity.job.organizationId,
+    const job = entity.job as JobRelation | undefined;
+    if (job) {
+      (application as unknown as { job: JobRelation }).job = {
+        id: job.id,
+        title: job.title,
+        organizationId: job.organizationId,
       };
     }
 
     // Map candidate relation if exists
-    if (entity.candidate) {
-      (application as any).candidate = {
-        id: entity.candidate.id,
-        name: entity.candidate.name,
-        email: entity.candidate.email,
-        avatar: entity.candidate.avatar,
-        profession: entity.candidate.profession,
+    const candidate = entity.candidate as CandidateRelation | undefined;
+    if (candidate) {
+      (application as unknown as { candidate: CandidateRelation }).candidate = {
+        id: candidate.id,
+        name: candidate.name,
+        email: candidate.email,
+        avatar: candidate.avatar,
+        profession: candidate.profession,
       };
     }
 

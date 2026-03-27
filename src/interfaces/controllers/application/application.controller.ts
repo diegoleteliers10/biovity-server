@@ -11,6 +11,7 @@ import {
   HttpStatus,
   ParseUUIDPipe,
 } from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
 import { ApplicationService } from '../../../core/services/application.service';
 import { ApplicationDtoDomainMapper } from '../../../shared/mappers/application/applicationDto-domain.mapper';
 import { ApplicationCreateDto } from '../../dtos/application/application-create.dto';
@@ -21,6 +22,7 @@ import { ApplicationPaginatedResponseDto } from '../../dtos/application/applicat
 import { ApplicationStatusUpdateDto } from '../../dtos/application/application-status.dto';
 import { ApplicationStatus } from '../../../core/domain/entities/application.entity';
 
+@ApiTags('applications')
 @Controller('applications')
 export class ApplicationController {
   constructor(private readonly applicationService: ApplicationService) {}
@@ -47,12 +49,6 @@ export class ApplicationController {
   async getAllApplications(
     @Query() query: ApplicationQueryDto,
   ): Promise<ApplicationPaginatedResponseDto> {
-    const filters = {
-      jobId: query.jobId,
-      candidateId: query.candidateId,
-      status: query.status,
-    };
-
     const pagination = {
       page: query.page,
       limit: query.limit,

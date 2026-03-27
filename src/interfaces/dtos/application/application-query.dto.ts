@@ -1,11 +1,4 @@
-import {
-  IsOptional,
-  IsInt,
-  IsEnum,
-  Min,
-  Max,
-  IsUUID,
-} from 'class-validator';
+import { IsOptional, IsInt, IsEnum, Min, Max, IsUUID } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export enum ApplicationStatus {

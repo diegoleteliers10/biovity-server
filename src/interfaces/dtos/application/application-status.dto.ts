@@ -1,7 +1,4 @@
-import {
-  IsString,
-  IsEnum,
-} from 'class-validator';
+import { IsEnum } from 'class-validator';
 
 export enum ApplicationStatus {
   PENDIENTE = 'pendiente',

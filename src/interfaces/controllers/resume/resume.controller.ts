@@ -10,12 +10,14 @@ import {
   HttpStatus,
   ParseUUIDPipe,
 } from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
 import { ResumeService } from '../../../core/services/resume.service';
 import { ResumeDtoDomainMapper } from '../../../shared/mappers/resume/resumeDto-domain.mapper';
 import { ResumeCreateDto } from '../../dtos/resume/resume-create.dto';
 import { ResumeResponseDto } from '../../dtos/resume/resume-response.dto';
 import { ResumeDomainDtoMapper } from '../../../shared/mappers/resume/resumeDomain-dto.mapper';
 
+@ApiTags('resume')
 @Controller('resumes')
 export class ResumeController {
   constructor(private readonly resumeService: ResumeService) {}
@@ -55,16 +57,16 @@ export class ResumeController {
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: Partial<ResumeCreateDto>,
   ): Promise<ResumeResponseDto | null> {
-    const input = ResumeDtoDomainMapper.toCreateResumeInput(dto as ResumeCreateDto);
+    const input = ResumeDtoDomainMapper.toCreateResumeInput(
+      dto as ResumeCreateDto,
+    );
     const resume = await this.resumeService.updateResume(id, input);
     return resume ? ResumeDomainDtoMapper.toDto(resume) : null;
   }
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  async deleteResume(
-    @Param('id', ParseUUIDPipe) id: string,
-  ): Promise<void> {
+  async deleteResume(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
     await this.resumeService.deleteResume(id);
   }
 }

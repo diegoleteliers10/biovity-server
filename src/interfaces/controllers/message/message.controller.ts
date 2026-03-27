@@ -10,12 +10,14 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
 import { MessageService } from '../../../core/services/message.service';
 import { MessageDtoDomainMapper } from '../../../shared/mappers/message/messageDto-domain.mapper';
 import { MessageCreateDto } from '../../dtos/message/message-create.dto';
 import { MessageResponseDto } from '../../dtos/message/message-response.dto';
 import { MessageDomainDtoMapper } from '../../../shared/mappers/message/messageDomain-dto.mapper';
 
+@ApiTags('message')
 @Controller('messages')
 export class MessageController {
   constructor(private readonly messageService: MessageService) {}
@@ -67,9 +69,7 @@ export class MessageController {
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  async deleteMessage(
-    @Param('id', ParseUUIDPipe) id: string,
-  ): Promise<void> {
+  async deleteMessage(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
     await this.messageService.deleteMessage(id);
   }
 }
