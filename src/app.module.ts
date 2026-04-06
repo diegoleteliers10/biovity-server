@@ -12,6 +12,7 @@ import { ResumeModule } from './interfaces/controllers/resume/resume.module';
 import { ApplicationModule } from './interfaces/controllers/application/application.module';
 import { SavedJobModule } from './interfaces/controllers/saved-job/saved-job.module';
 import { HealthModule } from './interfaces/controllers/health/health.module';
+import { EventModule } from './interfaces/controllers/event/event.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { HealthModule } from './interfaces/controllers/health/health.module';
     ApplicationModule,
     SavedJobModule,
     HealthModule,
+    EventModule,
   ],
   controllers: [],
   providers: [],

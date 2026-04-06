@@ -6,7 +6,7 @@ import {
   IMessageUseCase,
   CreateMessageInput,
 } from '../use-cases/message/message.use-case';
-import { Message } from '../domain/entities/message.entity';
+import { Message, MessageType, MessageContent } from '../domain/entities/message.entity';
 
 @Injectable()
 export class MessageService implements IMessageUseCase {
@@ -33,6 +33,8 @@ export class MessageService implements IMessageUseCase {
       data.chatId,
       data.senderId,
       data.content,
+      data.type || MessageType.TEXT,
+      (data.contentType as unknown as MessageContent) || null,
       false,
       new Date(),
     );

@@ -8,6 +8,8 @@ export class MessageDomainOrmMapper {
     messageOrm.chatId = domain.chatId;
     messageOrm.senderId = domain.senderId;
     messageOrm.content = domain.content;
+    messageOrm.type = domain.type;
+    messageOrm.contentType = domain.contentType;
     messageOrm.isRead = domain.isRead;
     messageOrm.createdAt = domain.createdAt;
 
@@ -20,6 +22,8 @@ export class MessageDomainOrmMapper {
       entity.chatId,
       entity.senderId,
       entity.content,
+      entity.type,
+      entity.contentType,
       entity.isRead,
       entity.createdAt,
     );

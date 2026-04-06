@@ -11,6 +11,8 @@ import {
   ChatEntity,
   MessageEntity,
   SavedJobEntity,
+  EventEntity,
+  EventNoteEntity,
 } from './src/infrastructure/database/orm';
 
 config();
@@ -33,6 +35,8 @@ export const AppDataSource = new DataSource({
     ChatEntity,
     MessageEntity,
     SavedJobEntity,
+    EventEntity,
+    EventNoteEntity,
   ],
   migrations: ['src/infrastructure/database/migrations/*.ts'],
   migrationsTableName: 'migrations',

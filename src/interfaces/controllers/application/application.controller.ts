@@ -116,6 +116,30 @@ export class ApplicationController {
     };
   }
 
+  @Get('organization/:organizationId')
+  async getApplicationsByOrganization(
+    @Param('organizationId', ParseUUIDPipe) organizationId: string,
+    @Query() query: ApplicationQueryDto,
+  ): Promise<ApplicationPaginatedResponseDto> {
+    const pagination = {
+      page: query.page,
+      limit: query.limit,
+    };
+
+    const result = await this.applicationService.getApplicationsByOrganizationId(
+      organizationId,
+      pagination,
+    );
+
+    return {
+      data: result.data.map(app => ApplicationDomainDtoMapper.toDto(app)),
+      total: result.total,
+      page: result.page,
+      limit: result.limit,
+      totalPages: result.totalPages,
+    };
+  }
+
   @Put(':id/status')
   async updateApplicationStatus(
     @Param('id', ParseUUIDPipe) id: string,
