@@ -19,7 +19,7 @@ export class SubscriptionEntity {
   @PrimaryGeneratedColumn('uuid')
   public id: string;
 
-  @Column({ nullable: false })
+  @Column({ type: 'uuid', nullable: false })
   public organizationId: string;
 
   @ManyToOne(() => OrganizationEntity)

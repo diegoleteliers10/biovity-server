@@ -2,14 +2,16 @@
   "version": 2,
   "builds": [
     {
-      "src": "dist/api/index.js",
+      "src": "api/index.ts",
       "use": "@vercel/node"
     }
   ],
   "routes": [
     {
-      "src": "/(.*)",
-      "dest": "dist/api/index.js"
+      "src": "/api/(.*)",
+      "dest": "api/index.ts"
     }
-  ]
+  ],
+  "buildCommand": "bun run build",
+  "outputDirectory": "dist"
 }
