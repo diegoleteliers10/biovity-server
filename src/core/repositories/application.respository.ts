@@ -38,6 +38,10 @@ export interface IApplicationRepository {
     candidateId: string,
     pagination?: PaginationOptions,
   ): Promise<PaginatedResult<Application>>;
+  findByOrganizationId(
+    organizationId: string,
+    pagination?: PaginationOptions,
+  ): Promise<PaginatedResult<Application>>;
   update(id: string, entity: Partial<Application>): Promise<Application | null>;
   delete(id: string): Promise<boolean>;
 }

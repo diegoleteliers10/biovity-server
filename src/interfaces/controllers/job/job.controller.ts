@@ -117,6 +117,7 @@ export class JobController {
     return {
       ...jobDto,
       applicationsCount: result.applicationsCount,
+      totalApplications: result.applicationsCount,
     } as JobWithApplicationsResponseDto;
   }
 
@@ -269,5 +270,26 @@ export class JobController {
   @ApiResponse({ status: 404, description: 'Oferta no encontrada' })
   async deleteJob(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
     await this.jobService.deleteJob(id);
+  }
+
+  @Put(':id/views')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Incrementar vistas de una oferta de trabajo' })
+  @ApiParam({
+    name: 'id',
+    type: 'string',
+    format: 'uuid',
+    description: 'ID de la oferta de trabajo',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Vistas incrementadas',
+    type: JobResponseDto,
+  })
+  async incrementViews(
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<JobResponseDto | null> {
+    const job = await this.jobService.incrementJobViews(id);
+    return job ? JobDomainDtoMapper.toDto(job) : null;
   }
 }

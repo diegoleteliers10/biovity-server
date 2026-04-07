@@ -1,5 +1,6 @@
 export * from './application.entity';
 export * from './chat.entity';
+export * from './event.entity';
 export * from './job.entity';
 export * from './message.entity';
 export * from './organization.entity';

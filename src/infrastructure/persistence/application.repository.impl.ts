@@ -69,6 +69,49 @@ export class ApplicationRepositoryImpl implements IApplicationRepository {
     return this.findByFilters({ candidateId }, pagination);
   }
 
+  async findByOrganizationId(
+    organizationId: string,
+    pagination?: PaginationOptions,
+  ): Promise<PaginatedResult<Application>> {
+    return this.findByFiltersWithOrganization(organizationId, pagination);
+  }
+
+  private async findByFiltersWithOrganization(
+    organizationId: string,
+    pagination?: PaginationOptions,
+  ): Promise<PaginatedResult<Application>> {
+    const page = pagination?.page || 1;
+    const limit = pagination?.limit || 10;
+    const skip = (page - 1) * limit;
+
+    const queryBuilder = this.applicationRepository
+      .createQueryBuilder('application')
+      .leftJoinAndSelect('application.job', 'job')
+      .leftJoinAndSelect('application.candidate', 'candidate')
+      .leftJoinAndSelect('job.organization', 'organization')
+      .where('organization.id = :organizationId', { organizationId });
+
+    const total = await queryBuilder.getCount();
+
+    queryBuilder
+      .skip(skip)
+      .take(limit)
+      .orderBy('application.createdAt', 'DESC');
+
+    const applicationsOrm = await queryBuilder.getMany();
+    const data = applicationsOrm.map(app =>
+      ApplicationDomainOrmMapper.toDomain(app),
+    );
+
+    return {
+      data,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
+  }
+
   private async findByFilters(
     filters?: ApplicationFilters,
     pagination?: PaginationOptions,
@@ -130,6 +173,7 @@ export class ApplicationRepositoryImpl implements IApplicationRepository {
 
     if (entity.status !== undefined) {
       updateData.status = entity.status;
+      updateData.stageChangedAt = new Date();
     }
 
     if (Object.keys(updateData).length === 0) {

@@ -56,6 +56,7 @@ export class Job {
     public salary: JobSalary = {},
     public status: JobStatus = JobStatus.DRAFT,
     public applicationsCount: number = 0,
+    public views: number = 0,
     public expiresAt?: Date,
     public location: JobLocation = {},
   ) {}

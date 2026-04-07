@@ -10,6 +10,8 @@ import {
   ChatEntity,
   MessageEntity,
   SavedJobEntity,
+  EventEntity,
+  EventNoteEntity,
 } from '../database/orm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 
@@ -39,6 +41,8 @@ export const DatabaseConfig = TypeOrmModule.forRootAsync({
         ChatEntity,
         MessageEntity,
         SavedJobEntity,
+        EventEntity,
+        EventNoteEntity,
       ],
       synchronize: false,
       logging: true,

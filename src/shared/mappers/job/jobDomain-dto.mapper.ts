@@ -15,6 +15,7 @@ export class JobDomainDtoMapper {
     dto.benefits = domain.benefits;
     dto.status = domain.status;
     dto.applicationsCount = domain.applicationsCount;
+    dto.views = domain.views;
     dto.expiresAt = domain.expiresAt;
     dto.createdAt = domain.createdAt;
     dto.updatedAt = domain.updatedAt;

@@ -134,4 +134,20 @@ export class ApplicationService implements IApplicationUseCase {
       );
     return !!existingApplication;
   }
+
+  async getApplicationsByOrganizationId(
+    organizationId: string,
+    pagination?: { page?: number; limit?: number },
+  ): Promise<{
+    data: Application[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  }> {
+    return this.applicationRepository.findByOrganizationId(
+      organizationId,
+      pagination,
+    );
+  }
 }

@@ -49,6 +49,7 @@ export class JobService implements IJobUseCase {
       this.mapSalary(data.salary),
       (data.status as JobStatus) || JobStatus.DRAFT,
       data.applicationsCount || 0,
+      0, // views
       data.expiresAt,
       this.mapLocation(data.location),
     );
@@ -58,6 +59,10 @@ export class JobService implements IJobUseCase {
 
   async getJobById(id: string): Promise<Job | null> {
     return this.jobRepository.findById(id);
+  }
+
+  async incrementJobViews(id: string): Promise<Job | null> {
+    return this.jobRepository.incrementViews(id);
   }
 
   async getAllJobs(filters?: any, pagination?: any): Promise<any> {

@@ -8,6 +8,8 @@ export class MessageDomainDtoMapper {
     dto.chatId = domain.chatId;
     dto.senderId = domain.senderId;
     dto.content = domain.content;
+    dto.type = domain.type;
+    dto.contentType = domain.contentType as unknown as Record<string, unknown> | undefined;
     dto.isRead = domain.isRead;
     dto.createdAt = domain.createdAt;
     return dto;

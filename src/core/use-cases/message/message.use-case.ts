@@ -1,4 +1,4 @@
-import { Message } from '../../domain/entities/message.entity';
+import { Message, MessageType } from '../../domain/entities/message.entity';
 
 export interface IMessageUseCase {
   createMessage(data: CreateMessageInput): Promise<Message>;
@@ -13,4 +13,6 @@ export interface CreateMessageInput {
   chatId: string;
   senderId: string;
   content: string;
+  type?: MessageType;
+  contentType?: Record<string, unknown> | null;
 }
