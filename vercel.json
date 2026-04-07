@@ -11,5 +11,6 @@
       "src": "/(.*)",
       "dest": "dist/api/index.js"
     }
-  ]
+  ],
+  "buildCommand": "bun run build"
 }
