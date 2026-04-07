@@ -14,6 +14,7 @@ export class EventDomainOrmMapper {
     entity.meetingUrl = domain.meetingUrl;
     entity.status = domain.status;
     entity.organizerId = domain.organizerId;
+    entity.organizationId = domain.organizationId;
     entity.candidateId = domain.candidateId;
     entity.applicationId = domain.applicationId;
     entity.createdAt = domain.createdAt;
@@ -33,6 +34,7 @@ export class EventDomainOrmMapper {
       entity.meetingUrl,
       entity.status,
       entity.organizerId,
+      entity.organizationId,
       entity.candidateId,
       entity.applicationId,
       entity.createdAt,

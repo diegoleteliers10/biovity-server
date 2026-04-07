@@ -109,6 +109,9 @@ export class JobEntity {
   @Column({ default: 0 })
   public applicationsCount: number;
 
+  @Column({ default: 0 })
+  public views: number;
+
   @Column({ type: 'timestamp', nullable: true })
   public expiresAt?: Date;
 

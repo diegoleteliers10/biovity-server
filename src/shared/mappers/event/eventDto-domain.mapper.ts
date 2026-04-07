@@ -13,6 +13,7 @@ export class EventDtoDomainMapper {
       location: dto.location,
       meetingUrl: dto.meetingUrl,
       organizerId: dto.organizerId,
+      organizationId: dto.organizationId,
       candidateId: dto.candidateId,
       applicationId: dto.applicationId,
     };

@@ -41,6 +41,7 @@ export interface IJobUseCase {
     pagination?: PaginationOptions,
   ): Promise<PaginatedResult<JobWithApplications>>;
   updateJob(id: string, data: UpdateJobInput): Promise<Job | null>;
+  incrementJobViews(id: string): Promise<Job | null>;
   deleteJob(id: string): Promise<boolean>;
 }
 

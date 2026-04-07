@@ -2,6 +2,7 @@ import { Event, EventNote } from '../domain/entities/event.entity';
 
 export interface EventFilters {
   organizerId?: string;
+  organizationId?: string;
   candidateId?: string;
   userId?: string;
   type?: 'interview' | 'task_deadline' | 'announcement' | 'onboarding';

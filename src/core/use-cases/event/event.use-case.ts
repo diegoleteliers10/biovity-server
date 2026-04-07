@@ -20,6 +20,7 @@ export interface PaginatedResult<T> {
 
 export interface EventFilters {
   organizerId?: string;
+  organizationId?: string;
   candidateId?: string;
   userId?: string;
   type?: EventType;
@@ -51,6 +52,7 @@ export interface CreateEventInput {
   location?: string;
   meetingUrl?: string;
   organizerId: string;
+  organizationId?: string;
   candidateId?: string;
   applicationId?: string;
 }

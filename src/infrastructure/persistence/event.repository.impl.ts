@@ -56,6 +56,12 @@ export class EventRepositoryImpl implements IEventRepository {
       });
     }
 
+    if (filters?.organizationId) {
+      queryBuilder.andWhere('event.organizationId = :organizationId', {
+        organizationId: filters.organizationId,
+      });
+    }
+
     if (filters?.candidateId) {
       queryBuilder.andWhere('event.candidateId = :candidateId', {
         candidateId: filters.candidateId,

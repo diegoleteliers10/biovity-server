@@ -9,6 +9,7 @@ import {
 } from 'typeorm';
 import { UserEntity } from './user.entity';
 import { ApplicationEntity } from './application.entity';
+import { OrganizationEntity } from './organization.entity';
 
 export enum EventType {
   INTERVIEW = 'interview',
@@ -56,6 +57,9 @@ export class EventEntity {
   public organizerId: string;
 
   @Column({ type: 'uuid', nullable: true })
+  public organizationId: string | null;
+
+  @Column({ type: 'uuid', nullable: true })
   public candidateId: string | null;
 
   @Column({ type: 'uuid', nullable: true })
@@ -64,6 +68,10 @@ export class EventEntity {
   @ManyToOne(() => UserEntity)
   @JoinColumn({ name: 'organizerId' })
   public organizer: UserEntity;
+
+  @ManyToOne(() => OrganizationEntity, { nullable: true })
+  @JoinColumn({ name: 'organizationId' })
+  public organization: OrganizationEntity;
 
   @ManyToOne(() => UserEntity)
   @JoinColumn({ name: 'candidateId' })

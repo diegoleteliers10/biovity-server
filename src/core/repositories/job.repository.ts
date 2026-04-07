@@ -36,6 +36,7 @@ export interface IJobRepository {
     pagination?: PaginationOptions,
   ): Promise<PaginatedResult<JobWithApplications>>;
   update(id: string, entity: Partial<Job>): Promise<Job | null>;
+  incrementViews(id: string): Promise<Job | null>;
   delete(id: string): Promise<boolean>;
 }
 

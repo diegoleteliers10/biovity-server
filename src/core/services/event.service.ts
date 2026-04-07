@@ -32,6 +32,7 @@ export class EventService implements IEventUseCase {
       data.meetingUrl || null,
       EventStatus.SCHEDULED,
       data.organizerId,
+      data.organizationId || null,
       data.candidateId || null,
       data.applicationId || null,
       new Date(),

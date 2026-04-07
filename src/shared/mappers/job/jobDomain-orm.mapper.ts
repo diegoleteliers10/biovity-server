@@ -16,6 +16,7 @@ export class JobDomainOrmMapper {
     jobOrm.salary = domain.salary;
     jobOrm.status = domain.status;
     jobOrm.applicationsCount = domain.applicationsCount;
+    jobOrm.views = domain.views;
     jobOrm.expiresAt = domain.expiresAt;
     jobOrm.location = domain.location;
 
@@ -36,6 +37,7 @@ export class JobDomainOrmMapper {
       entity.salary,
       entity.status,
       entity.applicationsCount,
+      entity.views,
       entity.expiresAt,
       entity.location,
     );

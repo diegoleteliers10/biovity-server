@@ -14,6 +14,7 @@ export class EventDomainDtoMapper {
     dto.meetingUrl = domain.meetingUrl;
     dto.status = domain.status as EventResponseDto['status'];
     dto.organizerId = domain.organizerId;
+    dto.organizationId = domain.organizationId;
     dto.candidateId = domain.candidateId;
     dto.applicationId = domain.applicationId;
     dto.createdAt = domain.createdAt;

@@ -14,5 +14,6 @@ export class Application {
     public createdAt: Date = new Date(),
     public updatedAt: Date = new Date(),
     public status: ApplicationStatus = ApplicationStatus.PENDIENTE,
+    public stageChangedAt: Date = new Date(),
   ) {}
 }

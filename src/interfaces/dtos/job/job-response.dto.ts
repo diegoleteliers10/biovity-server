@@ -168,6 +168,10 @@ export class JobResponseDto {
   @IsNumber()
   applicationsCount: number;
 
+  @ApiProperty({ example: 0, description: 'Conteo de vistas' })
+  @IsNumber()
+  views: number;
+
   @ApiPropertyOptional({
     example: '2024-12-31',
     description: 'Fecha de expiración',

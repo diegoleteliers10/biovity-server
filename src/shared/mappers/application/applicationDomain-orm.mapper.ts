@@ -24,6 +24,7 @@ export class ApplicationDomainOrmMapper {
     appOrm.candidateId = domain.candidateId;
     appOrm.createdAt = domain.createdAt;
     appOrm.updatedAt = domain.updatedAt;
+    appOrm.stageChangedAt = domain.stageChangedAt;
 
     return appOrm;
   }
@@ -36,6 +37,7 @@ export class ApplicationDomainOrmMapper {
       entity.createdAt,
       entity.updatedAt,
       entity.status,
+      entity.stageChangedAt,
     );
 
     // Map job relation if exists

@@ -47,6 +47,10 @@ export class EventCreateDto {
 
   @IsOptional()
   @IsUUID()
+  organizationId?: string;
+
+  @IsOptional()
+  @IsUUID()
   candidateId?: string;
 
   @IsOptional()
@@ -99,6 +103,10 @@ export class EventQueryDto {
 
   @IsOptional()
   @IsUUID()
+  organizationId?: string;
+
+  @IsOptional()
+  @IsUUID()
   candidateId?: string;
 
   @IsOptional()
@@ -141,6 +149,7 @@ export class EventResponseDto {
   meetingUrl: string | null;
   status: 'scheduled' | 'completed' | 'cancelled';
   organizerId: string;
+  organizationId: string | null;
   candidateId: string | null;
   applicationId: string | null;
   createdAt: Date;

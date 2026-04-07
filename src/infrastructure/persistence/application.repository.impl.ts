@@ -173,6 +173,7 @@ export class ApplicationRepositoryImpl implements IApplicationRepository {
 
     if (entity.status !== undefined) {
       updateData.status = entity.status;
+      updateData.stageChangedAt = new Date();
     }
 
     if (Object.keys(updateData).length === 0) {

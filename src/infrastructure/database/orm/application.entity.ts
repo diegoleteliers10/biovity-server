@@ -49,4 +49,7 @@ export class ApplicationEntity {
     default: ApplicationStatus.PENDIENTE,
   })
   public status: ApplicationStatus;
+
+  @Column({ type: 'timestamp', default: () => 'now()' })
+  public stageChangedAt: Date;
 }

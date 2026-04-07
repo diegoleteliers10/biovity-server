@@ -156,6 +156,11 @@ export class JobRepositoryImpl implements IJobRepository {
     return JobDomainOrmMapper.toDomain(savedJob);
   }
 
+  async incrementViews(id: string): Promise<Job | null> {
+    await this.jobRepository.increment({ id }, 'views', 1);
+    return this.findById(id);
+  }
+
   async delete(id: string): Promise<boolean> {
     const result = await this.jobRepository.delete(id);
     return result.affected != null && result.affected > 0;

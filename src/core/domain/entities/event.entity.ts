@@ -23,6 +23,7 @@ export class Event {
     public meetingUrl: string | null,
     public status: EventStatus,
     public organizerId: string,
+    public organizationId: string | null,
     public candidateId: string | null,
     public applicationId: string | null,
     public createdAt: Date = new Date(),
