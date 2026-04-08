@@ -1,6 +1,11 @@
 export { ApplicationEntity, ApplicationStatus } from './application.entity';
 export { ChatEntity } from './chat.entity';
-export { EventEntity, EventNoteEntity, EventType, EventStatus } from './event.entity';
+export {
+  EventEntity,
+  EventNoteEntity,
+  EventType,
+  EventStatus,
+} from './event.entity';
 export {
   JobEntity,
   JobStatus,

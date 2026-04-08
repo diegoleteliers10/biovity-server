@@ -7,13 +7,22 @@ export class DashboardMetricsDto {
   @ApiProperty({ example: 12, description: 'Postulaciones pendientes' })
   pendingApplications: number;
 
-  @ApiProperty({ example: 3, description: 'Entrevistas programadas en el período' })
+  @ApiProperty({
+    example: 3,
+    description: 'Entrevistas programadas en el período',
+  })
   interviewsThisPeriod: number;
 
-  @ApiProperty({ example: 15, description: 'Porcentaje de cambio vs período anterior' })
+  @ApiProperty({
+    example: 15,
+    description: 'Porcentaje de cambio vs período anterior',
+  })
   interviewsTrend: number;
 
-  @ApiProperty({ example: 8, description: 'Porcentaje de cambio en postulaciones vs período anterior' })
+  @ApiProperty({
+    example: 8,
+    description: 'Porcentaje de cambio en postulaciones vs período anterior',
+  })
   applicationsTrend: number;
 }
 
@@ -41,7 +50,10 @@ export class PipelineMetricsDto {
   @ApiProperty({ type: PipelineByStatusDto })
   byStatus: PipelineByStatusDto;
 
-  @ApiProperty({ example: 27, description: 'Tasa de conversión: entrevistas / total %' })
+  @ApiProperty({
+    example: 27,
+    description: 'Tasa de conversión: entrevistas / total %',
+  })
   conversionRate: number;
 }
 
@@ -49,7 +61,10 @@ export class JobPerformanceDto {
   @ApiProperty({ example: 'uuid', description: 'ID de la oferta' })
   jobId: string;
 
-  @ApiProperty({ example: 'Backend Developer', description: 'Título de la oferta' })
+  @ApiProperty({
+    example: 'Backend Developer',
+    description: 'Título de la oferta',
+  })
   jobTitle: string;
 
   @ApiProperty({ example: 150, description: 'Cantidad de vistas' })
@@ -58,7 +73,10 @@ export class JobPerformanceDto {
   @ApiProperty({ example: 12, description: 'Cantidad de postulaciones' })
   applications: number;
 
-  @ApiProperty({ example: 8, description: 'Tasa de conversión: postulaciones / vistas %' })
+  @ApiProperty({
+    example: 8,
+    description: 'Tasa de conversión: postulaciones / vistas %',
+  })
   applicationRate: number;
 }
 

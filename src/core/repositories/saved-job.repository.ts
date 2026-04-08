@@ -17,11 +17,36 @@ export interface PaginatedResult<T> {
 }
 
 export interface ISavedJobRepository {
-  create(entity: import('../../core/domain/entities/saved-job.entity').SavedJob): Promise<import('../../core/domain/entities/saved-job.entity').SavedJob>;
-  findById(id: string): Promise<import('../../core/domain/entities/saved-job.entity').SavedJob | null>;
-  findByUserAndJob(userId: string, jobId: string): Promise<import('../../core/domain/entities/saved-job.entity').SavedJob | null>;
-  findByUserId(userId: string, pagination?: PaginationOptions): Promise<PaginatedResult<import('../../core/domain/entities/saved-job.entity').SavedJob>>;
-  findByJobId(jobId: string, pagination?: PaginationOptions): Promise<PaginatedResult<import('../../core/domain/entities/saved-job.entity').SavedJob>>;
+  create(
+    entity: import('../../core/domain/entities/saved-job.entity').SavedJob,
+  ): Promise<import('../../core/domain/entities/saved-job.entity').SavedJob>;
+  findById(
+    id: string,
+  ): Promise<
+    import('../../core/domain/entities/saved-job.entity').SavedJob | null
+  >;
+  findByUserAndJob(
+    userId: string,
+    jobId: string,
+  ): Promise<
+    import('../../core/domain/entities/saved-job.entity').SavedJob | null
+  >;
+  findByUserId(
+    userId: string,
+    pagination?: PaginationOptions,
+  ): Promise<
+    PaginatedResult<
+      import('../../core/domain/entities/saved-job.entity').SavedJob
+    >
+  >;
+  findByJobId(
+    jobId: string,
+    pagination?: PaginationOptions,
+  ): Promise<
+    PaginatedResult<
+      import('../../core/domain/entities/saved-job.entity').SavedJob
+    >
+  >;
   delete(id: string): Promise<boolean>;
   deleteByUserAndJob(userId: string, jobId: string): Promise<boolean>;
 }

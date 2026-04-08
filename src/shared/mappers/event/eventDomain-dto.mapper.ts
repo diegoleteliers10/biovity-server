@@ -1,5 +1,8 @@
 import { Event, EventNote } from '../../../core/domain/entities/event.entity';
-import { EventResponseDto, EventNoteResponseDto } from '../../../interfaces/dtos/event/event.dto';
+import {
+  EventResponseDto,
+  EventNoteResponseDto,
+} from '../../../interfaces/dtos/event/event.dto';
 
 export class EventDomainDtoMapper {
   static toDto(domain: Event): EventResponseDto {

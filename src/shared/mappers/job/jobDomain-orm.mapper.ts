@@ -1,5 +1,5 @@
-import { Job } from '../../../core/domain/entities/index';
-import { JobEntity } from '../../../infrastructure/database/orm/index';
+import { Job } from '../../../core/domain/entities/job.entity';
+import { JobEntity } from '../../../infrastructure/database/orm/job.entity';
 
 export class JobDomainOrmMapper {
   static toOrm(domain: Job): JobEntity {
@@ -15,7 +15,6 @@ export class JobDomainOrmMapper {
     jobOrm.updatedAt = domain.updatedAt;
     jobOrm.salary = domain.salary;
     jobOrm.status = domain.status;
-    jobOrm.applicationsCount = domain.applicationsCount;
     jobOrm.views = domain.views;
     jobOrm.expiresAt = domain.expiresAt;
     jobOrm.location = domain.location;
@@ -36,7 +35,6 @@ export class JobDomainOrmMapper {
       entity.updatedAt,
       entity.salary,
       entity.status,
-      entity.applicationsCount,
       entity.views,
       entity.expiresAt,
       entity.location,

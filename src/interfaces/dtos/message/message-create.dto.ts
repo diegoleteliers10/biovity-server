@@ -1,4 +1,11 @@
-import { IsString, IsUUID, IsOptional, IsObject, ValidateNested, IsEnum } from 'class-validator';
+import {
+  IsString,
+  IsUUID,
+  IsOptional,
+  IsObject,
+  ValidateNested,
+  IsEnum,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 export enum MessageTypeDto {

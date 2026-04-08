@@ -35,7 +35,6 @@ export interface IJobUseCase {
     organizationId: string,
     pagination?: PaginationOptions,
   ): Promise<PaginatedResult<Job>>;
-  getJobByIdWithApplications(id: string): Promise<JobWithApplications | null>;
   getAllJobsWithApplicationCounts(
     organizationId: string,
     pagination?: PaginationOptions,
@@ -55,7 +54,6 @@ export interface CreateJobInput {
   location?: Record<string, unknown>;
   benefits?: Record<string, unknown>[];
   status?: string;
-  applicationsCount?: number;
   expiresAt?: Date;
 }
 
@@ -68,6 +66,5 @@ export interface UpdateJobInput {
   location?: Record<string, unknown>;
   benefits?: Record<string, unknown>[];
   status?: string;
-  applicationsCount?: number;
   expiresAt?: Date;
 }

@@ -31,9 +31,7 @@ export class EventController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  async createEvent(
-    @Body() dto: EventCreateDto,
-  ): Promise<EventResponseDto> {
+  async createEvent(@Body() dto: EventCreateDto): Promise<EventResponseDto> {
     const input = EventDtoDomainMapper.toCreateEventInput(dto);
     const event = await this.eventService.createEvent(input);
     return EventDomainDtoMapper.toDto(event);
@@ -50,9 +48,7 @@ export class EventController {
   }
 
   @Get()
-  async getEvents(
-    @Query() query: EventQueryDto,
-  ): Promise<{
+  async getEvents(@Query() query: EventQueryDto): Promise<{
     data: EventResponseDto[];
     total: number;
     page: number;

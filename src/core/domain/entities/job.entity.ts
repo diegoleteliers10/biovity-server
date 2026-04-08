@@ -55,7 +55,6 @@ export class Job {
     public updatedAt: Date = new Date(),
     public salary: JobSalary = {},
     public status: JobStatus = JobStatus.DRAFT,
-    public applicationsCount: number = 0,
     public views: number = 0,
     public expiresAt?: Date,
     public location: JobLocation = {},
@@ -66,10 +65,6 @@ export class Job {
       this.status === JobStatus.ACTIVE &&
       (!this.expiresAt || this.expiresAt > new Date())
     );
-  }
-
-  public incrementApplicationsCount(): void {
-    this.applicationsCount += 1;
   }
 
   public canReceiveApplications(): boolean {

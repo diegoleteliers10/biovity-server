@@ -1,4 +1,12 @@
-import { IsString, IsUUID, IsBoolean, IsDate, IsEnum, IsOptional, IsObject } from 'class-validator';
+import {
+  IsString,
+  IsUUID,
+  IsBoolean,
+  IsDate,
+  IsEnum,
+  IsOptional,
+  IsObject,
+} from 'class-validator';
 
 export enum MessageTypeResponseDto {
   TEXT = 'text',

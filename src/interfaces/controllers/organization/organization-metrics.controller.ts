@@ -7,7 +7,13 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiParam,
+  ApiQuery,
+} from '@nestjs/swagger';
 import { OrganizationMetricsService } from '../../../core/services/organization-metrics.service';
 import { OrganizationMetricsDto } from '../../dtos/organization/organization-metrics.dto';
 
@@ -41,6 +47,8 @@ export class OrganizationMetricsController {
     @Param('id', ParseUUIDPipe) id: string,
     @Query('period') period?: 'week' | 'month' | 'year',
   ): Promise<OrganizationMetricsDto> {
-    return this.metricsService.getMetrics(id, { period }) as Promise<OrganizationMetricsDto>;
+    return this.metricsService.getMetrics(id, {
+      period,
+    }) as Promise<OrganizationMetricsDto>;
   }
 }

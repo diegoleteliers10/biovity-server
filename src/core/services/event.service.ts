@@ -93,9 +93,11 @@ export class EventService implements IEventUseCase {
     }
 
     // Soft delete - set status to cancelled
-    return this.eventRepository.update(id, {
-      status: EventStatus.CANCELLED,
-    }).then(() => true);
+    return this.eventRepository
+      .update(id, {
+        status: EventStatus.CANCELLED,
+      })
+      .then(() => true);
   }
 
   async createNote(eventId: string, data: CreateNoteInput): Promise<EventNote> {

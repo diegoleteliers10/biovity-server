@@ -1,10 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import {
-  EventEntity,
-  EventNoteEntity,
-} from '../database/orm';
+import { EventEntity, EventNoteEntity } from '../database/orm';
 import { Event, EventNote } from '../../core/domain/entities/event.entity';
 import {
   IEventRepository,
@@ -79,7 +76,9 @@ export class EventRepositoryImpl implements IEventRepository {
     }
 
     if (filters?.status) {
-      queryBuilder.andWhere('event.status = :status', { status: filters.status });
+      queryBuilder.andWhere('event.status = :status', {
+        status: filters.status,
+      });
     }
 
     if (filters?.from) {
@@ -92,10 +91,7 @@ export class EventRepositoryImpl implements IEventRepository {
 
     const total = await queryBuilder.getCount();
 
-    queryBuilder
-      .skip(skip)
-      .take(limit)
-      .orderBy('event.startAt', 'ASC');
+    queryBuilder.skip(skip).take(limit).orderBy('event.startAt', 'ASC');
 
     const eventsOrm = await queryBuilder.getMany();
     const data = eventsOrm.map(e => EventDomainOrmMapper.toDomain(e));
@@ -113,12 +109,14 @@ export class EventRepositoryImpl implements IEventRepository {
     const updateData: Partial<EventEntity> = {};
 
     if (entity.title !== undefined) updateData.title = entity.title;
-    if (entity.description !== undefined) updateData.description = entity.description;
+    if (entity.description !== undefined)
+      updateData.description = entity.description;
     if (entity.type !== undefined) updateData.type = entity.type;
     if (entity.startAt !== undefined) updateData.startAt = entity.startAt;
     if (entity.endAt !== undefined) updateData.endAt = entity.endAt;
     if (entity.location !== undefined) updateData.location = entity.location;
-    if (entity.meetingUrl !== undefined) updateData.meetingUrl = entity.meetingUrl;
+    if (entity.meetingUrl !== undefined)
+      updateData.meetingUrl = entity.meetingUrl;
     if (entity.status !== undefined) updateData.status = entity.status;
 
     if (Object.keys(updateData).length === 0) {

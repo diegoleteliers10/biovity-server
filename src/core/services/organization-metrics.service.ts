@@ -1,7 +1,13 @@
 import { Injectable, NotFoundException, Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { JobEntity, ApplicationEntity, EventEntity, EventStatus, EventType } from '../../infrastructure/database/orm';
+import {
+  JobEntity,
+  ApplicationEntity,
+  EventEntity,
+  EventStatus,
+  EventType,
+} from '../../infrastructure/database/orm';
 import { JobStatus } from '../domain/entities/job.entity';
 import { OrganizationService } from './organization.service';
 
@@ -65,9 +71,12 @@ export class OrganizationMetricsService {
     filters?: OrganizationMetricsFilters,
   ): Promise<OrganizationMetrics> {
     // Verify organization exists
-    const organization = await this.organizationService.getOrganizationById(organizationId);
+    const organization =
+      await this.organizationService.getOrganizationById(organizationId);
     if (!organization) {
-      throw new NotFoundException(`Organization with id ${organizationId} not found`);
+      throw new NotFoundException(
+        `Organization with id ${organizationId} not found`,
+      );
     }
 
     const period = filters?.period || 'month';
@@ -92,7 +101,8 @@ export class OrganizationMetricsService {
     period: string,
   ): Promise<DashboardMetrics> {
     const now = new Date();
-    const { startOfPeriod, endOfPeriod, startOfLastPeriod } = this.getPeriodDates(now, period);
+    const { startOfPeriod, endOfPeriod, startOfLastPeriod } =
+      this.getPeriodDates(now, period);
 
     // Active jobs count
     const activeJobs = await this.jobRepository.count({
@@ -116,8 +126,14 @@ export class OrganizationMetricsService {
       .where('event.organizationId = :organizationId', { organizationId })
       .andWhere('event.type = :type', { type: EventType.INTERVIEW })
       .andWhere('event.status = :status', { status: EventStatus.SCHEDULED })
-      .andWhere("TO_CHAR(event.startAt AT TIME ZONE 'America/Santiago', 'YYYY-MM-DD') >= :startOfPeriod", { startOfPeriod })
-      .andWhere("TO_CHAR(event.startAt AT TIME ZONE 'America/Santiago', 'YYYY-MM-DD') < :endOfPeriod", { endOfPeriod })
+      .andWhere(
+        "TO_CHAR(event.startAt AT TIME ZONE 'America/Santiago', 'YYYY-MM-DD') >= :startOfPeriod",
+        { startOfPeriod },
+      )
+      .andWhere(
+        "TO_CHAR(event.startAt AT TIME ZONE 'America/Santiago', 'YYYY-MM-DD') < :endOfPeriod",
+        { endOfPeriod },
+      )
       .getCount();
 
     // Count interviews from last period for trend calculation
@@ -126,8 +142,14 @@ export class OrganizationMetricsService {
       .where('event.organizationId = :organizationId', { organizationId })
       .andWhere('event.type = :type', { type: EventType.INTERVIEW })
       .andWhere('event.status = :status', { status: EventStatus.SCHEDULED })
-      .andWhere("TO_CHAR(event.startAt AT TIME ZONE 'America/Santiago', 'YYYY-MM-DD') >= :startOfLastPeriod", { startOfLastPeriod })
-      .andWhere("TO_CHAR(event.startAt AT TIME ZONE 'America/Santiago', 'YYYY-MM-DD') < :startOfPeriod", { startOfPeriod })
+      .andWhere(
+        "TO_CHAR(event.startAt AT TIME ZONE 'America/Santiago', 'YYYY-MM-DD') >= :startOfLastPeriod",
+        { startOfLastPeriod },
+      )
+      .andWhere(
+        "TO_CHAR(event.startAt AT TIME ZONE 'America/Santiago', 'YYYY-MM-DD') < :startOfPeriod",
+        { startOfPeriod },
+      )
       .getCount();
 
     // Applications this period vs last period
@@ -135,26 +157,52 @@ export class OrganizationMetricsService {
       .createQueryBuilder('application')
       .leftJoin('application.job', 'job')
       .where('job.organizationId = :organizationId', { organizationId })
-      .andWhere("TO_CHAR(application.createdAt AT TIME ZONE 'America/Santiago', 'YYYY-MM-DD') >= :startOfPeriod", { startOfPeriod })
-      .andWhere("TO_CHAR(application.createdAt AT TIME ZONE 'America/Santiago', 'YYYY-MM-DD') < :endOfPeriod", { endOfPeriod })
+      .andWhere(
+        "TO_CHAR(application.createdAt AT TIME ZONE 'America/Santiago', 'YYYY-MM-DD') >= :startOfPeriod",
+        { startOfPeriod },
+      )
+      .andWhere(
+        "TO_CHAR(application.createdAt AT TIME ZONE 'America/Santiago', 'YYYY-MM-DD') < :endOfPeriod",
+        { endOfPeriod },
+      )
       .getCount();
 
     const applicationsLastPeriod = await this.applicationRepository
       .createQueryBuilder('application')
       .leftJoin('application.job', 'job')
       .where('job.organizationId = :organizationId', { organizationId })
-      .andWhere("TO_CHAR(application.createdAt AT TIME ZONE 'America/Santiago', 'YYYY-MM-DD') >= :startOfLastPeriod", { startOfLastPeriod })
-      .andWhere("TO_CHAR(application.createdAt AT TIME ZONE 'America/Santiago', 'YYYY-MM-DD') < :startOfPeriod", { startOfPeriod })
+      .andWhere(
+        "TO_CHAR(application.createdAt AT TIME ZONE 'America/Santiago', 'YYYY-MM-DD') >= :startOfLastPeriod",
+        { startOfLastPeriod },
+      )
+      .andWhere(
+        "TO_CHAR(application.createdAt AT TIME ZONE 'America/Santiago', 'YYYY-MM-DD') < :startOfPeriod",
+        { startOfPeriod },
+      )
       .getCount();
 
     // Calculate trends
-    const interviewsTrend = interviewsLastPeriod > 0
-      ? Math.round(((interviewsThisPeriod - interviewsLastPeriod) / interviewsLastPeriod) * 100)
-      : interviewsThisPeriod > 0 ? 100 : 0;
+    const interviewsTrend =
+      interviewsLastPeriod > 0
+        ? Math.round(
+            ((interviewsThisPeriod - interviewsLastPeriod) /
+              interviewsLastPeriod) *
+              100,
+          )
+        : interviewsThisPeriod > 0
+          ? 100
+          : 0;
 
-    const applicationsTrend = applicationsLastPeriod > 0
-      ? Math.round(((applicationsThisPeriod - applicationsLastPeriod) / applicationsLastPeriod) * 100)
-      : applicationsThisPeriod > 0 ? 100 : 0;
+    const applicationsTrend =
+      applicationsLastPeriod > 0
+        ? Math.round(
+            ((applicationsThisPeriod - applicationsLastPeriod) /
+              applicationsLastPeriod) *
+              100,
+          )
+        : applicationsThisPeriod > 0
+          ? 100
+          : 0;
 
     return {
       activeJobs,
@@ -198,9 +246,10 @@ export class OrganizationMetricsService {
     });
 
     // Conversion rate: entrevistas / total * 100
-    const conversionRate = totalApplications > 0
-      ? Math.round((byStatus.entrevista / totalApplications) * 100)
-      : 0;
+    const conversionRate =
+      totalApplications > 0
+        ? Math.round((byStatus.entrevista / totalApplications) * 100)
+        : 0;
 
     return {
       totalApplications,
@@ -233,9 +282,8 @@ export class OrganizationMetricsService {
         jobTitle: job.title,
         views: job.views,
         applications: applicationsCount,
-        applicationRate: job.views > 0
-          ? Math.round((applicationsCount / job.views) * 100)
-          : 0,
+        applicationRate:
+          job.views > 0 ? Math.round((applicationsCount / job.views) * 100) : 0,
       });
     }
 
@@ -256,10 +304,18 @@ export class OrganizationMetricsService {
       .createQueryBuilder('application')
       .leftJoin('application.job', 'job')
       .where('job.organizationId = :organizationId', { organizationId })
-      .andWhere("TO_CHAR(application.createdAt AT TIME ZONE 'America/Santiago', 'YYYY-MM-DD') >= :startDateStr", { startDateStr })
-      .select("TO_CHAR(application.createdAt AT TIME ZONE 'America/Santiago', 'YYYY-MM-DD')", 'date')
+      .andWhere(
+        "TO_CHAR(application.createdAt AT TIME ZONE 'America/Santiago', 'YYYY-MM-DD') >= :startDateStr",
+        { startDateStr },
+      )
+      .select(
+        "TO_CHAR(application.createdAt AT TIME ZONE 'America/Santiago', 'YYYY-MM-DD')",
+        'date',
+      )
       .addSelect('COUNT(*)', 'count')
-      .groupBy("TO_CHAR(application.createdAt AT TIME ZONE 'America/Santiago', 'YYYY-MM-DD')")
+      .groupBy(
+        "TO_CHAR(application.createdAt AT TIME ZONE 'America/Santiago', 'YYYY-MM-DD')",
+      )
       .orderBy('date', 'ASC')
       .getRawMany();
 
@@ -267,23 +323,38 @@ export class OrganizationMetricsService {
       .createQueryBuilder('event')
       .where('event.organizationId = :organizationId', { organizationId })
       .andWhere('event.type = :type', { type: EventType.INTERVIEW })
-      .andWhere("TO_CHAR(event.startAt AT TIME ZONE 'America/Santiago', 'YYYY-MM-DD') >= :startDateStr", { startDateStr })
-      .select("TO_CHAR(event.startAt AT TIME ZONE 'America/Santiago', 'YYYY-MM-DD')", 'date')
+      .andWhere(
+        "TO_CHAR(event.startAt AT TIME ZONE 'America/Santiago', 'YYYY-MM-DD') >= :startDateStr",
+        { startDateStr },
+      )
+      .select(
+        "TO_CHAR(event.startAt AT TIME ZONE 'America/Santiago', 'YYYY-MM-DD')",
+        'date',
+      )
       .addSelect('COUNT(*)', 'count')
-      .groupBy("TO_CHAR(event.startAt AT TIME ZONE 'America/Santiago', 'YYYY-MM-DD')")
+      .groupBy(
+        "TO_CHAR(event.startAt AT TIME ZONE 'America/Santiago', 'YYYY-MM-DD')",
+      )
       .orderBy('date', 'ASC')
       .getRawMany();
 
     // Create a map for quick lookup
     const appsMap = new Map(
-      applicationsByDate.map((row: { date: string; count: string }) => [row.date, parseInt(row.count, 10)]),
+      applicationsByDate.map((row: { date: string; count: string }) => [
+        row.date,
+        parseInt(row.count, 10),
+      ]),
     );
     const interviewsMap = new Map(
-      interviewsByDate.map((row: { date: string; count: string }) => [row.date, parseInt(row.count, 10)]),
+      interviewsByDate.map((row: { date: string; count: string }) => [
+        row.date,
+        parseInt(row.count, 10),
+      ]),
     );
 
     // Generate all dates in range
-    const result: { date: string; applications: number; interviews: number }[] = [];
+    const result: { date: string; applications: number; interviews: number }[] =
+      [];
     const current = new Date(startDate);
     while (current <= now) {
       const dateStr = current.toISOString().split('T')[0];
@@ -298,7 +369,10 @@ export class OrganizationMetricsService {
     return result;
   }
 
-  private getPeriodDates(date: Date, period: string): { startOfPeriod: string; endOfPeriod: string; startOfLastPeriod: string } {
+  private getPeriodDates(
+    date: Date,
+    period: string,
+  ): { startOfPeriod: string; endOfPeriod: string; startOfLastPeriod: string } {
     const now = new Date(date);
 
     let startOfPeriod: Date;
@@ -345,6 +419,10 @@ export class OrganizationMetricsService {
     const endOfPeriodStr = endOfPeriod.toISOString().split('T')[0];
     const startOfLastPeriodStr = startOfLastPeriod.toISOString().split('T')[0];
 
-    return { startOfPeriod: startOfPeriodStr, endOfPeriod: endOfPeriodStr, startOfLastPeriod: startOfLastPeriodStr };
+    return {
+      startOfPeriod: startOfPeriodStr,
+      endOfPeriod: endOfPeriodStr,
+      startOfLastPeriod: startOfLastPeriodStr,
+    };
   }
 }

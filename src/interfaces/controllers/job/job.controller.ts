@@ -23,7 +23,7 @@ import { JobService } from '../../../core/services/job.service';
 import { JobDtoDomainMapper } from '../../../shared/mappers/job/jobDto-domain.mapper';
 import { JobCreateDto } from '../../dtos/job/job-create.dto';
 import { JobResponseDto } from '../../dtos/job/job-response.dto';
-import { JobWithApplicationsResponseDto } from '../../dtos/job/job-with-applications.dto';
+
 import { JobDomainDtoMapper } from '../../../shared/mappers/job/jobDomain-dto.mapper';
 import { JobQueryDto } from '../../dtos/job/job-query.dto';
 
@@ -86,39 +86,13 @@ export class JobController {
   async getJobById(
     @Param('id', ParseUUIDPipe) id: string,
   ): Promise<JobResponseDto | null> {
-    const job = await this.jobService.getJobById(id);
-    return job ? JobDomainDtoMapper.toDto(job) : null;
-  }
-
-  @Get(':id/with-applications')
-  @ApiOperation({
-    summary: 'Obtener oferta de trabajo con conteo de postulaciones',
-  })
-  @ApiParam({
-    name: 'id',
-    type: 'string',
-    format: 'uuid',
-    description: 'ID de la oferta de trabajo',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Oferta con conteo de postulaciones',
-    type: JobWithApplicationsResponseDto,
-  })
-  async getJobByIdWithApplications(
-    @Param('id', ParseUUIDPipe) id: string,
-  ): Promise<JobWithApplicationsResponseDto | null> {
-    const result = (await this.jobService.getJobByIdWithApplications(id)) as {
-      job: Parameters<typeof JobDomainDtoMapper.toDto>[0];
-      applicationsCount: number;
-    } | null;
+    const result = await this.jobService.getJobByIdWithApplicationCount(id);
     if (!result) return null;
     const jobDto = JobDomainDtoMapper.toDto(result.job);
     return {
       ...jobDto,
-      applicationsCount: result.applicationsCount,
-      totalApplications: result.applicationsCount,
-    } as JobWithApplicationsResponseDto;
+      totalApplications: result.totalApplications,
+    } as JobResponseDto;
   }
 
   @Get()

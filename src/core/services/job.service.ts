@@ -48,7 +48,6 @@ export class JobService implements IJobUseCase {
       new Date(),
       this.mapSalary(data.salary),
       (data.status as JobStatus) || JobStatus.DRAFT,
-      data.applicationsCount || 0,
       0, // views
       data.expiresAt,
       this.mapLocation(data.location),
@@ -59,6 +58,17 @@ export class JobService implements IJobUseCase {
 
   async getJobById(id: string): Promise<Job | null> {
     return this.jobRepository.findById(id);
+  }
+
+  async getJobByIdWithApplicationCount(
+    id: string,
+  ): Promise<{ job: Job; totalApplications: number } | null> {
+    const result = await this.jobRepository.findByIdWithApplicationCount(id);
+    if (!result) return null;
+    return {
+      job: result.job,
+      totalApplications: result.applicationsCount,
+    };
   }
 
   async incrementJobViews(id: string): Promise<Job | null> {
@@ -74,10 +84,6 @@ export class JobService implements IJobUseCase {
     pagination?: any,
   ): Promise<any> {
     return this.jobRepository.findByOrganizationId(organizationId, pagination);
-  }
-
-  async getJobByIdWithApplications(id: string): Promise<any> {
-    return this.jobRepository.findByIdWithApplications(id);
   }
 
   async getAllJobsWithApplicationCounts(
@@ -113,8 +119,6 @@ export class JobService implements IJobUseCase {
       location: this.mapLocation(data.location) ?? existingJob.location,
       benefits: this.mapBenefits(data.benefits) ?? existingJob.benefits,
       status: data.status ? (data.status as JobStatus) : existingJob.status,
-      applicationsCount:
-        data.applicationsCount ?? existingJob.applicationsCount,
       expiresAt: data.expiresAt,
     };
 

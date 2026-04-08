@@ -87,7 +87,7 @@ export class JobRepositoryImpl implements IJobRepository {
     return this.findAll({ organizationId }, pagination);
   }
 
-  async findByIdWithApplications(
+  async findByIdWithApplicationCount(
     id: string,
   ): Promise<JobWithApplications | null> {
     const job = await this.findById(id);

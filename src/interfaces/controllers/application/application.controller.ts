@@ -126,10 +126,11 @@ export class ApplicationController {
       limit: query.limit,
     };
 
-    const result = await this.applicationService.getApplicationsByOrganizationId(
-      organizationId,
-      pagination,
-    );
+    const result =
+      await this.applicationService.getApplicationsByOrganizationId(
+        organizationId,
+        pagination,
+      );
 
     return {
       data: result.data.map(app => ApplicationDomainDtoMapper.toDto(app)),
