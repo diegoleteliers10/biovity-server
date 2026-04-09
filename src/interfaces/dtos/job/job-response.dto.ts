@@ -164,9 +164,9 @@ export class JobResponseDto {
   @IsEnum(JobStatus)
   status: JobStatus;
 
-  @ApiProperty({ example: 0, description: 'Conteo de postulaciones' })
+  @ApiProperty({ example: 0, description: 'Total de postulaciones' })
   @IsNumber()
-  applicationsCount: number;
+  totalApplications: number;
 
   @ApiProperty({ example: 0, description: 'Conteo de vistas' })
   @IsNumber()

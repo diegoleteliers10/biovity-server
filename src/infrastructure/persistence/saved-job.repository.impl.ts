@@ -32,7 +32,10 @@ export class SavedJobRepositoryImpl implements ISavedJobRepository {
     return savedJobOrm ? SavedJobDomainOrmMapper.toDomain(savedJobOrm) : null;
   }
 
-  async findByUserAndJob(userId: string, jobId: string): Promise<SavedJob | null> {
+  async findByUserAndJob(
+    userId: string,
+    jobId: string,
+  ): Promise<SavedJob | null> {
     const savedJobOrm = await this.savedJobRepository.findOne({
       where: { userId, jobId },
       relations: ['job', 'user'],
@@ -62,7 +65,7 @@ export class SavedJobRepositoryImpl implements ISavedJobRepository {
       .orderBy('savedJob.createdAt', 'DESC')
       .getMany();
 
-    const data = savedJobsOrm.map((savedJob) =>
+    const data = savedJobsOrm.map(savedJob =>
       SavedJobDomainOrmMapper.toDomain(savedJob),
     );
 
@@ -96,7 +99,7 @@ export class SavedJobRepositoryImpl implements ISavedJobRepository {
       .orderBy('savedJob.createdAt', 'DESC')
       .getMany();
 
-    const data = savedJobsOrm.map((savedJob) =>
+    const data = savedJobsOrm.map(savedJob =>
       SavedJobDomainOrmMapper.toDomain(savedJob),
     );
 

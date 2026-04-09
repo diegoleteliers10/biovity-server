@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException, ConflictException, Inject } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+  Inject,
+} from '@nestjs/common';
 import * as crypto from 'crypto';
 import { ISavedJobRepository } from '../repositories/saved-job.repository';
 import { IJobRepository } from '../repositories/job.repository';
@@ -86,7 +91,10 @@ export class SavedJobService {
   }
 
   async checkIfJobIsSaved(userId: string, jobId: string): Promise<boolean> {
-    const savedJob = await this.savedJobRepository.findByUserAndJob(userId, jobId);
+    const savedJob = await this.savedJobRepository.findByUserAndJob(
+      userId,
+      jobId,
+    );
     return !!savedJob;
   }
 

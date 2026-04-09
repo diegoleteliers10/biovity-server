@@ -30,7 +30,7 @@ export interface IJobRepository {
     organizationId: string,
     pagination?: PaginationOptions,
   ): Promise<PaginatedResult<Job>>;
-  findByIdWithApplications(id: string): Promise<JobWithApplications | null>;
+  findByIdWithApplicationCount(id: string): Promise<JobWithApplications | null>;
   findAllWithApplicationCounts(
     organizationId: string,
     pagination?: PaginationOptions,

@@ -11,7 +11,7 @@ export class MessageDtoDomainMapper {
       chatId: dto.chatId,
       senderId: senderId,
       content: dto.content,
-      type: dto.type as MessageType || MessageType.TEXT,
+      type: (dto.type as MessageType) || MessageType.TEXT,
       contentType: dto.contentType || null,
     };
   }

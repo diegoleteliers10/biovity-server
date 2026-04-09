@@ -20,7 +20,6 @@ export class JobDtoDomainMapper {
         | Record<string, unknown>[]
         | undefined,
       status: dto.status as unknown as string | undefined,
-      applicationsCount: dto.applicationsCount,
       expiresAt: dto.expiresAt ? new Date(dto.expiresAt) : undefined,
     };
   }

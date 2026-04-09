@@ -107,9 +107,6 @@ export class JobEntity {
   public status: JobStatus;
 
   @Column({ default: 0 })
-  public applicationsCount: number;
-
-  @Column({ default: 0 })
   public views: number;
 
   @Column({ type: 'timestamp', nullable: true })

@@ -35,7 +35,7 @@ export class ErrorFormatInterceptor implements NestInterceptor {
             statusCode: status,
             message:
               typeof response === 'object' && response !== null
-                ? (response as Record<string, unknown>).message as string
+                ? ((response as Record<string, unknown>).message as string)
                 : error.message,
             error: HttpStatus[status] || 'Error',
             timestamp,
@@ -54,7 +54,10 @@ export class ErrorFormatInterceptor implements NestInterceptor {
           path,
         };
 
-        return throwError(() => new HttpException(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR));
+        return throwError(
+          () =>
+            new HttpException(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR),
+        );
       }),
     );
   }

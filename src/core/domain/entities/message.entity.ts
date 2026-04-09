@@ -35,7 +35,12 @@ export interface EventContent {
   title: string;
 }
 
-export type MessageContent = string | FileContent | AudioContent | ImageContent | EventContent;
+export type MessageContent =
+  | string
+  | FileContent
+  | AudioContent
+  | ImageContent
+  | EventContent;
 
 export class Message {
   constructor(

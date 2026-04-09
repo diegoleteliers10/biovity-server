@@ -1,6 +1,15 @@
-import { EventCreateDto, EventUpdateDto } from '../../../interfaces/dtos/event/event.dto';
-import { CreateEventInput, UpdateEventInput } from '../../../core/use-cases/event/event.use-case';
-import { EventType, EventStatus } from '../../../core/domain/entities/event.entity';
+import {
+  EventCreateDto,
+  EventUpdateDto,
+} from '../../../interfaces/dtos/event/event.dto';
+import {
+  CreateEventInput,
+  UpdateEventInput,
+} from '../../../core/use-cases/event/event.use-case';
+import {
+  EventType,
+  EventStatus,
+} from '../../../core/domain/entities/event.entity';
 
 export class EventDtoDomainMapper {
   static toCreateEventInput(dto: EventCreateDto): CreateEventInput {
@@ -29,7 +38,8 @@ export class EventDtoDomainMapper {
     if (dto.endAt !== undefined) input.endAt = new Date(dto.endAt);
     if (dto.location !== undefined) input.location = dto.location;
     if (dto.meetingUrl !== undefined) input.meetingUrl = dto.meetingUrl;
-    if (dto.status !== undefined) input.status = dto.status as unknown as EventStatus;
+    if (dto.status !== undefined)
+      input.status = dto.status as unknown as EventStatus;
 
     return input;
   }

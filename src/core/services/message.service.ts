@@ -6,7 +6,11 @@ import {
   IMessageUseCase,
   CreateMessageInput,
 } from '../use-cases/message/message.use-case';
-import { Message, MessageType, MessageContent } from '../domain/entities/message.entity';
+import {
+  Message,
+  MessageType,
+  MessageContent,
+} from '../domain/entities/message.entity';
 
 @Injectable()
 export class MessageService implements IMessageUseCase {

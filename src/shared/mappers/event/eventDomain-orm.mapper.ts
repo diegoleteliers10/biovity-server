@@ -1,4 +1,7 @@
-import { EventEntity, EventNoteEntity } from '../../../infrastructure/database/orm';
+import {
+  EventEntity,
+  EventNoteEntity,
+} from '../../../infrastructure/database/orm';
 import { Event, EventNote } from '../../../core/domain/entities/event.entity';
 
 export class EventDomainOrmMapper {

@@ -5,7 +5,9 @@ import { AppLogger, WideEvent, LOGGER_TOKEN } from './logger.service';
 
 @Injectable()
 export class LoggerMiddleware implements NestMiddleware {
-  constructor(@Optional() @Inject(LOGGER_TOKEN) private readonly logger: AppLogger) {}
+  constructor(
+    @Optional() @Inject(LOGGER_TOKEN) private readonly logger: AppLogger,
+  ) {}
 
   use(req: Request, res: Response, next: NextFunction) {
     const requestId = randomUUID();
@@ -72,10 +74,9 @@ export class LoggerMiddleware implements NestMiddleware {
 
       // Request Details
       userAgent: req.headers['user-agent'],
-      ip:
-        (req.headers['x-forwarded-for'] as string)?.split(',')[0] ||
-        req.ip,
-      contentLength: parseInt(req.headers['content-length'] || '0', 10) || undefined,
+      ip: (req.headers['x-forwarded-for'] as string)?.split(',')[0] || req.ip,
+      contentLength:
+        parseInt(req.headers['content-length'] || '0', 10) || undefined,
 
       // Timestamp
       timestamp: new Date().toISOString(),
