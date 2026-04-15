@@ -8,5 +8,9 @@ export interface IOrganizationRepository {
     id: string,
     entity: Partial<Organization>,
   ): Promise<Organization | null>;
+  updateSubscription(
+    organizationId: string,
+    subscriptionId: string,
+  ): Promise<Organization | null>;
   delete(id: string): Promise<boolean>;
 }
