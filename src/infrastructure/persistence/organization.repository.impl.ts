@@ -55,6 +55,21 @@ export class OrganizationRepositoryImpl implements IOrganizationRepository {
     return OrganizationDomainOrmMapper.toDomain(savedOrganization);
   }
 
+  async updateSubscription(
+    organizationId: string,
+    subscriptionId: string,
+  ): Promise<Organization | null> {
+    const existingOrganization = await this.organizationRepository.findOne({
+      where: { id: organizationId },
+    });
+    if (!existingOrganization) return null;
+
+    existingOrganization.subscriptionId = subscriptionId;
+    const savedOrganization =
+      await this.organizationRepository.save(existingOrganization);
+    return OrganizationDomainOrmMapper.toDomain(savedOrganization);
+  }
+
   async delete(id: string): Promise<boolean> {
     const result = await this.organizationRepository.delete(id);
     return result.affected != null && result.affected > 0;
