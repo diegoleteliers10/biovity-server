@@ -3,6 +3,7 @@ import {
   NotFoundException,
   ForbiddenException,
   BadRequestException,
+  Inject,
 } from '@nestjs/common';
 import * as crypto from 'crypto';
 import { IJobQuestionRepository } from '../repositories/job-question.repository';
@@ -22,7 +23,7 @@ import {
 export class JobQuestionService implements IJobQuestionUseCase {
   constructor(
     private readonly jobQuestionRepository: IJobQuestionRepository,
-    private readonly jobRepository: IJobRepository,
+    @Inject('IJobRepository') private readonly jobRepository: IJobRepository,
   ) {}
 
   private generateId(): string {
