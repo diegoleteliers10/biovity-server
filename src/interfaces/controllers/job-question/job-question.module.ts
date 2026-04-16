@@ -7,9 +7,10 @@ import { JobQuestionRepositoryImpl } from '../../../infrastructure/persistence/j
 import { JobQuestionDomainOrmMapper } from '../../../shared/mappers/job-question/jobQuestionDomain-orm.mapper';
 import { JobQuestionDtoDomainMapper } from '../../../shared/mappers/job-question/jobQuestionDto-domain.mapper';
 import { JobQuestionDomainDtoMapper } from '../../../shared/mappers/job-question/jobQuestionDomain-dto.mapper';
+import { JobModule } from '../job/job.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([JobQuestionEntity])],
+  imports: [TypeOrmModule.forFeature([JobQuestionEntity]), JobModule],
   controllers: [JobQuestionController],
   providers: [
     JobQuestionService,

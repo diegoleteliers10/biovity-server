@@ -30,6 +30,6 @@ import { OrganizationRepositoryImpl } from '../../../infrastructure/persistence/
       useClass: OrganizationRepositoryImpl,
     },
   ],
-  exports: [JobService],
+  exports: [JobService, 'IJobRepository'],
 })
 export class JobModule {}
