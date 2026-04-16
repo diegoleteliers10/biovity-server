@@ -22,6 +22,7 @@ import {
 @Injectable()
 export class JobQuestionService implements IJobQuestionUseCase {
   constructor(
+    @Inject('IJobQuestionRepository')
     private readonly jobQuestionRepository: IJobQuestionRepository,
     @Inject('IJobRepository') private readonly jobRepository: IJobRepository,
   ) {}

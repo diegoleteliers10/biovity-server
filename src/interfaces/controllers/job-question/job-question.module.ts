@@ -14,7 +14,10 @@ import { JobModule } from '../job/job.module';
   controllers: [JobQuestionController],
   providers: [
     JobQuestionService,
-    JobQuestionRepositoryImpl,
+    {
+      provide: 'IJobQuestionRepository',
+      useClass: JobQuestionRepositoryImpl,
+    },
     JobQuestionDomainOrmMapper,
     JobQuestionDtoDomainMapper,
     JobQuestionDomainDtoMapper,
