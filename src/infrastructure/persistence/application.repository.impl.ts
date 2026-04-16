@@ -28,7 +28,7 @@ export class ApplicationRepositoryImpl implements IApplicationRepository {
   async findById(id: string): Promise<Application | null> {
     const applicationOrm = await this.applicationRepository.findOne({
       where: { id },
-      relations: ['job', 'candidate'],
+      relations: ['job', 'candidate', 'answers'],
     });
     return applicationOrm
       ? ApplicationDomainOrmMapper.toDomain(applicationOrm)
@@ -41,7 +41,7 @@ export class ApplicationRepositoryImpl implements IApplicationRepository {
   ): Promise<Application | null> {
     const applicationOrm = await this.applicationRepository.findOne({
       where: { jobId, candidateId },
-      relations: ['job', 'candidate'],
+      relations: ['job', 'candidate', 'answers'],
     });
     return applicationOrm
       ? ApplicationDomainOrmMapper.toDomain(applicationOrm)

@@ -3,9 +3,11 @@ import { config } from 'dotenv';
 import {
   UserEntity,
   ApplicationEntity,
+  ApplicationAnswerEntity,
   OrganizationEntity,
   SubscriptionEntity,
   JobEntity,
+  JobQuestionEntity,
   ResumeEntity,
   WaitlistEntity,
   ChatEntity,
@@ -27,9 +29,11 @@ export const AppDataSource = new DataSource({
   entities: [
     UserEntity,
     ApplicationEntity,
+    ApplicationAnswerEntity,
     OrganizationEntity,
     SubscriptionEntity,
     JobEntity,
+    JobQuestionEntity,
     ResumeEntity,
     WaitlistEntity,
     ChatEntity,

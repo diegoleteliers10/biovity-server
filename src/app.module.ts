@@ -11,6 +11,7 @@ import { MessageModule } from './interfaces/controllers/message/message.module';
 import { ResumeModule } from './interfaces/controllers/resume/resume.module';
 import { ApplicationModule } from './interfaces/controllers/application/application.module';
 import { SavedJobModule } from './interfaces/controllers/saved-job/saved-job.module';
+import { JobQuestionModule } from './interfaces/controllers/job-question/job-question.module';
 import { HealthModule } from './interfaces/controllers/health/health.module';
 import { EventModule } from './interfaces/controllers/event/event.module';
 import { SubscriptionModule } from './interfaces/controllers/subscription/subscription.module';
@@ -32,6 +33,7 @@ import { SubscriptionModule } from './interfaces/controllers/subscription/subscr
     HealthModule,
     EventModule,
     SubscriptionModule,
+    JobQuestionModule,
   ],
   controllers: [],
   providers: [],

@@ -8,6 +8,13 @@ export class ApplicationDtoDomainMapper {
     return {
       jobId: dto.jobId,
       candidateId: dto.candidateId,
+      coverLetter: dto.coverLetter,
+      salaryMin: dto.salaryMin,
+      salaryMax: dto.salaryMax,
+      salaryCurrency: dto.salaryCurrency,
+      availabilityDate: dto.availabilityDate,
+      resumeUrl: dto.resumeUrl,
+      answers: dto.answers,
     };
   }
 }
