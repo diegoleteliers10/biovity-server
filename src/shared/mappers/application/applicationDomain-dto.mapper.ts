@@ -24,6 +24,12 @@ export class ApplicationDomainDtoMapper {
     dto.status = domain.status;
     dto.createdAt = domain.createdAt;
     dto.updatedAt = domain.updatedAt;
+    dto.coverLetter = domain.coverLetter;
+    dto.salaryMin = domain.salaryMin;
+    dto.salaryMax = domain.salaryMax;
+    dto.salaryCurrency = domain.salaryCurrency;
+    dto.availabilityDate = domain.availabilityDate;
+    dto.resumeUrl = domain.resumeUrl;
 
     // Map job relation if exists
     const job = (domain as unknown as { job?: JobRelation }).job;
@@ -46,6 +52,12 @@ export class ApplicationDomainDtoMapper {
         avatar: candidate.avatar,
         profession: candidate.profession,
       };
+    }
+
+    // Map answers if exists
+    const answers = (domain as unknown as { answers?: unknown[] }).answers;
+    if (answers) {
+      dto.answers = answers as ApplicationResponseDto['answers'];
     }
 
     return dto;

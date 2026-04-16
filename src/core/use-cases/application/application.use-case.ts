@@ -47,4 +47,11 @@ export interface IApplicationUseCase {
 export interface CreateApplicationInput {
   jobId: string;
   candidateId: string;
+  coverLetter?: string;
+  salaryMin?: number;
+  salaryMax?: number;
+  salaryCurrency?: string;
+  availabilityDate?: string;
+  resumeUrl?: string;
+  answers?: { questionId: string; value: string }[];
 }

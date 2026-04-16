@@ -5,10 +5,12 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   ManyToOne,
+  OneToMany,
   JoinColumn,
 } from 'typeorm';
 import { JobEntity } from './job.entity';
 import { UserEntity } from './user.entity';
+import { ApplicationAnswerEntity } from './application-answer.entity';
 
 export enum ApplicationStatus {
   PENDIENTE = 'pendiente',
@@ -52,4 +54,25 @@ export class ApplicationEntity {
 
   @Column({ type: 'timestamp', default: () => 'now()' })
   public stageChangedAt: Date;
+
+  @Column({ name: 'cover_letter', type: 'text', nullable: true })
+  public coverLetter?: string;
+
+  @Column({ name: 'salary_min', type: 'integer', nullable: true })
+  public salaryMin?: number;
+
+  @Column({ name: 'salary_max', type: 'integer', nullable: true })
+  public salaryMax?: number;
+
+  @Column({ name: 'salary_currency', type: 'text', default: 'USD' })
+  public salaryCurrency: string = 'USD';
+
+  @Column({ name: 'availability_date', type: 'date', nullable: true })
+  public availabilityDate?: string;
+
+  @Column({ name: 'resume_url', type: 'text', nullable: true })
+  public resumeUrl?: string;
+
+  @OneToMany(() => ApplicationAnswerEntity, answer => answer.application)
+  public answers: ApplicationAnswerEntity[];
 }

@@ -1,0 +1,23 @@
+import { Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { JobQuestionEntity } from '../../../infrastructure/database/orm';
+import { JobQuestionController } from './job-question.controller';
+import { JobQuestionService } from '../../../core/services/job-question.service';
+import { JobQuestionRepositoryImpl } from '../../../infrastructure/persistence/job-question.repository.impl';
+import { JobQuestionDomainOrmMapper } from '../../../shared/mappers/job-question/jobQuestionDomain-orm.mapper';
+import { JobQuestionDtoDomainMapper } from '../../../shared/mappers/job-question/jobQuestionDto-domain.mapper';
+import { JobQuestionDomainDtoMapper } from '../../../shared/mappers/job-question/jobQuestionDomain-dto.mapper';
+
+@Module({
+  imports: [TypeOrmModule.forFeature([JobQuestionEntity])],
+  controllers: [JobQuestionController],
+  providers: [
+    JobQuestionService,
+    JobQuestionRepositoryImpl,
+    JobQuestionDomainOrmMapper,
+    JobQuestionDtoDomainMapper,
+    JobQuestionDomainDtoMapper,
+  ],
+  exports: [JobQuestionService],
+})
+export class JobQuestionModule {}

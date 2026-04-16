@@ -25,6 +25,12 @@ export class ApplicationDomainOrmMapper {
     appOrm.createdAt = domain.createdAt;
     appOrm.updatedAt = domain.updatedAt;
     appOrm.stageChangedAt = domain.stageChangedAt;
+    appOrm.coverLetter = domain.coverLetter;
+    appOrm.salaryMin = domain.salaryMin;
+    appOrm.salaryMax = domain.salaryMax;
+    appOrm.salaryCurrency = domain.salaryCurrency ?? 'USD';
+    appOrm.availabilityDate = domain.availabilityDate;
+    appOrm.resumeUrl = domain.resumeUrl;
 
     return appOrm;
   }
@@ -38,6 +44,12 @@ export class ApplicationDomainOrmMapper {
       entity.updatedAt,
       entity.status,
       entity.stageChangedAt,
+      entity.coverLetter,
+      entity.salaryMin,
+      entity.salaryMax,
+      entity.salaryCurrency,
+      entity.availabilityDate,
+      entity.resumeUrl,
     );
 
     // Map job relation if exists
@@ -60,6 +72,12 @@ export class ApplicationDomainOrmMapper {
         avatar: candidate.avatar,
         profession: candidate.profession,
       };
+    }
+
+    // Map answers if exists
+    if (entity.answers) {
+      (application as unknown as { answers: unknown[] }).answers =
+        entity.answers;
     }
 
     return application;
