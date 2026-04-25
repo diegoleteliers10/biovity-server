@@ -130,6 +130,7 @@ export class ApplicationController {
       await this.applicationService.getApplicationsByOrganizationId(
         organizationId,
         pagination,
+        query.includeAnswers === 'true',
       );
 
     return {

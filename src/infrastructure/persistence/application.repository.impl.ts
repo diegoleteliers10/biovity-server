@@ -41,7 +41,7 @@ export class ApplicationRepositoryImpl implements IApplicationRepository {
   ): Promise<Application | null> {
     const applicationOrm = await this.applicationRepository.findOne({
       where: { jobId, candidateId },
-      relations: ['job', 'candidate', 'answers'],
+      relations: ['job', 'candidate'],
     });
     return applicationOrm
       ? ApplicationDomainOrmMapper.toDomain(applicationOrm)

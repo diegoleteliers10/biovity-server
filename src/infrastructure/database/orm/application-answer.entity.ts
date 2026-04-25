@@ -33,6 +33,6 @@ export class ApplicationAnswerEntity {
   @Column({ type: 'text', nullable: false })
   public value: string;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ name: 'created_at' })
   public createdAt: Date;
 }

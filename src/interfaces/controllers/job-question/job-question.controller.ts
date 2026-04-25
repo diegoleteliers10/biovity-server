@@ -27,7 +27,7 @@ import { QuestionResponseDto } from '../../dtos/job-question/question-response.d
 export class JobQuestionController {
   constructor(private readonly jobQuestionService: JobQuestionService) {}
 
-  @Get(':jobId/questions')
+  @Get('jobs/:jobId/questions')
   async getPublishedQuestions(
     @Param('jobId', ParseUUIDPipe) jobId: string,
   ): Promise<QuestionResponseDto[]> {
