@@ -213,6 +213,7 @@ export class ApplicationService implements IApplicationUseCase {
   async getApplicationsByOrganizationId(
     organizationId: string,
     pagination?: { page?: number; limit?: number },
+    includeAnswers?: boolean,
   ): Promise<{
     data: Application[];
     total: number;
@@ -220,9 +221,26 @@ export class ApplicationService implements IApplicationUseCase {
     limit: number;
     totalPages: number;
   }> {
-    return this.applicationRepository.findByOrganizationId(
+    const result = await this.applicationRepository.findByOrganizationId(
       organizationId,
       pagination,
     );
+
+    if (includeAnswers && result.data.length > 0) {
+      const appIds = result.data.map(app => app.id);
+      const allAnswers = await this.applicationAnswerRepository.findByApplicationIds(appIds);
+      const answersByApp = new Map<string, typeof allAnswers>();
+      for (const answer of allAnswers) {
+        const list = answersByApp.get(answer.applicationId) ?? [];
+        list.push(answer);
+        answersByApp.set(answer.applicationId, list);
+      }
+      for (const app of result.data) {
+        (app as unknown as { answers: typeof allAnswers }).answers =
+          answersByApp.get(app.id) ?? [];
+      }
+    }
+
+    return result;
   }
 }

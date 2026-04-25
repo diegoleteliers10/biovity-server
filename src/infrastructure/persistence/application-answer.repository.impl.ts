@@ -24,6 +24,17 @@ export class ApplicationAnswerRepositoryImpl implements IApplicationAnswerReposi
     return entities.map(e => this.toDomain(e));
   }
 
+  async findByApplicationIds(
+    applicationIds: string[],
+  ): Promise<ApplicationAnswer[]> {
+    if (applicationIds.length === 0) return [];
+    const entities = await this.repository
+      .createQueryBuilder('aa')
+      .where('aa.application_id IN (:...ids)', { ids: applicationIds })
+      .getMany();
+    return entities.map(e => this.toDomain(e));
+  }
+
   async create(answer: ApplicationAnswer): Promise<ApplicationAnswer> {
     const entity = this.toEntity(answer);
     const saved = await this.repository.save(entity);

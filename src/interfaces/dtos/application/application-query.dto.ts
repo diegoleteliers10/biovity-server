@@ -34,4 +34,8 @@ export class ApplicationQueryDto {
   @IsOptional()
   @IsEnum(ApplicationStatus)
   status?: 'pendiente' | 'oferta' | 'entrevista' | 'rechazado' | 'contratado';
+
+  @IsOptional()
+  @IsUUID()
+  includeAnswers?: string;
 }
