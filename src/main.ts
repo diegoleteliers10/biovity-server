@@ -14,7 +14,7 @@ async function bootstrap() {
     logger: ['error', 'warn', 'log', 'debug', 'verbose'],
   });
 
-  // Configure CORS - Allow all origins, methods, and headers
+  // Configure CORS - Allow all origins for MCP agents
   app.enableCors({
     origin: '*',
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
@@ -31,9 +31,9 @@ async function bootstrap() {
   // Configure global ValidationPipe
   app.useGlobalPipes(
     new ValidationPipe({
-      whitelist: true, // Strip properties that do not have any decorators
-      transform: true, // Automatically transform payloads to DTO instances
-      forbidNonWhitelisted: true, // Throw error if non-whitelisted properties are present
+      whitelist: true,
+      transform: true,
+      forbidNonWhitelisted: true,
     }),
   );
 

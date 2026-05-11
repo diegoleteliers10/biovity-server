@@ -52,4 +52,8 @@ export class UserService implements IUserUseCase {
 
     return this.userRepository.update(id, updatedUser);
   }
+
+  async incrementViews(id: string): Promise<User | null> {
+    return this.userRepository.incrementViews(id);
+  }
 }

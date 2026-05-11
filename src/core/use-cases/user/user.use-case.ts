@@ -28,6 +28,7 @@ export interface IUserUseCase {
     pagination?: PaginationOptions,
   ): Promise<PaginatedResult<User>>;
   updateUser(id: string, data: UpdateUserInput): Promise<User | null>;
+  incrementViews(id: string): Promise<User | null>;
 }
 
 export interface UpdateUserInput {

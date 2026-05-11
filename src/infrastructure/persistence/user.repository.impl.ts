@@ -101,6 +101,11 @@ export class UserRepositoryImpl implements IUserRepository {
     return UserDomainOrmMapper.toDomain(savedUser);
   }
 
+  async incrementViews(id: string): Promise<User | null> {
+    await this.userRepository.increment({ id }, 'profileViews', 1);
+    return this.findById(id);
+  }
+
   async delete(id: string): Promise<boolean> {
     const result = await this.userRepository.delete(id);
     return result.affected != null && result.affected > 0;

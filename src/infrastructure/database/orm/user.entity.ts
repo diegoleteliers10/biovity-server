@@ -63,6 +63,9 @@ export class UserEntity {
   @Column({ nullable: true })
   public phone?: string;
 
+  @Column({ default: 0 })
+  public profileViews: number;
+
   @Column({ type: 'jsonb', nullable: true })
   public location?: {
     city?: string;

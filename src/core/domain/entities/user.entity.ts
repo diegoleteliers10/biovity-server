@@ -26,5 +26,6 @@ export class User {
       city?: string;
       country?: string;
     },
+    public profileViews: number = 0,
   ) {}
 }

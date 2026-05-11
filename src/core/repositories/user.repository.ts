@@ -28,5 +28,6 @@ export interface IUserRepository {
     pagination?: PaginationOptions,
   ): Promise<PaginatedResult<User>>;
   update(id: string, entity: Partial<User>): Promise<User | null>;
+  incrementViews(id: string): Promise<User | null>;
   delete(id: string): Promise<boolean>;
 }

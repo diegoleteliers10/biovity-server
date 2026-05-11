@@ -91,6 +91,17 @@ export class TrendDataDto {
   interviews: number;
 }
 
+export class GeographicDistributionDto {
+  @ApiProperty({ example: 'Santiago', description: 'Ciudad' })
+  city: string;
+
+  @ApiProperty({ example: 25, description: 'Cantidad de postulantes' })
+  count: number;
+
+  @ApiProperty({ example: 35, description: 'Porcentaje del total' })
+  percentage: number;
+}
+
 export class OrganizationMetricsDto {
   @ApiProperty({ type: DashboardMetricsDto })
   dashboard: DashboardMetricsDto;
@@ -103,4 +114,13 @@ export class OrganizationMetricsDto {
 
   @ApiProperty({ type: [TrendDataDto] })
   recentTrend: TrendDataDto[];
+
+  @ApiProperty({ type: [GeographicDistributionDto] })
+  geographicDistribution: GeographicDistributionDto[];
+
+  @ApiProperty({
+    example: 12.5,
+    description: 'Días promedio hasta contratación',
+  })
+  avgHiringTimeDays: number;
 }
