@@ -228,7 +228,8 @@ export class ApplicationService implements IApplicationUseCase {
 
     if (includeAnswers && result.data.length > 0) {
       const appIds = result.data.map(app => app.id);
-      const allAnswers = await this.applicationAnswerRepository.findByApplicationIds(appIds);
+      const allAnswers =
+        await this.applicationAnswerRepository.findByApplicationIds(appIds);
       const answersByApp = new Map<string, typeof allAnswers>();
       for (const answer of allAnswers) {
         const list = answersByApp.get(answer.applicationId) ?? [];

@@ -6,7 +6,9 @@ import { ApplicationAnswer } from '../../core/domain/entities/application.entity
 import { IApplicationAnswerRepository } from '../../core/repositories/application-answer.repository';
 
 @Injectable()
-export class ApplicationAnswerRepositoryImpl implements IApplicationAnswerRepository {
+export class ApplicationAnswerRepositoryImpl
+  implements IApplicationAnswerRepository
+{
   constructor(
     @InjectRepository(ApplicationAnswerEntity)
     private readonly repository: Repository<ApplicationAnswerEntity>,

@@ -15,6 +15,7 @@ import { JobQuestionModule } from './interfaces/controllers/job-question/job-que
 import { HealthModule } from './interfaces/controllers/health/health.module';
 import { EventModule } from './interfaces/controllers/event/event.module';
 import { SubscriptionModule } from './interfaces/controllers/subscription/subscription.module';
+import { ApiKeysModule } from './interfaces/controllers/api-keys/api-keys.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { SubscriptionModule } from './interfaces/controllers/subscription/subscr
     EventModule,
     SubscriptionModule,
     JobQuestionModule,
+    ApiKeysModule,
   ],
   controllers: [],
   providers: [],

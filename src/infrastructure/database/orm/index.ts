@@ -38,3 +38,4 @@ export { SubscriptionEntity, SubscriptionPlan } from './subscription.entity';
 export { UserEntity, UserType } from './user.entity';
 export { WaitlistEntity, WaitlistRole } from './waitlist.entity';
 export { SavedJobEntity } from './saved-job.entity';
+export { ApiKeyEntity } from './api-key.entity';

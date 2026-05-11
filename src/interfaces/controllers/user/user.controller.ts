@@ -2,10 +2,13 @@ import {
   Controller,
   Get,
   Put,
+  Post,
   Body,
   Param,
   Query,
   ParseUUIDPipe,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { UserService } from '../../../core/services/user.service';
@@ -71,5 +74,14 @@ export class UserController {
     const input = UserDtoDomainMapper.toUpdateUserInput(dto);
     const user = await this.userService.updateUser(id, input);
     return user ? UserDomainDtoMapper.toDto(user) : null;
+  }
+
+  @Post(':id/views')
+  @HttpCode(HttpStatus.OK)
+  async incrementViews(
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<{ views: number }> {
+    const user = await this.userService.incrementViews(id);
+    return { views: user?.profileViews ?? 0 };
   }
 }

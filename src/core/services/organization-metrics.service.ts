@@ -39,6 +39,12 @@ export interface JobPerformanceMetrics {
   applicationRate: number; // applications / views * 100
 }
 
+export interface GeographicDistribution {
+  city: string;
+  count: number;
+  percentage: number;
+}
+
 export interface OrganizationMetrics {
   dashboard: DashboardMetrics;
   pipeline: PipelineMetrics;
@@ -48,6 +54,8 @@ export interface OrganizationMetrics {
     applications: number;
     interviews: number;
   }[];
+  geographicDistribution: GeographicDistribution[];
+  avgHiringTimeDays: number;
 }
 
 export interface OrganizationMetricsFilters {
@@ -81,11 +89,20 @@ export class OrganizationMetricsService {
 
     const period = filters?.period || 'month';
 
-    const [dashboard, pipeline, topJobs, recentTrend] = await Promise.all([
+    const [
+      dashboard,
+      pipeline,
+      topJobs,
+      recentTrend,
+      geographicDistribution,
+      avgHiringTimeDays,
+    ] = await Promise.all([
       this.getDashboardMetrics(organizationId, period),
       this.getPipelineMetrics(organizationId),
       this.getTopJobsMetrics(organizationId),
       this.getRecentTrend(organizationId, period),
+      this.getGeographicDistribution(organizationId),
+      this.getAvgHiringTimeDays(organizationId),
     ]);
 
     return {
@@ -93,6 +110,8 @@ export class OrganizationMetricsService {
       pipeline,
       topJobs,
       recentTrend,
+      geographicDistribution,
+      avgHiringTimeDays,
     };
   }
 
@@ -367,6 +386,57 @@ export class OrganizationMetricsService {
     }
 
     return result;
+  }
+
+  async getGeographicDistribution(
+    organizationId: string,
+  ): Promise<GeographicDistribution[]> {
+    const results = await this.applicationRepository
+      .createQueryBuilder('application')
+      .leftJoin('application.candidate', 'candidate')
+      .leftJoin('application.job', 'job')
+      .where('job.organizationId = :organizationId', { organizationId })
+      .select("COALESCE(candidate.location->>'city', 'Unknown')", 'city')
+      .addSelect('COUNT(*)', 'count')
+      .groupBy("COALESCE(candidate.location->>'city', 'Unknown')")
+      .orderBy('count', 'DESC')
+      .limit(10)
+      .getRawMany();
+
+    const total = results.reduce(
+      (sum: number, row: { count: string }) => sum + parseInt(row.count, 10),
+      0,
+    );
+
+    return results.map((row: { city: string; count: string }) => ({
+      city: row.city || 'Unknown',
+      count: parseInt(row.count, 10),
+      percentage:
+        total > 0 ? Math.round((parseInt(row.count, 10) / total) * 100) : 0,
+    }));
+  }
+
+  async getAvgHiringTimeDays(organizationId: string): Promise<number> {
+    const hiredApplications = await this.applicationRepository
+      .createQueryBuilder('application')
+      .leftJoin('application.job', 'job')
+      .where('job.organizationId = :organizationId', { organizationId })
+      .andWhere('application.status = :status', { status: 'contratado' })
+      .andWhere('application.stageChangedAt > application.createdAt')
+      .getMany();
+
+    if (hiredApplications.length === 0) return 0;
+
+    let totalDays = 0;
+    for (const app of hiredApplications) {
+      const diffTime = Math.abs(
+        app.stageChangedAt.getTime() - app.createdAt.getTime(),
+      );
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      totalDays += diffDays;
+    }
+
+    return Math.round((totalDays / hiredApplications.length) * 10) / 10;
   }
 
   private getPeriodDates(
