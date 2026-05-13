@@ -25,6 +25,7 @@ export class User {
     public location?: {
       city?: string;
       country?: string;
+      street?: string;
     },
     public profileViews: number = 0,
   ) {}
