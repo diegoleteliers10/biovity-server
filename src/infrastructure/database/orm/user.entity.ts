@@ -70,6 +70,7 @@ export class UserEntity {
   public location?: {
     city?: string;
     country?: string;
+    street?: string;
   };
 
   @CreateDateColumn()

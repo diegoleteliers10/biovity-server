@@ -20,6 +20,10 @@ export class UserLocationDto {
   @IsOptional()
   @IsString()
   country?: string;
+
+  @IsOptional()
+  @IsString()
+  street?: string;
 }
 
 export class UserUpdateDto {
