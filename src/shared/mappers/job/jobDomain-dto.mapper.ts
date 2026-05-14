@@ -18,6 +18,7 @@ export class JobDomainDtoMapper {
     dto.expiresAt = domain.expiresAt;
     dto.createdAt = domain.createdAt;
     dto.updatedAt = domain.updatedAt;
+    dto.category = domain.category;
     return dto;
   }
 }

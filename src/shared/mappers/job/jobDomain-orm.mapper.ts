@@ -18,6 +18,7 @@ export class JobDomainOrmMapper {
     jobOrm.views = domain.views;
     jobOrm.expiresAt = domain.expiresAt;
     jobOrm.location = domain.location;
+    jobOrm.category = domain.category;
 
     return jobOrm;
   }
@@ -38,6 +39,7 @@ export class JobDomainOrmMapper {
       entity.views,
       entity.expiresAt,
       entity.location,
+      entity.category,
     );
   }
 }

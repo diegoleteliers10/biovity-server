@@ -178,4 +178,12 @@ export class JobCreateDto {
   @IsOptional()
   @IsString()
   expiresAt?: string;
+
+  @ApiPropertyOptional({
+    example: 'research',
+    description: 'Categoría del trabajo',
+  })
+  @IsOptional()
+  @IsString()
+  category?: string;
 }

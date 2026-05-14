@@ -4,6 +4,7 @@ export interface JobFilters {
   organizationId?: string;
   status?: 'draft' | 'active' | 'paused' | 'closed' | 'expired';
   search?: string;
+  category?: string;
 }
 
 export interface PaginationOptions {
@@ -55,6 +56,7 @@ export interface CreateJobInput {
   benefits?: Record<string, unknown>[];
   status?: string;
   expiresAt?: Date;
+  category?: string;
 }
 
 export interface UpdateJobInput {
@@ -67,4 +69,5 @@ export interface UpdateJobInput {
   benefits?: Record<string, unknown>[];
   status?: string;
   expiresAt?: Date;
+  category?: string;
 }

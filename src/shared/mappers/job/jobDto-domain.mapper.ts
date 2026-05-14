@@ -21,6 +21,7 @@ export class JobDtoDomainMapper {
         | undefined,
       status: dto.status as unknown as string | undefined,
       expiresAt: dto.expiresAt ? new Date(dto.expiresAt) : undefined,
+      category: dto.category,
     };
   }
 

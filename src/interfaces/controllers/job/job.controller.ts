@@ -111,6 +111,7 @@ export class JobController {
       organizationId: query.organizationId,
       status: query.status,
       search: query.search,
+      category: query.category,
     };
 
     const pagination = {
