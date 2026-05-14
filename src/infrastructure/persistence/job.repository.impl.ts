@@ -64,6 +64,12 @@ export class JobRepositoryImpl implements IJobRepository {
       );
     }
 
+    if (filters?.category) {
+      queryBuilder.andWhere('job.category ILIKE :category', {
+        category: `%${filters.category}%`,
+      });
+    }
+
     const total = await queryBuilder.getCount();
 
     queryBuilder.skip(skip).take(limit).orderBy('job.createdAt', 'DESC');

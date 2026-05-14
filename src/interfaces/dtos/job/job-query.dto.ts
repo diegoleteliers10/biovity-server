@@ -57,4 +57,8 @@ export class JobQueryDto {
   @IsOptional()
   @IsString()
   search?: string;
+
+  @IsOptional()
+  @IsString()
+  category?: string;
 }

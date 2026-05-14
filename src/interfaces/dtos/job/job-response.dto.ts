@@ -184,7 +184,19 @@ export class JobResponseDto {
   @IsDateString()
   createdAt: Date;
 
-  @ApiProperty({ example: '2024-01-15', description: 'Fecha de actualización' })
+  @ApiPropertyOptional({
+    example: '2024-01-15',
+    description: 'Fecha de actualización',
+  })
+  @IsOptional()
   @IsDateString()
-  updatedAt: Date;
+  updatedAt?: Date;
+
+  @ApiPropertyOptional({
+    example: 'biotecnologia',
+    description: 'Slug de categoría',
+  })
+  @IsOptional()
+  @IsString()
+  category?: string;
 }

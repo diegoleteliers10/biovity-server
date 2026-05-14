@@ -58,6 +58,7 @@ export class Job {
     public views: number = 0,
     public expiresAt?: Date,
     public location: JobLocation = {},
+    public category?: string,
   ) {}
 
   public isActive(): boolean {

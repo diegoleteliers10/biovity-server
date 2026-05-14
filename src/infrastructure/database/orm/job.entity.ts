@@ -115,6 +115,9 @@ export class JobEntity {
   @Column({ type: 'json', nullable: false })
   public location: JobLocation;
 
+  @Column({ nullable: true })
+  public category?: string;
+
   @OneToMany(() => ApplicationEntity, application => application.job)
   public applications: ApplicationEntity[];
 }

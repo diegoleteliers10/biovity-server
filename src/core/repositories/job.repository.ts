@@ -4,6 +4,7 @@ export interface JobFilters {
   organizationId?: string;
   status?: 'draft' | 'active' | 'paused' | 'closed' | 'expired';
   search?: string;
+  category?: string;
 }
 
 export interface PaginationOptions {

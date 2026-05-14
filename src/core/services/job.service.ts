@@ -51,6 +51,7 @@ export class JobService implements IJobUseCase {
       0, // views
       data.expiresAt,
       this.mapLocation(data.location),
+      data.category,
     );
 
     return this.jobRepository.create(job);
@@ -120,6 +121,7 @@ export class JobService implements IJobUseCase {
       benefits: this.mapBenefits(data.benefits) ?? existingJob.benefits,
       status: data.status ? (data.status as JobStatus) : existingJob.status,
       expiresAt: data.expiresAt,
+      category: data.category,
     };
 
     return this.jobRepository.update(id, updatedJob);
