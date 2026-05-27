@@ -13,6 +13,7 @@ import { ApplicationModule } from './interfaces/controllers/application/applicat
 import { SavedJobModule } from './interfaces/controllers/saved-job/saved-job.module';
 import { JobQuestionModule } from './interfaces/controllers/job-question/job-question.module';
 import { HealthModule } from './interfaces/controllers/health/health.module';
+import { AdminModule } from './interfaces/controllers/admin/admin.module';
 import { EventModule } from './interfaces/controllers/event/event.module';
 import { SubscriptionModule } from './interfaces/controllers/subscription/subscription.module';
 import { ApiKeysModule } from './interfaces/controllers/api-keys/api-keys.module';
@@ -36,6 +37,7 @@ import { ApiKeysModule } from './interfaces/controllers/api-keys/api-keys.module
     SubscriptionModule,
     JobQuestionModule,
     ApiKeysModule,
+    AdminModule,
   ],
   controllers: [],
   providers: [],

@@ -51,7 +51,7 @@ export class JobQueryDto {
   organizationId?: string;
 
   @IsOptional()
-  @IsEnum(JobStatus)
+  @IsEnum(JobStatus, { message: 'status must be one of: draft, active, paused, closed, expired' })
   status?: 'draft' | 'active' | 'paused' | 'closed' | 'expired';
 
   @IsOptional()
