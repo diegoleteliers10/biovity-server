@@ -9,14 +9,7 @@ import {
 } from 'typeorm';
 import { ChatEntity } from './chat.entity';
 import { UserEntity } from './user.entity';
-
-export enum MessageType {
-  TEXT = 'text',
-  FILE = 'file',
-  AUDIO = 'audio',
-  IMAGE = 'image',
-  EVENT = 'event',
-}
+import { MessageType } from '../../../core/domain/enums';
 
 export interface FileContent {
   url: string;

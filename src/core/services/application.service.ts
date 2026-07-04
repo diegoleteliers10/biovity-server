@@ -4,8 +4,11 @@ import {
   ConflictException,
   BadRequestException,
   Inject,
+  LoggerService,
 } from '@nestjs/common';
 import * as crypto from 'crypto';
+import { DataSource } from 'typeorm';
+import { InjectDataSource } from '@nestjs/typeorm';
 import { IApplicationRepository } from '../repositories/application.respository';
 import { IJobRepository } from '../repositories/job.repository';
 import { IUserRepository } from '../repositories/user.repository';
@@ -17,10 +20,25 @@ import {
 } from '../use-cases/application/application.use-case';
 import {
   Application,
-  ApplicationStatus,
   ApplicationAnswer,
 } from '../domain/entities/application.entity';
-import { QuestionStatus } from '../domain/entities/job-question.entity';
+import {
+  ApplicationStatus,
+  NotificationType,
+  QuestionStatus,
+  UserType,
+} from '../domain/enums';
+import { ApplicationEntity } from '../../infrastructure/database/orm/application.entity';
+import { ApplicationAnswerEntity } from '../../infrastructure/database/orm/application-answer.entity';
+import { ApplicationDomainOrmMapper } from '../../shared/mappers/application/applicationDomain-orm.mapper';
+import { LOGGER_TOKEN } from '../../shared/logger/logger.service';
+import {
+  NotificationService,
+  applicationStatusLabel,
+} from '../../shared/notification';
+
+const APPLICATIONS_LINK = '/dashboard/applications';
+const MY_APPLICATIONS_LINK = '/dashboard/my-applications';
 
 @Injectable()
 export class ApplicationService implements IApplicationUseCase {
@@ -35,6 +53,10 @@ export class ApplicationService implements IApplicationUseCase {
     private readonly jobQuestionRepository: IJobQuestionRepository,
     @Inject('IApplicationAnswerRepository')
     private readonly applicationAnswerRepository: IApplicationAnswerRepository,
+    @InjectDataSource()
+    private readonly dataSource: DataSource,
+    private readonly notificationService: NotificationService,
+    @Inject(LOGGER_TOKEN) private readonly logger: LoggerService,
   ) {}
 
   private generateId(): string {
@@ -121,25 +143,66 @@ export class ApplicationService implements IApplicationUseCase {
       data.resumeUrl,
     );
 
-    const createdApplication =
-      await this.applicationRepository.create(application);
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
 
-    if (data.answers && data.answers.length > 0) {
-      const answers = data.answers.map(
-        a =>
-          new ApplicationAnswer(
-            this.generateId(),
-            createdApplication.id,
-            a.questionId,
-            a.value,
-          ),
+    let createdApplication: Application;
+    try {
+      const applicationOrm = ApplicationDomainOrmMapper.toOrm(application);
+      const savedOrm = await queryRunner.manager.save(
+        ApplicationEntity,
+        applicationOrm,
       );
+
       const savedAnswers =
-        await this.applicationAnswerRepository.bulkCreate(answers);
-      (
-        createdApplication as unknown as { answers: ApplicationAnswer[] }
-      ).answers = savedAnswers;
+        data.answers && data.answers.length > 0
+          ? await queryRunner.manager.save(
+              ApplicationAnswerEntity,
+              data.answers.map(a => {
+                const entity = new ApplicationAnswerEntity();
+                entity.id = this.generateId();
+                entity.applicationId = savedOrm.id;
+                entity.questionId = a.questionId;
+                entity.value = a.value;
+                entity.createdAt = new Date();
+                return entity;
+              }),
+            )
+          : [];
+
+      await queryRunner.commitTransaction();
+
+      createdApplication = ApplicationDomainOrmMapper.toDomain(savedOrm);
+      if (savedAnswers.length > 0) {
+        (
+          createdApplication as unknown as { answers: ApplicationAnswer[] }
+        ).answers = savedAnswers.map(
+          e =>
+            new ApplicationAnswer(
+              e.id,
+              e.applicationId,
+              e.questionId,
+              e.value,
+              e.createdAt,
+            ),
+        );
+      }
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      await queryRunner.release();
     }
+
+    await this.notifyNewApplication({
+      applicationId: createdApplication.id,
+      candidateId: createdApplication.candidateId,
+      candidateName: candidate.name,
+      jobId: createdApplication.jobId,
+      jobTitle: job.title,
+      organizationId: job.organizationId,
+    });
 
     return createdApplication;
   }
@@ -186,7 +249,101 @@ export class ApplicationService implements IApplicationUseCase {
       throw new NotFoundException(`Application with id ${id} not found`);
     }
 
-    return this.applicationRepository.update(id, { status });
+    if (existingApplication.status === status) {
+      return existingApplication;
+    }
+
+    const updated = await this.applicationRepository.update(id, { status });
+    if (!updated) {
+      return null;
+    }
+
+    await this.notifyApplicationStageChange({
+      applicationId: existingApplication.id,
+      candidateId: existingApplication.candidateId,
+      jobId: existingApplication.jobId,
+      status,
+    });
+
+    return updated;
+  }
+
+  private async notifyNewApplication(context: {
+    applicationId: string;
+    candidateId: string;
+    candidateName: string;
+    jobId: string;
+    jobTitle: string;
+    organizationId: string;
+  }): Promise<void> {
+    // EXCEPTION. REASON: post-commit best-effort side-effect. Any failure here
+    // (recipient lookup or insert) must never break the already-committed
+    // application creation.
+    try {
+      const recipients = await this.userRepository.findIdsByOrganizationId(
+        context.organizationId,
+        UserType.ORGANIZATION,
+      );
+      const targets = recipients.filter(id => id !== context.candidateId);
+      if (targets.length === 0) {
+        return;
+      }
+
+      await this.notificationService.createMany(
+        targets.map(userId => ({
+          userId,
+          type: NotificationType.APPLICATION,
+          title: 'Nueva postulacion',
+          body: `${context.candidateName} postulo a ${context.jobTitle}`,
+          link: APPLICATIONS_LINK,
+          data: {
+            applicationId: context.applicationId,
+            jobId: context.jobId,
+            candidateId: context.candidateId,
+          },
+          dedupKey: `app:${context.applicationId}:created`,
+        })),
+      );
+    } catch (error) {
+      this.logger.error(
+        `new application notification failed: ${(error as Error).message}`,
+        (error as Error).stack,
+        'ApplicationService',
+      );
+    }
+  }
+
+  private async notifyApplicationStageChange(context: {
+    applicationId: string;
+    candidateId: string;
+    jobId: string;
+    status: ApplicationStatus;
+  }): Promise<void> {
+    // EXCEPTION. REASON: post-commit best-effort side-effect. Any failure here
+    // (job lookup or insert) must never break the already-committed status
+    // update.
+    try {
+      const job = await this.jobRepository.findById(context.jobId);
+      await this.notificationService.create({
+        userId: context.candidateId,
+        type: NotificationType.APPLICATION,
+        title: 'Actualizacion de postulacion',
+        body: `Tu postulacion a ${job?.title ?? 'la vacante'} paso a ${applicationStatusLabel(context.status)}`,
+        link: MY_APPLICATIONS_LINK,
+        data: {
+          applicationId: context.applicationId,
+          jobId: context.jobId,
+          status: context.status,
+        },
+        dedupKey: `app:${context.applicationId}:status:${context.status}`,
+      });
+    } catch (error) {
+      this.logger.error(
+        `application stage notification failed: ${(error as Error).message}`,
+        (error as Error).stack,
+        'ApplicationService',
+      );
+    }
   }
 
   async deleteApplication(id: string): Promise<boolean> {

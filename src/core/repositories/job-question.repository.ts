@@ -1,7 +1,5 @@
-import {
-  JobQuestion,
-  QuestionStatus,
-} from '../domain/entities/job-question.entity';
+import { JobQuestion } from '../domain/entities/job-question.entity';
+import { QuestionStatus } from '../domain/enums';
 
 export interface IJobQuestionRepository {
   findById(id: string): Promise<JobQuestion | null>;

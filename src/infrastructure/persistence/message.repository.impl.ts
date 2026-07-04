@@ -27,11 +27,16 @@ export class MessageRepositoryImpl implements IMessageRepository {
     return messageOrm ? MessageDomainOrmMapper.toDomain(messageOrm) : null;
   }
 
-  async findByChatId(chatId: string): Promise<Message[]> {
+  async findByChatId(
+    chatId: string,
+    pagination?: { take?: number; skip?: number },
+  ): Promise<Message[]> {
     const messagesOrm = await this.messageRepository.find({
       where: { chatId },
       relations: ['sender'],
       order: { createdAt: 'ASC' },
+      take: pagination?.take ?? 50,
+      skip: pagination?.skip ?? 0,
     });
     return messagesOrm.map(msgOrm => MessageDomainOrmMapper.toDomain(msgOrm));
   }

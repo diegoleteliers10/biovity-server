@@ -9,6 +9,7 @@ import {
   ParseUUIDPipe,
   HttpCode,
   HttpStatus,
+  NotFoundException,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { OrganizationService } from '../../../core/services/organization.service';
@@ -45,11 +46,10 @@ export class OrganizationController {
   @Get(':id')
   async getOrganizationById(
     @Param('id', ParseUUIDPipe) id: string,
-  ): Promise<OrganizationResponseDto | null> {
+  ): Promise<OrganizationResponseDto> {
     const organization = await this.organizationService.getOrganizationById(id);
-    return organization
-      ? OrganizationDomainDtoMapper.toDto(organization)
-      : null;
+    if (!organization) throw new NotFoundException('Organization not found');
+    return OrganizationDomainDtoMapper.toDto(organization);
   }
 
   @Get()
@@ -62,7 +62,7 @@ export class OrganizationController {
   async updateOrganization(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: OrganizationUpdateDto,
-  ): Promise<OrganizationResponseDto | null> {
+  ): Promise<OrganizationResponseDto> {
     const input: UpdateOrganizationInput = {
       name: dto.name,
       website: dto.website,
@@ -73,9 +73,8 @@ export class OrganizationController {
       id,
       input,
     );
-    return organization
-      ? OrganizationDomainDtoMapper.toDto(organization)
-      : null;
+    if (!organization) throw new NotFoundException('Organization not found');
+    return OrganizationDomainDtoMapper.toDto(organization);
   }
 
   @Delete(':id')

@@ -6,26 +6,15 @@ import {
   UpdateDateColumn,
   ManyToOne,
   JoinColumn,
+  Index,
 } from 'typeorm';
 import { JobEntity } from './job.entity';
 import { OrganizationEntity } from './organization.entity';
-
-export enum QuestionType {
-  TEXT = 'text',
-  TEXTAREA = 'textarea',
-  NUMBER = 'number',
-  SELECT = 'select',
-  MULTISELECT = 'multiselect',
-  BOOLEAN = 'boolean',
-  DATE = 'date',
-}
-
-export enum QuestionStatus {
-  DRAFT = 'draft',
-  PUBLISHED = 'published',
-}
+import { QuestionType, QuestionStatus } from '../../../core/domain/enums';
 
 @Entity('job_question')
+@Index('idx_job_question_job_id', ['jobId'])
+@Index('idx_job_question_organization_id', ['organizationId'])
 export class JobQuestionEntity {
   @PrimaryGeneratedColumn('uuid')
   public id: string;

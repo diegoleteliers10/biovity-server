@@ -4,24 +4,14 @@ import {
   Column,
   ManyToOne,
   JoinColumn,
+  UpdateDateColumn,
+  Index,
 } from 'typeorm';
 import { OrganizationEntity } from './organization.entity';
-
-export enum SubscriptionPlan {
-  FREE = 'free',
-  BASIC = 'basic',
-  PREMIUM = 'premium',
-  ENTERPRISE = 'enterprise',
-}
-
-export enum PaymentStatus {
-  PENDING = 'pending',
-  APPROVED = 'approved',
-  REJECTED = 'rejected',
-  CANCELLED = 'cancelled',
-}
+import { SubscriptionPlan, PaymentStatus } from '../../../core/domain/enums';
 
 @Entity('subscription')
+@Index('idx_subscription_organizationId', ['organizationId'])
 export class SubscriptionEntity {
   @PrimaryGeneratedColumn('uuid')
   public id: string;
@@ -82,6 +72,6 @@ export class SubscriptionEntity {
   @Column({ type: 'timestamp', nullable: false, name: 'created_at' })
   public createdAt: Date;
 
-  @Column({ type: 'timestamp', nullable: false, name: 'updated_at' })
+  @UpdateDateColumn({ name: 'updated_at' })
   public updatedAt: Date;
 }

@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { DatabaseConfig } from './infrastructure/config/database.config';
 import { LoggerModule, LoggerMiddleware } from './shared/logger';
 import { InterceptorsModule } from './shared/interceptors/interceptors.module';
+import { NotificationModule } from './shared/notification';
 import { JobModule } from './interfaces/controllers/job/job.module';
 import { UserModule } from './interfaces/controllers/user/user.module';
 import { OrganizationModule } from './interfaces/controllers/organization/organization.module';
@@ -23,6 +24,7 @@ import { ApiKeysModule } from './interfaces/controllers/api-keys/api-keys.module
     ConfigModule.forRoot({ isGlobal: true }),
     LoggerModule,
     InterceptorsModule,
+    NotificationModule,
     DatabaseConfig,
     JobModule,
     UserModule,

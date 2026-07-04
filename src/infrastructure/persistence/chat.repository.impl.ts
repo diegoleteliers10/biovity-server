@@ -38,20 +38,30 @@ export class ChatRepositoryImpl implements IChatRepository {
     return chatOrm ? ChatDomainOrmMapper.toDomain(chatOrm) : null;
   }
 
-  async findByRecruiterId(recruiterId: string): Promise<Chat[]> {
+  async findByRecruiterId(
+    recruiterId: string,
+    pagination?: { take?: number; skip?: number },
+  ): Promise<Chat[]> {
     const chatsOrm = await this.chatRepository.find({
       where: { recruiterId },
       relations: ['recruiter', 'professional'],
       order: { updatedAt: 'DESC' },
+      take: pagination?.take ?? 50,
+      skip: pagination?.skip ?? 0,
     });
     return chatsOrm.map(chatOrm => ChatDomainOrmMapper.toDomain(chatOrm));
   }
 
-  async findByProfessionalId(professionalId: string): Promise<Chat[]> {
+  async findByProfessionalId(
+    professionalId: string,
+    pagination?: { take?: number; skip?: number },
+  ): Promise<Chat[]> {
     const chatsOrm = await this.chatRepository.find({
       where: { professionalId },
       relations: ['recruiter', 'professional'],
       order: { updatedAt: 'DESC' },
+      take: pagination?.take ?? 50,
+      skip: pagination?.skip ?? 0,
     });
     return chatsOrm.map(chatOrm => ChatDomainOrmMapper.toDomain(chatOrm));
   }

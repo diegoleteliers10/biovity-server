@@ -10,6 +10,7 @@ import {
   HttpCode,
   HttpStatus,
   ParseUUIDPipe,
+  NotFoundException,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { JobQuestionService } from '../../../core/services/job-question.service';
@@ -68,26 +69,29 @@ export class JobQuestionController {
   async updateQuestion(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateQuestionDto,
-  ): Promise<QuestionResponseDto | null> {
+  ): Promise<QuestionResponseDto> {
     const input = JobQuestionDtoDomainMapper.toUpdateInput(dto);
     const question = await this.jobQuestionService.updateQuestion(id, input);
-    return question ? JobQuestionDomainDtoMapper.toDto(question) : null;
+    if (!question) throw new NotFoundException('Question not found');
+    return JobQuestionDomainDtoMapper.toDto(question);
   }
 
   @Patch('jobs/questions/:id/publish')
   async publishQuestion(
     @Param('id', ParseUUIDPipe) id: string,
-  ): Promise<QuestionResponseDto | null> {
+  ): Promise<QuestionResponseDto> {
     const question = await this.jobQuestionService.publishQuestion(id);
-    return question ? JobQuestionDomainDtoMapper.toDto(question) : null;
+    if (!question) throw new NotFoundException('Question not found');
+    return JobQuestionDomainDtoMapper.toDto(question);
   }
 
   @Patch('jobs/questions/:id/unpublish')
   async unpublishQuestion(
     @Param('id', ParseUUIDPipe) id: string,
-  ): Promise<QuestionResponseDto | null> {
+  ): Promise<QuestionResponseDto> {
     const question = await this.jobQuestionService.unpublishQuestion(id);
-    return question ? JobQuestionDomainDtoMapper.toDto(question) : null;
+    if (!question) throw new NotFoundException('Question not found');
+    return JobQuestionDomainDtoMapper.toDto(question);
   }
 
   @Patch('organizations/:organizationId/jobs/:jobId/questions/reorder')

@@ -1,10 +1,10 @@
+import { JobCreateDto } from '../../../interfaces/dtos/job/job-create.dto';
+import { CreateJobInput } from '../../../core/use-cases/job/job.use-case';
 import {
-  JobCreateDto,
   JobEmploymentType,
   JobExperienceLevel,
   JobStatus,
-} from '../../../interfaces/dtos/job/job-create.dto';
-import { CreateJobInput } from '../../../core/use-cases/job/job.use-case';
+} from '../../../core/domain/enums';
 
 export class JobDtoDomainMapper {
   static toCreateJobInput(dto: JobCreateDto): CreateJobInput {
@@ -12,14 +12,14 @@ export class JobDtoDomainMapper {
       organizationId: dto.organizationId,
       title: dto.title,
       description: dto.description,
-      employmentType: dto.employmentType as unknown as string,
-      experienceLevel: dto.experienceLevel as unknown as string,
+      employmentType: dto.employmentType,
+      experienceLevel: dto.experienceLevel,
       salary: dto.salary as unknown as Record<string, unknown> | undefined,
       location: dto.location as unknown as Record<string, unknown> | undefined,
       benefits: dto.benefits as unknown as
         | Record<string, unknown>[]
         | undefined,
-      status: dto.status as unknown as string | undefined,
+      status: dto.status,
       expiresAt: dto.expiresAt ? new Date(dto.expiresAt) : undefined,
       category: dto.category,
     };

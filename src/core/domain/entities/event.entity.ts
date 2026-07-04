@@ -1,15 +1,5 @@
-export enum EventType {
-  INTERVIEW = 'interview',
-  TASK_DEADLINE = 'task_deadline',
-  ANNOUNCEMENT = 'announcement',
-  ONBOARDING = 'onboarding',
-}
-
-export enum EventStatus {
-  SCHEDULED = 'scheduled',
-  COMPLETED = 'completed',
-  CANCELLED = 'cancelled',
-}
+import { EventType, EventStatus } from '../enums';
+import type { EventParticipant } from './event-participant.entity';
 
 export class Event {
   constructor(
@@ -28,6 +18,7 @@ export class Event {
     public applicationId: string | null,
     public createdAt: Date = new Date(),
     public updatedAt: Date = new Date(),
+    public participants: EventParticipant[] = [],
   ) {}
 
   public isActive(): boolean {

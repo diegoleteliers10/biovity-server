@@ -1,8 +1,10 @@
 import {
   EventEntity,
   EventNoteEntity,
+  EventParticipantEntity,
 } from '../../../infrastructure/database/orm';
 import { Event, EventNote } from '../../../core/domain/entities/event.entity';
+import { EventParticipant } from '../../../core/domain/entities/event-participant.entity';
 
 export class EventDomainOrmMapper {
   static toOrm(domain: Event): EventEntity {
@@ -26,7 +28,7 @@ export class EventDomainOrmMapper {
   }
 
   static toDomain(entity: EventEntity): Event {
-    return new Event(
+    const event = new Event(
       entity.id,
       entity.title,
       entity.description,
@@ -42,6 +44,21 @@ export class EventDomainOrmMapper {
       entity.applicationId,
       entity.createdAt,
       entity.updatedAt,
+      Array.isArray(entity.participants)
+        ? entity.participants.map(p => this.participantToDomain(p))
+        : [],
+    );
+    return event;
+  }
+
+  static participantToDomain(entity: EventParticipantEntity): EventParticipant {
+    return new EventParticipant(
+      entity.id,
+      entity.eventId,
+      entity.userId,
+      entity.role,
+      entity.status,
+      entity.createdAt,
     );
   }
 

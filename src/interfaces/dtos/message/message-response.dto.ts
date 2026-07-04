@@ -7,14 +7,7 @@ import {
   IsOptional,
   IsObject,
 } from 'class-validator';
-
-export enum MessageTypeResponseDto {
-  TEXT = 'text',
-  FILE = 'file',
-  AUDIO = 'audio',
-  IMAGE = 'image',
-  EVENT = 'event',
-}
+import { MessageType } from '../../../core/domain/enums';
 
 export class MessageResponseDto {
   @IsUUID()
@@ -29,8 +22,8 @@ export class MessageResponseDto {
   @IsString()
   content: string;
 
-  @IsEnum(MessageTypeResponseDto)
-  type: 'text' | 'file' | 'audio' | 'image' | 'event';
+  @IsEnum(MessageType)
+  type: MessageType;
 
   @IsOptional()
   @IsObject()

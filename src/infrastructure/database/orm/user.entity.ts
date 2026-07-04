@@ -11,11 +11,7 @@ import {
 import { OrganizationEntity } from './organization.entity';
 import { ResumeEntity } from './resume.entity';
 import { ApplicationEntity } from './application.entity';
-
-export enum UserType {
-  PROFESSIONAL = 'professional',
-  ORGANIZATION = 'organization',
-}
+import { UserType } from '../../../core/domain/enums';
 
 @Entity('user')
 export class UserEntity {

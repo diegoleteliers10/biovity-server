@@ -5,11 +5,13 @@ import {
   ManyToOne,
   CreateDateColumn,
   JoinColumn,
+  Index,
 } from 'typeorm';
 import { OrganizationEntity } from './organization.entity';
 import { UserEntity } from './user.entity';
 
 @Entity('api_keys')
+@Index('idx_api_keys_organization_id', ['organizationId'])
 export class ApiKeyEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;

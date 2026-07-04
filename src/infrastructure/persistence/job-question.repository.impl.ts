@@ -1,9 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { JobQuestionEntity, QuestionStatus } from '../database/orm';
+import { JobQuestionEntity } from '../database/orm';
 import { JobQuestion } from '../../core/domain/entities/job-question.entity';
 import { IJobQuestionRepository } from '../../core/repositories/job-question.repository';
+import { QuestionStatus } from '../../core/domain/enums';
 
 @Injectable()
 export class JobQuestionRepositoryImpl implements IJobQuestionRepository {
@@ -52,7 +53,7 @@ export class JobQuestionRepositoryImpl implements IJobQuestionRepository {
     id: string,
     data: Partial<JobQuestion>,
   ): Promise<JobQuestion | null> {
-    await this.repository.update(id, data as Partial<JobQuestionEntity>);
+    await this.repository.update(id, data);
     return this.findById(id);
   }
 
@@ -74,7 +75,7 @@ export class JobQuestionRepositoryImpl implements IJobQuestionRepository {
   async updateOrderIndex(id: string, orderIndex: number): Promise<void> {
     await this.repository.update(id, {
       orderIndex,
-    } as Partial<JobQuestionEntity>);
+    });
   }
 
   async bulkUpdateOrder(

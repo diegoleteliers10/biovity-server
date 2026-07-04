@@ -1,7 +1,5 @@
-import {
-  Application,
-  ApplicationStatus,
-} from '../../domain/entities/application.entity';
+import { Application } from '../../domain/entities/application.entity';
+import { ApplicationStatus } from '../../domain/enums';
 
 export interface ApplicationFilters {
   jobId?: string;

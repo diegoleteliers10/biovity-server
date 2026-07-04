@@ -49,6 +49,6 @@ export class OrganizationMetricsController {
   ): Promise<OrganizationMetricsDto> {
     return this.metricsService.getMetrics(id, {
       period,
-    }) as Promise<OrganizationMetricsDto>;
+    });
   }
 }

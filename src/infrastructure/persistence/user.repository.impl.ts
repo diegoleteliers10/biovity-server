@@ -4,6 +4,7 @@ import { UserEntity } from '../database/orm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from '../../core/domain/entities/user.entity';
+import { UserType } from '../../core/domain/enums';
 import { UserDomainOrmMapper } from '../../shared/mappers/user/userDomain-orm.mapper';
 import {
   UserFilters,
@@ -38,6 +39,23 @@ export class UserRepositoryImpl implements IUserRepository {
       relations: ['organization'],
     });
     return userOrm ? UserDomainOrmMapper.toDomain(userOrm) : null;
+  }
+
+  async findIdsByOrganizationId(
+    organizationId: string,
+    type?: UserType,
+  ): Promise<string[]> {
+    const queryBuilder = this.userRepository
+      .createQueryBuilder('user')
+      .select('user.id', 'id')
+      .where('user.organizationId = :organizationId', { organizationId });
+
+    if (type) {
+      queryBuilder.andWhere('user.type = :type', { type });
+    }
+
+    const rows = await queryBuilder.getRawMany<{ id: string }>();
+    return rows.map(row => row.id);
   }
 
   async findAll(

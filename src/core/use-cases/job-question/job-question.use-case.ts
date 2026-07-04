@@ -1,8 +1,5 @@
-import {
-  JobQuestion,
-  QuestionType,
-  QuestionStatus,
-} from '../../domain/entities/job-question.entity';
+import { JobQuestion } from '../../domain/entities/job-question.entity';
+import { QuestionType, QuestionStatus } from '../../domain/enums';
 
 export interface CreateQuestionInput {
   jobId: string;

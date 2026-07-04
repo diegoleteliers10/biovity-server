@@ -1,4 +1,5 @@
-import { Subscription, PaymentStatus } from '../domain/entities/index';
+import { Subscription } from '../domain/entities/index';
+import { PaymentStatus } from '../domain/enums';
 
 export interface SubscriptionFilters {
   organizationId?: string;
@@ -6,11 +7,19 @@ export interface SubscriptionFilters {
   isActive?: boolean;
 }
 
+export interface SubscriptionPagination {
+  take?: number;
+  skip?: number;
+}
+
 export interface ISubscriptionRepository {
   create(entity: Subscription): Promise<Subscription>;
   findById(id: string): Promise<Subscription | null>;
   findByOrganizationId(organizationId: string): Promise<Subscription | null>;
-  findAll(filters?: SubscriptionFilters): Promise<Subscription[]>;
+  findAll(
+    filters?: SubscriptionFilters,
+    pagination?: SubscriptionPagination,
+  ): Promise<Subscription[]>;
   update(
     id: string,
     entity: Partial<Subscription>,

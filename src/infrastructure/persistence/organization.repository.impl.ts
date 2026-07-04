@@ -29,8 +29,14 @@ export class OrganizationRepositoryImpl implements IOrganizationRepository {
       : null;
   }
 
-  async findAll(): Promise<Organization[]> {
-    const organizationsOrm = await this.organizationRepository.find();
+  async findAll(pagination?: {
+    take?: number;
+    skip?: number;
+  }): Promise<Organization[]> {
+    const organizationsOrm = await this.organizationRepository.find({
+      take: pagination?.take ?? 50,
+      skip: pagination?.skip ?? 0,
+    });
     return organizationsOrm.map(organizationOrm =>
       OrganizationDomainOrmMapper.toDomain(organizationOrm),
     );

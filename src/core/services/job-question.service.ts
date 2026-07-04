@@ -13,11 +13,8 @@ import {
   CreateQuestionInput,
   UpdateQuestionInput,
 } from '../use-cases/job-question/job-question.use-case';
-import {
-  JobQuestion,
-  QuestionType,
-  QuestionStatus,
-} from '../domain/entities/job-question.entity';
+import { JobQuestion } from '../domain/entities/job-question.entity';
+import { QuestionType, QuestionStatus } from '../domain/enums';
 
 @Injectable()
 export class JobQuestionService implements IJobQuestionUseCase {

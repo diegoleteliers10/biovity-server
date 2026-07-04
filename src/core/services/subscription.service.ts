@@ -5,14 +5,16 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import * as crypto from 'crypto';
+import { DataSource } from 'typeorm';
+import { InjectDataSource } from '@nestjs/typeorm';
 import { MercadoPagoConfig, Preference } from 'mercadopago';
 import { ISubscriptionRepository } from '../repositories/subscription.repository';
 import { IOrganizationRepository } from '../repositories/organization.repository';
-import {
-  Subscription,
-  SubscriptionPlan,
-  PaymentStatus,
-} from '../domain/entities/subscription.entity';
+import { Subscription } from '../domain/entities/subscription.entity';
+import { SubscriptionPlan, PaymentStatus } from '../domain/enums';
+import { SubscriptionEntity } from '../../infrastructure/database/orm/subscription.entity';
+import { OrganizationEntity } from '../../infrastructure/database/orm/organization.entity';
+import { SubscriptionDomainOrmMapper } from '../../shared/mappers/subscription/subscriptionDomain-orm.mapper';
 
 export interface CreatePreferenceInput {
   plan: string;
@@ -59,6 +61,8 @@ export class SubscriptionService {
     private readonly subscriptionRepository: ISubscriptionRepository,
     @Inject('IOrganizationRepository')
     private readonly organizationRepository: IOrganizationRepository,
+    @InjectDataSource()
+    private readonly dataSource: DataSource,
   ) {
     const accessToken = process.env.MERCADO_PAGO_ACCESS_TOKEN || '';
     this.mercadopagoClient = new MercadoPagoConfig({
@@ -114,18 +118,36 @@ export class SubscriptionService {
         null,
       );
 
-      await this.subscriptionRepository.create(subscription);
-      await this.organizationRepository.updateSubscription(
-        data.organizationId,
-        subscription.id,
-      );
+      const queryRunner = this.dataSource.createQueryRunner();
+      await queryRunner.connect();
+      await queryRunner.startTransaction();
+      try {
+        const subscriptionOrm = SubscriptionDomainOrmMapper.toOrm(subscription);
+        const savedSubscription = await queryRunner.manager.save(
+          SubscriptionEntity,
+          subscriptionOrm,
+        );
 
-      return {
-        preferenceId: 'free-plan',
-        initPoint: '',
-        plan: 'free',
-        price: 0,
-      };
+        await queryRunner.manager.update(
+          OrganizationEntity,
+          data.organizationId,
+          { subscriptionId: savedSubscription.id },
+        );
+
+        await queryRunner.commitTransaction();
+
+        return {
+          preferenceId: 'free-plan',
+          initPoint: '',
+          plan: 'free',
+          price: 0,
+        };
+      } catch (error) {
+        await queryRunner.rollbackTransaction();
+        throw error;
+      } finally {
+        await queryRunner.release();
+      }
     }
 
     // For paid plans, create MP preference
@@ -182,10 +204,9 @@ export class SubscriptionService {
       };
     } catch (error) {
       console.error('MercadoPago error:', error);
-      if (error instanceof Error) {
-        throw new BadRequestException(`MercadoPago error: ${error.message}`);
-      }
-      throw new BadRequestException('Error creating MercadoPago preference');
+      throw new BadRequestException(
+        'Error processing payment. Please try again.',
+      );
     }
   }
 
@@ -250,17 +271,35 @@ export class SubscriptionService {
         new Date(),
       );
 
-      const createdSubscription =
-        await this.subscriptionRepository.create(subscription);
+      const queryRunner = this.dataSource.createQueryRunner();
+      await queryRunner.connect();
+      await queryRunner.startTransaction();
+      try {
+        const subscriptionOrm = SubscriptionDomainOrmMapper.toOrm(subscription);
+        const savedSubscription = await queryRunner.manager.save(
+          SubscriptionEntity,
+          subscriptionOrm,
+        );
 
-      // Link subscription to organization
-      await this.organizationRepository.updateSubscription(
-        organizationId,
-        createdSubscription.id,
-      );
+        await queryRunner.manager.update(OrganizationEntity, organizationId, {
+          subscriptionId: savedSubscription.id,
+        });
 
-      console.log('Subscription created via webhook:', createdSubscription.id);
-      return createdSubscription;
+        await queryRunner.commitTransaction();
+
+        const createdSubscription =
+          SubscriptionDomainOrmMapper.toDomain(savedSubscription);
+        console.log(
+          'Subscription created via webhook:',
+          createdSubscription.id,
+        );
+        return createdSubscription;
+      } catch (error) {
+        await queryRunner.rollbackTransaction();
+        throw error;
+      } finally {
+        await queryRunner.release();
+      }
     }
 
     // Handle rejected/cancelled - create failed subscription record
@@ -313,7 +352,24 @@ export class SubscriptionService {
       new Date(),
     );
 
-    return this.subscriptionRepository.create(pendingSubscription);
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+    try {
+      const subscriptionOrm =
+        SubscriptionDomainOrmMapper.toOrm(pendingSubscription);
+      const savedSubscription = await queryRunner.manager.save(
+        SubscriptionEntity,
+        subscriptionOrm,
+      );
+      await queryRunner.commitTransaction();
+      return SubscriptionDomainOrmMapper.toDomain(savedSubscription);
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      await queryRunner.release();
+    }
   }
 
   private generateId(): string {

@@ -6,7 +6,8 @@ import {
   PaginatedResult,
 } from '../repositories/user.repository';
 import { IUserUseCase, UpdateUserInput } from '../use-cases/user/user.use-case';
-import { User, UserType } from '../domain/entities/user.entity';
+import { User } from '../domain/entities/user.entity';
+import { UserType } from '../domain/enums';
 
 @Injectable()
 export class UserService implements IUserUseCase {

@@ -11,29 +11,11 @@ import {
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-
-export enum JobEmploymentType {
-  FULL_TIME = 'Full-time',
-  PART_TIME = 'Part-time',
-  CONTRATO = 'Contrato',
-  PRACTICA = 'Practica',
-}
-
-export enum JobExperienceLevel {
-  ENTRANTE = 'Entrante',
-  JUNIOR = 'Junior',
-  MID_SENIOR = 'Mid-Senior',
-  SENIOR = 'Senior',
-  EJECUTIVO = 'Ejecutivo',
-}
-
-export enum JobStatus {
-  DRAFT = 'draft',
-  ACTIVE = 'active',
-  PAUSED = 'paused',
-  CLOSED = 'closed',
-  EXPIRED = 'expired',
-}
+import {
+  JobEmploymentType,
+  JobExperienceLevel,
+  JobStatus,
+} from '../../../core/domain/enums';
 
 export class JobSalaryDto {
   @ApiPropertyOptional({ example: 800000, description: 'Salario mínimo' })

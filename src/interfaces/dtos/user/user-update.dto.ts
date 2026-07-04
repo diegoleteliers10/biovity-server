@@ -8,9 +8,7 @@ import {
   IsObject,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { UserType } from './user-response.dto';
-
-export { UserType };
+import { UserType } from '../../../core/domain/enums';
 
 export class UserLocationDto {
   @IsOptional()

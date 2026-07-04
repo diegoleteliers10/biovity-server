@@ -1,9 +1,6 @@
 import { JobQuestion } from '../../../core/domain/entities/job-question.entity';
 import { QuestionResponseDto } from '../../../interfaces/dtos/job-question/question-response.dto';
-import {
-  QuestionType,
-  QuestionStatus,
-} from '../../../interfaces/dtos/job-question/question.dto';
+import { QuestionType, QuestionStatus } from '../../../core/domain/enums';
 
 export class JobQuestionDomainDtoMapper {
   static toDto(domain: JobQuestion): QuestionResponseDto {
@@ -12,10 +9,10 @@ export class JobQuestionDomainDtoMapper {
     dto.jobId = domain.jobId;
     dto.organizationId = domain.organizationId;
     dto.label = domain.label;
-    dto.type = domain.type as QuestionType;
+    dto.type = domain.type;
     dto.required = domain.required;
     dto.orderIndex = domain.orderIndex;
-    dto.status = domain.status as QuestionStatus;
+    dto.status = domain.status;
     dto.placeholder = domain.placeholder;
     dto.helperText = domain.helperText;
     dto.options = domain.options;

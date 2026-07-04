@@ -10,6 +10,7 @@ import {
   HttpCode,
   HttpStatus,
   ParseUUIDPipe,
+  NotFoundException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -22,6 +23,7 @@ import {
 import { JobService } from '../../../core/services/job.service';
 import { JobDtoDomainMapper } from '../../../shared/mappers/job/jobDto-domain.mapper';
 import { JobCreateDto } from '../../dtos/job/job-create.dto';
+import { JobUpdateDto } from '../../dtos/job/job-update.dto';
 import { JobResponseDto } from '../../dtos/job/job-response.dto';
 
 import { JobDomainDtoMapper } from '../../../shared/mappers/job/jobDomain-dto.mapper';
@@ -85,14 +87,14 @@ export class JobController {
   @ApiResponse({ status: 404, description: 'Oferta no encontrada' })
   async getJobById(
     @Param('id', ParseUUIDPipe) id: string,
-  ): Promise<JobResponseDto | null> {
+  ): Promise<JobResponseDto> {
     const result = await this.jobService.getJobByIdWithApplicationCount(id);
-    if (!result) return null;
+    if (!result) throw new NotFoundException('Job not found');
     const jobDto = JobDomainDtoMapper.toDto(result.job);
     return {
       ...jobDto,
       totalApplications: result.totalApplications,
-    } as JobResponseDto;
+    };
   }
 
   @Get()
@@ -222,14 +224,15 @@ export class JobController {
     type: JobResponseDto,
   })
   @ApiResponse({ status: 404, description: 'Oferta no encontrada' })
-  @ApiBody({ type: JobCreateDto })
+  @ApiBody({ type: JobUpdateDto })
   async updateJob(
     @Param('id', ParseUUIDPipe) id: string,
-    @Body() dto: Partial<JobCreateDto>,
-  ): Promise<JobResponseDto | null> {
+    @Body() dto: JobUpdateDto,
+  ): Promise<JobResponseDto> {
     const input = JobDtoDomainMapper.toCreateJobInput(dto as JobCreateDto);
     const job = await this.jobService.updateJob(id, input);
-    return job ? JobDomainDtoMapper.toDto(job) : null;
+    if (!job) throw new NotFoundException('Job not found');
+    return JobDomainDtoMapper.toDto(job);
   }
 
   @Delete(':id')
@@ -263,8 +266,9 @@ export class JobController {
   })
   async incrementViews(
     @Param('id', ParseUUIDPipe) id: string,
-  ): Promise<JobResponseDto | null> {
+  ): Promise<JobResponseDto> {
     const job = await this.jobService.incrementJobViews(id);
-    return job ? JobDomainDtoMapper.toDto(job) : null;
+    if (!job) throw new NotFoundException('Job not found');
+    return JobDomainDtoMapper.toDto(job);
   }
 }

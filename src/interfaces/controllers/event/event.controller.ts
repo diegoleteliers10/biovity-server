@@ -10,6 +10,7 @@ import {
   ParseUUIDPipe,
   HttpCode,
   HttpStatus,
+  NotFoundException,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { EventService } from '../../../core/services/event.service';
@@ -22,6 +23,7 @@ import {
   EventNoteCreateDto,
   EventResponseDto,
   EventNoteResponseDto,
+  RsvpUpdateDto,
 } from '../../dtos/event/event.dto';
 
 @ApiTags('events')
@@ -40,9 +42,9 @@ export class EventController {
   @Get(':id')
   async getEventById(
     @Param('id', ParseUUIDPipe) id: string,
-  ): Promise<EventResponseDto | null> {
+  ): Promise<EventResponseDto> {
     const event = await this.eventService.getEventById(id);
-    if (!event) return null;
+    if (!event) throw new NotFoundException('Event not found');
 
     return EventDomainDtoMapper.toDto(event);
   }
@@ -84,16 +86,32 @@ export class EventController {
   async updateEvent(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: EventUpdateDto,
-  ): Promise<EventResponseDto | null> {
+  ): Promise<EventResponseDto> {
     const input = EventDtoDomainMapper.toUpdateEventInput(dto);
     const event = await this.eventService.updateEvent(id, input);
-    return event ? EventDomainDtoMapper.toDto(event) : null;
+    if (!event) throw new NotFoundException('Event not found');
+    return EventDomainDtoMapper.toDto(event);
   }
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   async deleteEvent(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
     await this.eventService.deleteEvent(id);
+  }
+
+  @Patch(':id/participants/:userId')
+  async updateParticipantStatus(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('userId', ParseUUIDPipe) userId: string,
+    @Body() dto: RsvpUpdateDto,
+  ): Promise<EventResponseDto> {
+    const event = await this.eventService.updateParticipantStatus(
+      id,
+      userId,
+      dto.status,
+    );
+    if (!event) throw new NotFoundException('Event not found');
+    return EventDomainDtoMapper.toDto(event);
   }
 
   // Notes

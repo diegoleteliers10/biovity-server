@@ -1,4 +1,5 @@
-import { Message, MessageType } from '../../domain/entities/message.entity';
+import { Message } from '../../domain/entities/message.entity';
+import { MessageType } from '../../domain/enums';
 
 export interface IMessageUseCase {
   createMessage(data: CreateMessageInput): Promise<Message>;

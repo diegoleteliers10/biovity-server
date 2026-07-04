@@ -9,20 +9,7 @@ import {
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-
-export enum SubscriptionPlanDto {
-  FREE = 'free',
-  BASIC = 'basic',
-  PREMIUM = 'premium',
-  ENTERPRISE = 'enterprise',
-}
-
-export enum PaymentStatusDto {
-  PENDING = 'pending',
-  APPROVED = 'approved',
-  REJECTED = 'rejected',
-  CANCELLED = 'cancelled',
-}
+import { SubscriptionPlan, PaymentStatus } from '../../../core/domain/enums';
 
 export class SubscriptionFeaturesDto {
   @ApiPropertyOptional({ example: 5 })
@@ -59,9 +46,9 @@ export class SubscriptionResponseDto {
   @IsUUID()
   organizationId: string;
 
-  @ApiProperty({ enum: SubscriptionPlanDto })
-  @IsEnum(SubscriptionPlanDto)
-  planName: SubscriptionPlanDto;
+  @ApiProperty({ enum: SubscriptionPlan })
+  @IsEnum(SubscriptionPlan)
+  planName: SubscriptionPlan;
 
   @ApiProperty({ example: false })
   @IsBoolean()
@@ -77,10 +64,10 @@ export class SubscriptionResponseDto {
   @IsDateString()
   expiresAt: string | null;
 
-  @ApiPropertyOptional({ enum: PaymentStatusDto })
+  @ApiPropertyOptional({ enum: PaymentStatus })
   @IsOptional()
-  @IsEnum(PaymentStatusDto)
-  payment_status: PaymentStatusDto | null;
+  @IsEnum(PaymentStatus)
+  payment_status: PaymentStatus | null;
 
   @ApiPropertyOptional({ example: 'pref-xxx-xxx' })
   @IsOptional()
@@ -113,9 +100,9 @@ export class SubscriptionCreateDto {
   @IsUUID()
   organizationId: string;
 
-  @ApiProperty({ enum: SubscriptionPlanDto, description: 'Nombre del plan' })
-  @IsEnum(SubscriptionPlanDto)
-  planName: SubscriptionPlanDto;
+  @ApiProperty({ enum: SubscriptionPlan, description: 'Nombre del plan' })
+  @IsEnum(SubscriptionPlan)
+  planName: SubscriptionPlan;
 }
 
 export class CreatePreferenceDto {

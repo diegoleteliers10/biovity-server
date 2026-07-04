@@ -6,10 +6,8 @@ import { Injectable } from '@nestjs/common';
 import { SubscriptionEntity } from '../database/orm/subscription.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import {
-  Subscription,
-  PaymentStatus,
-} from '../../core/domain/entities/subscription.entity';
+import { Subscription } from '../../core/domain/entities/subscription.entity';
+import { PaymentStatus } from '../../core/domain/enums';
 import { SubscriptionDomainOrmMapper } from '../../shared/mappers/subscription/subscriptionDomain-orm.mapper';
 
 @Injectable()
@@ -48,7 +46,10 @@ export class SubscriptionRepositoryImpl implements ISubscriptionRepository {
       : null;
   }
 
-  async findAll(filters?: SubscriptionFilters): Promise<Subscription[]> {
+  async findAll(
+    filters?: SubscriptionFilters,
+    pagination?: { take?: number; skip?: number },
+  ): Promise<Subscription[]> {
     const queryBuilder = this.subscriptionRepository
       .createQueryBuilder('subscription')
       .leftJoinAndSelect('subscription.organization', 'organization');
@@ -70,6 +71,8 @@ export class SubscriptionRepositoryImpl implements ISubscriptionRepository {
         isActive: filters.isActive,
       });
     }
+
+    queryBuilder.take(pagination?.take ?? 50).skip(pagination?.skip ?? 0);
 
     const subscriptionsOrm = await queryBuilder.getMany();
     return subscriptionsOrm.map(subscriptionOrm =>

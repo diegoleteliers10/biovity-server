@@ -1,9 +1,5 @@
-import {
-  Event,
-  EventNote,
-  EventType,
-  EventStatus,
-} from '../../domain/entities/event.entity';
+import { Event, EventNote } from '../../domain/entities/event.entity';
+import { EventType, EventStatus, ParticipantStatus } from '../../domain/enums';
 
 export interface PaginationOptions {
   page?: number;
@@ -37,6 +33,11 @@ export interface IEventUseCase {
     pagination?: PaginationOptions,
   ): Promise<PaginatedResult<Event>>;
   updateEvent(id: string, data: UpdateEventInput): Promise<Event | null>;
+  updateParticipantStatus(
+    eventId: string,
+    userId: string,
+    status: ParticipantStatus,
+  ): Promise<Event | null>;
   deleteEvent(id: string): Promise<boolean>;
   createNote(eventId: string, data: CreateNoteInput): Promise<EventNote>;
   getNotes(eventId: string): Promise<EventNote[]>;

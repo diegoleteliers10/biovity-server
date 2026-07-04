@@ -3,28 +3,23 @@ import {
   PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
+  UpdateDateColumn,
   ManyToOne,
   OneToMany,
   JoinColumn,
+  Index,
 } from 'typeorm';
 import { UserEntity } from './user.entity';
 import { ApplicationEntity } from './application.entity';
 import { OrganizationEntity } from './organization.entity';
-
-export enum EventType {
-  INTERVIEW = 'interview',
-  TASK_DEADLINE = 'task_deadline',
-  ANNOUNCEMENT = 'announcement',
-  ONBOARDING = 'onboarding',
-}
-
-export enum EventStatus {
-  SCHEDULED = 'scheduled',
-  COMPLETED = 'completed',
-  CANCELLED = 'cancelled',
-}
+import { EventParticipantEntity } from './event-participant.entity';
+import { EventType, EventStatus } from '../../../core/domain/enums';
 
 @Entity('event')
+@Index('idx_event_organizerId', ['organizerId'])
+@Index('idx_event_organizationId', ['organizationId'])
+@Index('idx_event_candidateId', ['candidateId'])
+@Index('idx_event_applicationId', ['applicationId'])
 export class EventEntity {
   @PrimaryGeneratedColumn('uuid')
   public id: string;
@@ -84,10 +79,15 @@ export class EventEntity {
   @OneToMany(() => EventNoteEntity, en => en.event)
   public notes: EventNoteEntity[];
 
+  @OneToMany(() => EventParticipantEntity, p => p.event, {
+    cascade: false,
+  })
+  public participants: EventParticipantEntity[];
+
   @CreateDateColumn()
   public createdAt: Date = new Date();
 
-  @CreateDateColumn()
+  @UpdateDateColumn()
   public updatedAt: Date = new Date();
 }
 

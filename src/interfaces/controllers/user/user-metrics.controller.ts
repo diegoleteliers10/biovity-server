@@ -47,9 +47,6 @@ export class UserMetricsController {
     @Param('id', ParseUUIDPipe) id: string,
     @Query('period') period?: 'week' | 'month' | 'year',
   ): Promise<UserMetricsDto> {
-    return this.metricsService.getMetrics(
-      id,
-      period,
-    ) as Promise<UserMetricsDto>;
+    return this.metricsService.getMetrics(id, period);
   }
 }

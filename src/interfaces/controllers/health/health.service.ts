@@ -30,12 +30,11 @@ export class HealthService {
         status: 'up',
         message: 'Database connection is healthy',
       };
-    } catch (error: unknown) {
-      const err = error as { message?: string };
+    } catch {
       return {
         status: 'down',
         message: 'Database connection failed',
-        error: err.message,
+        error: 'Database connection failed',
       };
     }
   }

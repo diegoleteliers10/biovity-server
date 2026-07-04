@@ -53,7 +53,7 @@ export class ApiKeysController {
   @ApiParam({ name: 'orgId', type: 'string', format: 'uuid' })
   async list(@Param('orgId', ParseUUIDPipe) orgId: string) {
     const keys = await this.apiKeysService.listByOrg(orgId);
-    return keys.map(({ keyHash: _k, ...safe }: any) => safe);
+    return keys.map(({ keyHash: _k, keyPrefix: _p, ...safe }: any) => safe);
   }
 
   @Delete(':keyId')

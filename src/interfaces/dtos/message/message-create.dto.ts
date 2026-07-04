@@ -7,14 +7,7 @@ import {
   IsEnum,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-
-export enum MessageTypeDto {
-  TEXT = 'text',
-  FILE = 'file',
-  AUDIO = 'audio',
-  IMAGE = 'image',
-  EVENT = 'event',
-}
+import { MessageType } from '../../../core/domain/enums';
 
 export class FileContentDto {
   @IsString()
@@ -77,8 +70,8 @@ export class MessageCreateDto {
   content: string;
 
   @IsOptional()
-  @IsEnum(MessageTypeDto)
-  type?: 'text' | 'file' | 'audio' | 'image' | 'event';
+  @IsEnum(MessageType)
+  type?: MessageType;
 
   @IsOptional()
   @IsObject()

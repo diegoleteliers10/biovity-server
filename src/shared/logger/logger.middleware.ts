@@ -61,7 +61,7 @@ export class LoggerMiddleware implements NestMiddleware {
       // HTTP Context (High Cardinality)
       method: req.method,
       path: req.url,
-      query: req.query as Record<string, unknown>,
+      query: req.query,
       requestId,
       correlationId,
 

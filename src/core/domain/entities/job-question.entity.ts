@@ -1,17 +1,4 @@
-export enum QuestionType {
-  TEXT = 'text',
-  TEXTAREA = 'textarea',
-  NUMBER = 'number',
-  SELECT = 'select',
-  MULTISELECT = 'multiselect',
-  BOOLEAN = 'boolean',
-  DATE = 'date',
-}
-
-export enum QuestionStatus {
-  DRAFT = 'draft',
-  PUBLISHED = 'published',
-}
+import { QuestionType, QuestionStatus } from '../enums';
 
 export class JobQuestion {
   constructor(

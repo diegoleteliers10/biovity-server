@@ -3,14 +3,18 @@ import {
   PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
+  UpdateDateColumn,
   ManyToOne,
   JoinColumn,
   OneToMany,
+  Index,
 } from 'typeorm';
 import { UserEntity } from './user.entity';
 import { MessageEntity } from './message.entity';
 
 @Entity('chat')
+@Index('idx_chat_recruiterId', ['recruiterId'])
+@Index('idx_chat_professionalId', ['professionalId'])
 export class ChatEntity {
   @PrimaryGeneratedColumn('uuid')
   public id: string;
@@ -41,7 +45,7 @@ export class ChatEntity {
   @CreateDateColumn()
   public createdAt: Date = new Date();
 
-  @Column({ type: 'timestamp', nullable: true })
+  @UpdateDateColumn()
   public updatedAt?: Date;
 
   @OneToMany(() => MessageEntity, message => message.chat)

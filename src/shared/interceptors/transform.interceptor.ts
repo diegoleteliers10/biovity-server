@@ -24,9 +24,10 @@ export interface PaginatedApiResponse<T> {
 }
 
 @Injectable()
-export class TransformInterceptor<T>
-  implements NestInterceptor<T, ApiResponse<T> | PaginatedApiResponse<T>>
-{
+export class TransformInterceptor<T> implements NestInterceptor<
+  T,
+  ApiResponse<T> | PaginatedApiResponse<T>
+> {
   intercept(
     context: ExecutionContext,
     next: CallHandler,

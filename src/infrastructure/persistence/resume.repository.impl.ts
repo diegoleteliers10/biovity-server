@@ -1,3 +1,4 @@
+import { IResumeRepository } from '../../core/repositories/resume.repository';
 import { Injectable } from '@nestjs/common';
 import { ResumeEntity } from '../database/orm';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -5,8 +6,10 @@ import { Repository } from 'typeorm';
 import { Resume } from '../../core/domain/entities/resume.entity';
 import { ResumeDomainOrmMapper } from '../../shared/mappers/resume/resumeDomain-orm.mapper';
 
+const DEFAULT_TAKE = 50;
+
 @Injectable()
-export class ResumeRepositoryImpl {
+export class ResumeRepositoryImpl implements IResumeRepository {
   constructor(
     @InjectRepository(ResumeEntity)
     private readonly resumeRepository: Repository<ResumeEntity>,
@@ -30,8 +33,14 @@ export class ResumeRepositoryImpl {
     return resumeOrm ? ResumeDomainOrmMapper.toDomain(resumeOrm) : null;
   }
 
-  async findAll(): Promise<Resume[]> {
-    const resumesOrm = await this.resumeRepository.find();
+  async findAll(pagination?: {
+    take?: number;
+    skip?: number;
+  }): Promise<Resume[]> {
+    const resumesOrm = await this.resumeRepository.find({
+      take: pagination?.take ?? DEFAULT_TAKE,
+      skip: pagination?.skip ?? 0,
+    });
     return resumesOrm.map(resumeOrm =>
       ResumeDomainOrmMapper.toDomain(resumeOrm),
     );

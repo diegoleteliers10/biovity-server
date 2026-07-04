@@ -6,12 +6,15 @@ import {
   ManyToOne,
   JoinColumn,
   Unique,
+  Index,
 } from 'typeorm';
 import { ApplicationEntity } from './application.entity';
 import { JobQuestionEntity } from './job-question.entity';
 
 @Entity('application_answer')
 @Unique(['applicationId', 'questionId'])
+@Index('idx_application_answer_application_id', ['applicationId'])
+@Index('idx_application_answer_question_id', ['questionId'])
 export class ApplicationAnswerEntity {
   @PrimaryGeneratedColumn('uuid')
   public id: string;

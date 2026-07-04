@@ -1,16 +1,5 @@
-import {
-  Controller,
-  Get,
-  Query,
-  HttpCode,
-  HttpStatus,
-} from '@nestjs/common';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiResponse,
-  ApiQuery,
-} from '@nestjs/swagger';
+import { Controller, Get, Query, HttpCode, HttpStatus } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
 import { AdminService } from '../../../core/services/admin.service';
 import {
   AdminStatsResponseDto,
@@ -64,7 +53,9 @@ export class AdminController {
     description: 'Top jobs por número de postulaciones',
     type: TopJobsResponseDto,
   })
-  async getTopJobs(@Query() query: TopJobsQueryDto): Promise<TopJobsResponseDto> {
+  async getTopJobs(
+    @Query() query: TopJobsQueryDto,
+  ): Promise<TopJobsResponseDto> {
     return this.adminService.getTopJobs(query.limit ?? 10);
   }
 

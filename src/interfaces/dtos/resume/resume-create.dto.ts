@@ -8,18 +8,7 @@ import {
   IsObject,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-
-export enum SkillLevel {
-  ADVANCED = 'advanced',
-  INTERMEDIATE = 'intermediate',
-  ENTRY = 'entry',
-}
-
-export enum LanguageLevel {
-  ADVANCED = 'advanced',
-  INTERMEDIATE = 'intermediate',
-  ENTRY = 'entry',
-}
+import { SkillLevel, LanguageLevel } from '../../../core/domain/enums';
 
 export class ResumeExperienceDto {
   @IsString()
