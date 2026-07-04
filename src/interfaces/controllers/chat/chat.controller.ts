@@ -9,11 +9,13 @@ import {
   ParseUUIDPipe,
   HttpCode,
   HttpStatus,
+  NotFoundException,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { ChatService } from '../../../core/services/chat.service';
 import { ChatDtoDomainMapper } from '../../../shared/mappers/chat/chatDto-domain.mapper';
 import { ChatCreateDto } from '../../dtos/chat/chat-create.dto';
+import { ChatUpdateDto } from '../../dtos/chat/chat-update.dto';
 import { ChatResponseDto } from '../../dtos/chat/chat-response.dto';
 import { ChatDomainDtoMapper } from '../../../shared/mappers/chat/chatDomain-dto.mapper';
 
@@ -33,9 +35,10 @@ export class ChatController {
   @Get(':id')
   async getChatById(
     @Param('id', ParseUUIDPipe) id: string,
-  ): Promise<ChatResponseDto | null> {
+  ): Promise<ChatResponseDto> {
     const chat = await this.chatService.getChatById(id);
-    return chat ? ChatDomainDtoMapper.toDto(chat) : null;
+    if (!chat) throw new NotFoundException('Chat not found');
+    return ChatDomainDtoMapper.toDto(chat);
   }
 
   @Get('recruiter/:recruiterId')
@@ -58,21 +61,23 @@ export class ChatController {
   async getChatByParticipants(
     @Param('recruiterId', ParseUUIDPipe) recruiterId: string,
     @Param('professionalId', ParseUUIDPipe) professionalId: string,
-  ): Promise<ChatResponseDto | null> {
+  ): Promise<ChatResponseDto> {
     const chat = await this.chatService.getChatByParticipants(
       recruiterId,
       professionalId,
     );
-    return chat ? ChatDomainDtoMapper.toDto(chat) : null;
+    if (!chat) throw new NotFoundException('Chat not found');
+    return ChatDomainDtoMapper.toDto(chat);
   }
 
   @Put(':id')
   async updateChat(
     @Param('id', ParseUUIDPipe) id: string,
-    @Body() dto: Partial<ChatCreateDto>,
-  ): Promise<ChatResponseDto | null> {
+    @Body() dto: ChatUpdateDto,
+  ): Promise<ChatResponseDto> {
     const chat = await this.chatService.updateChat(id, dto);
-    return chat ? ChatDomainDtoMapper.toDto(chat) : null;
+    if (!chat) throw new NotFoundException('Chat not found');
+    return ChatDomainDtoMapper.toDto(chat);
   }
 
   @Delete(':id')

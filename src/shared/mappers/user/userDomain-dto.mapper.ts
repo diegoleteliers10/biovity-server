@@ -1,10 +1,10 @@
 import { User } from '../../../core/domain/entities/user.entity';
 import {
   UserResponseDto,
-  UserType as UserTypeDto,
   UserLocationDto,
 } from '../../../interfaces/dtos/user/user-response.dto';
 import { OrganizationDomainOrmMapper } from '../organization/organizationDomain-orm.mapper';
+import { UserType } from '../../../core/domain/enums';
 
 export class UserDomainDtoMapper {
   static toDto(domain: User): UserResponseDto {
@@ -12,7 +12,7 @@ export class UserDomainDtoMapper {
     dto.id = domain.id;
     dto.email = domain.email;
     dto.name = domain.name;
-    dto.type = domain.type as UserTypeDto;
+    dto.type = domain.type;
     dto.isEmailVerified = domain.isEmailVerified;
     dto.isActive = domain.isActive;
     dto.organizationId = domain.organizationId;

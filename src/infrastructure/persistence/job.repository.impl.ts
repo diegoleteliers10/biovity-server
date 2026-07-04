@@ -117,6 +117,9 @@ export class JobRepositoryImpl implements IJobRepository {
     const limit = pagination?.limit || 10;
     const skip = (page - 1) * limit;
 
+    const countMap =
+      await this.getApplicationCountsByOrganizationId(organizationId);
+
     const queryBuilder = this.jobRepository
       .createQueryBuilder('job')
       .leftJoinAndSelect('job.organization', 'organization')
@@ -128,18 +131,10 @@ export class JobRepositoryImpl implements IJobRepository {
 
     const jobsOrm = await queryBuilder.getMany();
 
-    // Get application counts for each job
-    const jobsWithCounts: JobWithApplications[] = await Promise.all(
-      jobsOrm.map(async jobOrm => {
-        const applicationsCount = await this.applicationRepository.count({
-          where: { jobId: jobOrm.id },
-        });
-        return {
-          job: JobDomainOrmMapper.toDomain(jobOrm),
-          applicationsCount,
-        };
-      }),
-    );
+    const jobsWithCounts: JobWithApplications[] = jobsOrm.map(jobOrm => ({
+      job: JobDomainOrmMapper.toDomain(jobOrm),
+      applicationsCount: countMap.get(jobOrm.id) ?? 0,
+    }));
 
     return {
       data: jobsWithCounts,
@@ -148,6 +143,21 @@ export class JobRepositoryImpl implements IJobRepository {
       limit,
       totalPages: Math.ceil(total / limit),
     };
+  }
+
+  private async getApplicationCountsByOrganizationId(
+    organizationId: string,
+  ): Promise<Map<string, number>> {
+    const rows = await this.applicationRepository
+      .createQueryBuilder('app')
+      .innerJoin('app.job', 'job')
+      .select('app.jobId', 'jobId')
+      .addSelect('COUNT(*)', 'count')
+      .where('job.organizationId = :organizationId', { organizationId })
+      .groupBy('app.jobId')
+      .getRawMany<{ jobId: string; count: string }>();
+
+    return new Map(rows.map(r => [r.jobId, parseInt(r.count, 10)]));
   }
 
   async update(id: string, entity: Partial<Job>): Promise<Job | null> {

@@ -1,9 +1,5 @@
 import type { Organization } from './organization.entity';
-
-export enum UserType {
-  PROFESSIONAL = 'professional',
-  ORGANIZATION = 'organization',
-}
+import { UserType } from '../enums';
 
 export class User {
   constructor(

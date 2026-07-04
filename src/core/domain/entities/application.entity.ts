@@ -1,10 +1,4 @@
-export enum ApplicationStatus {
-  PENDIENTE = 'pendiente',
-  OFERTA = 'oferta',
-  ENTREVISTA = 'entrevista',
-  RECHAZADO = 'rechazado',
-  CONTRATADO = 'contratado',
-}
+import { ApplicationStatus } from '../enums';
 
 export class ApplicationAnswer {
   constructor(

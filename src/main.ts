@@ -2,10 +2,6 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
-import {
-  LoggingInterceptor,
-  TransformInterceptor,
-} from './shared/interceptors';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 async function bootstrap() {
@@ -37,31 +33,27 @@ async function bootstrap() {
     }),
   );
 
-  // Configure global interceptors
-  app.useGlobalInterceptors(
-    new LoggingInterceptor(),
-    new TransformInterceptor(),
-  );
+  // Configure Swagger (disabled in production)
+  if (process.env.NODE_ENV !== 'production') {
+    const config = new DocumentBuilder()
+      .setTitle('Biovity API')
+      .setDescription('API para plataforma de empleos en biotecnología')
+      .setVersion('1.0')
+      .addBearerAuth()
+      .addTag('jobs', 'Operaciones de ofertas de trabajo')
+      .addTag('users', 'Operaciones de usuarios')
+      .addTag('organizations', 'Operaciones de organizaciones')
+      .addTag('applications', 'Operaciones de postulaciones')
+      .addTag('saved-jobs', 'Operaciones de empleos guardados')
+      .addTag('chat', 'Operaciones de chats')
+      .addTag('message', 'Operaciones de mensajes')
+      .addTag('resume', 'Operaciones de currículums')
+      .addTag('health', 'Verificación de estado de la API')
+      .build();
 
-  // Configure Swagger
-  const config = new DocumentBuilder()
-    .setTitle('Biovity API')
-    .setDescription('API para plataforma de empleos en biotecnología')
-    .setVersion('1.0')
-    .addBearerAuth()
-    .addTag('jobs', 'Operaciones de ofertas de trabajo')
-    .addTag('users', 'Operaciones de usuarios')
-    .addTag('organizations', 'Operaciones de organizaciones')
-    .addTag('applications', 'Operaciones de postulaciones')
-    .addTag('saved-jobs', 'Operaciones de empleos guardados')
-    .addTag('chat', 'Operaciones de chats')
-    .addTag('message', 'Operaciones de mensajes')
-    .addTag('resume', 'Operaciones de currículums')
-    .addTag('health', 'Verificación de estado de la API')
-    .build();
-
-  const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api/docs', app, document);
+    const document = SwaggerModule.createDocument(app, config);
+    SwaggerModule.setup('api/docs', app, document);
+  }
 
   const port = process.env.PORT || 3001;
   await app.listen(port);

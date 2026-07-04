@@ -1,16 +1,17 @@
 import { Injectable, NotFoundException, Inject } from '@nestjs/common';
 import * as crypto from 'crypto';
+import { DataSource } from 'typeorm';
+import { InjectDataSource } from '@nestjs/typeorm';
 import { IMessageRepository } from '../repositories/message.repository';
 import { IChatRepository } from '../repositories/chat.repository';
 import {
   IMessageUseCase,
   CreateMessageInput,
 } from '../use-cases/message/message.use-case';
-import {
-  Message,
-  MessageType,
-  MessageContent,
-} from '../domain/entities/message.entity';
+import { Message, MessageContent } from '../domain/entities/message.entity';
+import { MessageType } from '../domain/enums';
+import { MessageEntity } from '../../infrastructure/database/orm/message.entity';
+import { ChatEntity } from '../../infrastructure/database/orm/chat.entity';
 
 @Injectable()
 export class MessageService implements IMessageUseCase {
@@ -19,6 +20,8 @@ export class MessageService implements IMessageUseCase {
     private readonly messageRepository: IMessageRepository,
     @Inject('IChatRepository')
     private readonly chatRepository: IChatRepository,
+    @InjectDataSource()
+    private readonly dataSource: DataSource,
   ) {}
 
   private generateId(): string {
@@ -26,7 +29,6 @@ export class MessageService implements IMessageUseCase {
   }
 
   async createMessage(data: CreateMessageInput): Promise<Message> {
-    // Verify chat exists
     const chat = await this.chatRepository.findById(data.chatId);
     if (!chat) {
       throw new NotFoundException(`Chat with id ${data.chatId} not found`);
@@ -43,15 +45,49 @@ export class MessageService implements IMessageUseCase {
       new Date(),
     );
 
-    const savedMessage = await this.messageRepository.create(message);
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+    try {
+      const messageEntity = new MessageEntity();
+      Object.assign(messageEntity, {
+        id: message.id,
+        chatId: message.chatId,
+        senderId: message.senderId,
+        content: message.content,
+        type: message.type,
+        contentType: message.contentType,
+        isRead: message.isRead,
+        createdAt: message.createdAt,
+      });
+      const savedEntity = await queryRunner.manager.save(
+        MessageEntity,
+        messageEntity,
+      );
 
-    // Update chat's lastMessage
-    await this.chatRepository.update(data.chatId, {
-      lastMessage: data.content,
-      updatedAt: new Date(),
-    });
+      await queryRunner.manager.update(ChatEntity, data.chatId, {
+        lastMessage: data.content,
+        updatedAt: new Date(),
+      });
 
-    return savedMessage;
+      await queryRunner.commitTransaction();
+
+      return new Message(
+        savedEntity.id,
+        savedEntity.chatId,
+        savedEntity.senderId,
+        savedEntity.content,
+        savedEntity.type,
+        savedEntity.contentType,
+        savedEntity.isRead,
+        savedEntity.createdAt,
+      );
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      await queryRunner.release();
+    }
   }
 
   async getMessageById(id: string): Promise<Message | null> {

@@ -9,6 +9,7 @@ import {
   ParseUUIDPipe,
   HttpCode,
   HttpStatus,
+  NotFoundException,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { MessageService } from '../../../core/services/message.service';
@@ -37,9 +38,10 @@ export class MessageController {
   @Get(':id')
   async getMessageById(
     @Param('id', ParseUUIDPipe) id: string,
-  ): Promise<MessageResponseDto | null> {
+  ): Promise<MessageResponseDto> {
     const message = await this.messageService.getMessageById(id);
-    return message ? MessageDomainDtoMapper.toDto(message) : null;
+    if (!message) throw new NotFoundException('Message not found');
+    return MessageDomainDtoMapper.toDto(message);
   }
 
   @Get('chat/:chatId')
@@ -53,9 +55,10 @@ export class MessageController {
   @Put(':id/read')
   async markMessageAsRead(
     @Param('id', ParseUUIDPipe) id: string,
-  ): Promise<MessageResponseDto | null> {
+  ): Promise<MessageResponseDto> {
     const message = await this.messageService.markMessageAsRead(id);
-    return message ? MessageDomainDtoMapper.toDto(message) : null;
+    if (!message) throw new NotFoundException('Message not found');
+    return MessageDomainDtoMapper.toDto(message);
   }
 
   @Put('chat/:chatId/read')

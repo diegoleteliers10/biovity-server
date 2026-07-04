@@ -1,25 +1,4 @@
-export enum JobStatus {
-  DRAFT = 'draft',
-  ACTIVE = 'active',
-  PAUSED = 'paused',
-  CLOSED = 'closed',
-  EXPIRED = 'expired',
-}
-
-export enum JobEmploymentType {
-  FULL_TIME = 'Full-time',
-  PART_TIME = 'Part-time',
-  CONTRATO = 'Contrato',
-  PRACTICA = 'Practica',
-}
-
-export enum JobExperienceLevel {
-  ENTRANTE = 'Entrante',
-  JUNIOR = 'Junior',
-  MID_SENIOR = 'Mid-Senior',
-  SENIOR = 'Senior',
-  EJECUTIVO = 'Ejecutivo',
-}
+import { JobStatus, JobEmploymentType, JobExperienceLevel } from '../enums';
 
 export interface JobSalary {
   min?: number;

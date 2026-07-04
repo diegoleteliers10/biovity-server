@@ -4,17 +4,13 @@ import {
   IsEnum,
   IsOptional,
   IsDateString,
-  IsObject,
-  ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-
-export enum EventTypeDto {
-  INTERVIEW = 'interview',
-  TASK_DEADLINE = 'task_deadline',
-  ANNOUNCEMENT = 'announcement',
-  ONBOARDING = 'onboarding',
-}
+import {
+  EventType,
+  EventStatus,
+  ParticipantStatus,
+} from '../../../core/domain/enums';
 
 export class EventCreateDto {
   @IsString()
@@ -24,8 +20,8 @@ export class EventCreateDto {
   @IsString()
   description?: string;
 
-  @IsEnum(EventTypeDto)
-  type: 'interview' | 'task_deadline' | 'announcement' | 'onboarding';
+  @IsEnum(EventType)
+  type: EventType;
 
   @IsDateString()
   startAt: string;
@@ -68,8 +64,8 @@ export class EventUpdateDto {
   description?: string;
 
   @IsOptional()
-  @IsEnum(EventTypeDto)
-  type?: 'interview' | 'task_deadline' | 'announcement' | 'onboarding';
+  @IsEnum(EventType)
+  type?: EventType;
 
   @IsOptional()
   @IsDateString()
@@ -88,8 +84,8 @@ export class EventUpdateDto {
   meetingUrl?: string;
 
   @IsOptional()
-  @IsString()
-  status?: 'scheduled' | 'completed' | 'cancelled';
+  @IsEnum(EventStatus)
+  status?: EventStatus;
 }
 
 export class EventQueryDto {
@@ -110,12 +106,12 @@ export class EventQueryDto {
   candidateId?: string;
 
   @IsOptional()
-  @IsEnum(EventTypeDto)
-  type?: 'interview' | 'task_deadline' | 'announcement' | 'onboarding';
+  @IsEnum(EventType)
+  type?: EventType;
 
   @IsOptional()
-  @IsString()
-  status?: 'scheduled' | 'completed' | 'cancelled';
+  @IsEnum(EventStatus)
+  status?: EventStatus;
 
   @IsOptional()
   @IsDateString()
@@ -154,6 +150,21 @@ export class EventResponseDto {
   applicationId: string | null;
   createdAt: Date;
   updatedAt: Date;
+  participants: EventParticipantDto[];
+}
+
+export class EventParticipantDto {
+  id: string;
+  eventId: string;
+  userId: string;
+  role: 'organizer' | 'attendee' | 'guest';
+  status: 'pending' | 'accepted' | 'declined';
+  createdAt: Date;
+}
+
+export class RsvpUpdateDto {
+  @IsEnum(ParticipantStatus)
+  status: ParticipantStatus;
 }
 
 export class EventNoteCreateDto {

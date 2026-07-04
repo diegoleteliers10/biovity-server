@@ -1,8 +1,6 @@
-import {
-  UserUpdateDto,
-  UserType,
-} from '../../../interfaces/dtos/user/user-update.dto';
+import { UserUpdateDto } from '../../../interfaces/dtos/user/user-update.dto';
 import { UpdateUserInput } from '../../../core/use-cases/user/user.use-case';
+import { UserType } from '../../../core/domain/enums';
 
 export class UserDtoDomainMapper {
   static toUpdateUserInput(dto: UserUpdateDto): UpdateUserInput {

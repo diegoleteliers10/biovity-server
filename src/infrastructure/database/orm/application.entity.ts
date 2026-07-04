@@ -7,20 +7,19 @@ import {
   ManyToOne,
   OneToMany,
   JoinColumn,
+  Index,
+  Unique,
 } from 'typeorm';
 import { JobEntity } from './job.entity';
 import { UserEntity } from './user.entity';
 import { ApplicationAnswerEntity } from './application-answer.entity';
-
-export enum ApplicationStatus {
-  PENDIENTE = 'pendiente',
-  OFERTA = 'oferta',
-  ENTREVISTA = 'entrevista',
-  RECHAZADO = 'rechazado',
-  CONTRATADO = 'contratado',
-}
+import { ApplicationStatus } from '../../../core/domain/enums';
 
 @Entity('application')
+@Unique(['jobId', 'candidateId'])
+@Index('idx_application_jobId', ['jobId'])
+@Index('idx_application_candidateId', ['candidateId'])
+@Index('idx_application_status', ['status'])
 export class ApplicationEntity {
   @PrimaryGeneratedColumn('uuid')
   public id: string;

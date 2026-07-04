@@ -12,21 +12,7 @@ import {
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-
-export enum QuestionType {
-  TEXT = 'text',
-  TEXTAREA = 'textarea',
-  NUMBER = 'number',
-  SELECT = 'select',
-  MULTISELECT = 'multiselect',
-  BOOLEAN = 'boolean',
-  DATE = 'date',
-}
-
-export enum QuestionStatus {
-  DRAFT = 'draft',
-  PUBLISHED = 'published',
-}
+import { QuestionType, QuestionStatus } from '../../../core/domain/enums';
 
 export class QuestionOptionDto {
   @ApiProperty({ example: 'Option 1', description: 'Opción' })

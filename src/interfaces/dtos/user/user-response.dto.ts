@@ -10,11 +10,7 @@ import {
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { OrganizationResponseDto } from '../organization/organization-response.dto';
-
-export enum UserType {
-  PROFESSIONAL = 'professional',
-  ORGANIZATION = 'organization',
-}
+import { UserType } from '../../../core/domain/enums';
 
 export class UserLocationDto {
   @ApiPropertyOptional({ example: 'Santiago', description: 'Ciudad' })

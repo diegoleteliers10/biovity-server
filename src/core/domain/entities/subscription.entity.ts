@@ -1,16 +1,4 @@
-export enum SubscriptionPlan {
-  FREE = 'free',
-  BASIC = 'basic',
-  PREMIUM = 'premium',
-  ENTERPRISE = 'enterprise',
-}
-
-export enum PaymentStatus {
-  PENDING = 'pending',
-  APPROVED = 'approved',
-  REJECTED = 'rejected',
-  CANCELLED = 'cancelled',
-}
+import { SubscriptionPlan, PaymentStatus } from '../enums';
 
 export interface SubscriptionFeatures {
   maxJobs: number;

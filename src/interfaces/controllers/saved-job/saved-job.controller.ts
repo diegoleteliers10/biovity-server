@@ -9,6 +9,7 @@ import {
   HttpCode,
   HttpStatus,
   ParseUUIDPipe,
+  NotFoundException,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { SavedJobService } from '../../../core/services/saved-job.service';
@@ -95,9 +96,10 @@ export class SavedJobController {
   @Get(':id')
   async getSavedJobById(
     @Param('id', ParseUUIDPipe) id: string,
-  ): Promise<SavedJobResponseDto | null> {
+  ): Promise<SavedJobResponseDto> {
     const savedJob = await this.savedJobService.getSavedJobById(id);
-    return savedJob ? SavedJobDomainDtoMapper.toDto(savedJob) : null;
+    if (!savedJob) throw new NotFoundException('Saved job not found');
+    return SavedJobDomainDtoMapper.toDto(savedJob);
   }
 
   @Delete(':id')

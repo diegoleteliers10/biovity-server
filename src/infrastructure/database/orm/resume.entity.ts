@@ -6,20 +6,10 @@ import {
   JoinColumn,
   CreateDateColumn,
   UpdateDateColumn,
+  Index,
 } from 'typeorm';
 import { UserEntity } from './user.entity';
-
-export enum SkillLevel {
-  ADVANCED = 'advanced',
-  INTERMEDIATE = 'intermediate',
-  ENTRY = 'entry',
-}
-
-export enum LanguageLevel {
-  ADVANCED = 'advanced',
-  INTERMEDIATE = 'intermediate',
-  ENTRY = 'entry',
-}
+import { SkillLevel, LanguageLevel } from '../../../core/domain/enums';
 
 export class ResumeExperienceEntity {
   title: string;
@@ -64,6 +54,7 @@ export class CvFileEntity {
 }
 
 @Entity('resume')
+@Index('idx_resume_userId', ['userId'])
 export class ResumeEntity {
   @PrimaryGeneratedColumn('uuid')
   public id: string;

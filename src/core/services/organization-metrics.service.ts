@@ -5,10 +5,8 @@ import {
   JobEntity,
   ApplicationEntity,
   EventEntity,
-  EventStatus,
-  EventType,
 } from '../../infrastructure/database/orm';
-import { JobStatus } from '../domain/entities/job.entity';
+import { EventStatus, EventType, JobStatus } from '../domain/enums';
 import { OrganizationService } from './organization.service';
 
 export interface DashboardMetrics {
@@ -281,6 +279,20 @@ export class OrganizationMetricsService {
     organizationId: string,
     limit: number = 5,
   ): Promise<JobPerformanceMetrics[]> {
+    const countRows = await this.applicationRepository
+      .createQueryBuilder('app')
+      .innerJoin('app.job', 'job')
+      .select('app.jobId', 'jobId')
+      .addSelect('COUNT(*)', 'count')
+      .where('job.organizationId = :organizationId', { organizationId })
+      .andWhere('job.status = :status', { status: JobStatus.ACTIVE })
+      .groupBy('app.jobId')
+      .getRawMany<{ jobId: string; count: string }>();
+
+    const countMap = new Map(
+      countRows.map(r => [r.jobId, parseInt(r.count, 10)]),
+    );
+
     const jobs = await this.jobRepository
       .createQueryBuilder('job')
       .where('job.organizationId = :organizationId', { organizationId })
@@ -289,24 +301,17 @@ export class OrganizationMetricsService {
       .limit(limit)
       .getMany();
 
-    const topJobs: JobPerformanceMetrics[] = [];
-
-    for (const job of jobs) {
-      const applicationsCount = await this.applicationRepository.count({
-        where: { jobId: job.id },
-      });
-
-      topJobs.push({
+    return jobs.map(job => {
+      const applicationsCount = countMap.get(job.id) ?? 0;
+      return {
         jobId: job.id,
         jobTitle: job.title,
         views: job.views,
         applications: applicationsCount,
         applicationRate:
           job.views > 0 ? Math.round((applicationsCount / job.views) * 100) : 0,
-      });
-    }
-
-    return topJobs;
+      };
+    });
   }
 
   async getRecentTrend(
@@ -417,26 +422,20 @@ export class OrganizationMetricsService {
   }
 
   async getAvgHiringTimeDays(organizationId: string): Promise<number> {
-    const hiredApplications = await this.applicationRepository
+    const result = await this.applicationRepository
       .createQueryBuilder('application')
       .leftJoin('application.job', 'job')
       .where('job.organizationId = :organizationId', { organizationId })
       .andWhere('application.status = :status', { status: 'contratado' })
       .andWhere('application.stageChangedAt > application.createdAt')
-      .getMany();
+      .select(
+        'AVG(EXTRACT(EPOCH FROM (application."stageChangedAt" - application."createdAt")) / 86400)',
+        'avg_days',
+      )
+      .getRawOne<{ avg_days: string | null }>();
 
-    if (hiredApplications.length === 0) return 0;
-
-    let totalDays = 0;
-    for (const app of hiredApplications) {
-      const diffTime = Math.abs(
-        app.stageChangedAt.getTime() - app.createdAt.getTime(),
-      );
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      totalDays += diffDays;
-    }
-
-    return Math.round((totalDays / hiredApplications.length) * 10) / 10;
+    const avgDays = result?.avg_days ? parseFloat(result.avg_days) : 0;
+    return Math.round(avgDays * 10) / 10;
   }
 
   private getPeriodDates(

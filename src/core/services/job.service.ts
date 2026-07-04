@@ -2,16 +2,26 @@ import { Injectable, NotFoundException, Inject } from '@nestjs/common';
 import * as crypto from 'crypto';
 import { IJobRepository } from '../repositories/job.repository';
 import { IOrganizationRepository } from '../repositories/organization.repository';
-import { IJobUseCase, CreateJobInput } from '../use-cases/job/job.use-case';
+import {
+  IJobUseCase,
+  CreateJobInput,
+  UpdateJobInput,
+  JobFilters,
+  PaginationOptions,
+  PaginatedResult,
+  JobWithApplications,
+} from '../use-cases/job/job.use-case';
 import {
   Job,
-  JobStatus,
-  JobEmploymentType,
-  JobExperienceLevel,
   JobBenefits,
   JobSalary,
   JobLocation,
 } from '../domain/entities/job.entity';
+import {
+  JobStatus,
+  JobEmploymentType,
+  JobExperienceLevel,
+} from '../domain/enums';
 
 @Injectable()
 export class JobService implements IJobUseCase {
@@ -76,31 +86,31 @@ export class JobService implements IJobUseCase {
     return this.jobRepository.incrementViews(id);
   }
 
-  async getAllJobs(filters?: any, pagination?: any): Promise<any> {
+  async getAllJobs(
+    filters?: JobFilters,
+    pagination?: PaginationOptions,
+  ): Promise<PaginatedResult<Job>> {
     return this.jobRepository.findAll(filters, pagination);
   }
 
   async getJobsByOrganizationId(
     organizationId: string,
-    pagination?: any,
-  ): Promise<any> {
+    pagination?: PaginationOptions,
+  ): Promise<PaginatedResult<Job>> {
     return this.jobRepository.findByOrganizationId(organizationId, pagination);
   }
 
   async getAllJobsWithApplicationCounts(
     organizationId: string,
-    pagination?: any,
-  ): Promise<any> {
+    pagination?: PaginationOptions,
+  ): Promise<PaginatedResult<JobWithApplications>> {
     return this.jobRepository.findAllWithApplicationCounts(
       organizationId,
       pagination,
     );
   }
 
-  async updateJob(
-    id: string,
-    data: Partial<CreateJobInput>,
-  ): Promise<Job | null> {
+  async updateJob(id: string, data: UpdateJobInput): Promise<Job | null> {
     const existingJob = await this.jobRepository.findById(id);
     if (!existingJob) {
       throw new NotFoundException(`Job with id ${id} not found`);

@@ -29,7 +29,7 @@ export class EventRepositoryImpl implements IEventRepository {
   async findById(id: string): Promise<Event | null> {
     const eventOrm = await this.eventRepository.findOne({
       where: { id },
-      relations: ['organizer', 'candidate', 'notes'],
+      relations: ['organizer', 'candidate', 'notes', 'participants'],
     });
     return eventOrm ? EventDomainOrmMapper.toDomain(eventOrm) : null;
   }
@@ -66,9 +66,10 @@ export class EventRepositoryImpl implements IEventRepository {
     }
 
     if (filters?.userId) {
-      queryBuilder.andWhere('event.candidateId = :userId', {
-        userId: filters.userId,
-      });
+      queryBuilder.andWhere(
+        `(event.organizerId = :userId OR EXISTS (SELECT 1 FROM event_participant ep WHERE ep.event_id = event.id AND ep.user_id = :userId))`,
+        { userId: filters.userId },
+      );
     }
 
     if (filters?.type) {

@@ -10,14 +10,7 @@ import {
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-
-export enum ApplicationStatus {
-  PENDIENTE = 'pendiente',
-  OFERTA = 'oferta',
-  ENTREVISTA = 'entrevista',
-  RECHAZADO = 'rechazado',
-  CONTRATADO = 'contratado',
-}
+import { ApplicationStatus } from '../../../core/domain/enums';
 
 export class JobSummaryDto {
   @ApiProperty({ format: 'uuid' })

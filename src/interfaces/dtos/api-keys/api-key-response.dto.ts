@@ -7,9 +7,6 @@ export class ApiKeyResponseDto {
   @ApiProperty({ example: 'Production MCP Key' })
   name: string;
 
-  @ApiProperty({ example: 'bvty_live_Xk9m...' })
-  keyPrefix: string;
-
   @ApiPropertyOptional({ example: ['mcp:read', 'jobs:search'] })
   scopes: string[];
 

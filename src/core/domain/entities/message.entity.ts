@@ -1,13 +1,4 @@
-// Domain enums and interfaces for Message
-// The Message domain class is exported from the ORM entity file
-
-export enum MessageType {
-  TEXT = 'text',
-  FILE = 'file',
-  AUDIO = 'audio',
-  IMAGE = 'image',
-  EVENT = 'event',
-}
+import { MessageType } from '../enums';
 
 export interface FileContent {
   url: string;

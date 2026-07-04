@@ -9,11 +9,13 @@ import {
   HttpCode,
   HttpStatus,
   ParseUUIDPipe,
+  NotFoundException,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { ResumeService } from '../../../core/services/resume.service';
 import { ResumeDtoDomainMapper } from '../../../shared/mappers/resume/resumeDto-domain.mapper';
 import { ResumeCreateDto } from '../../dtos/resume/resume-create.dto';
+import { ResumeUpdateDto } from '../../dtos/resume/resume-update.dto';
 import { ResumeResponseDto } from '../../dtos/resume/resume-response.dto';
 import { ResumeDomainDtoMapper } from '../../../shared/mappers/resume/resumeDomain-dto.mapper';
 
@@ -33,17 +35,19 @@ export class ResumeController {
   @Get(':id')
   async getResumeById(
     @Param('id', ParseUUIDPipe) id: string,
-  ): Promise<ResumeResponseDto | null> {
+  ): Promise<ResumeResponseDto> {
     const resume = await this.resumeService.getResumeById(id);
-    return resume ? ResumeDomainDtoMapper.toDto(resume) : null;
+    if (!resume) throw new NotFoundException('Resume not found');
+    return ResumeDomainDtoMapper.toDto(resume);
   }
 
   @Get('user/:userId')
   async getResumeByUserId(
     @Param('userId', ParseUUIDPipe) userId: string,
-  ): Promise<ResumeResponseDto | null> {
+  ): Promise<ResumeResponseDto> {
     const resume = await this.resumeService.getResumeByUserId(userId);
-    return resume ? ResumeDomainDtoMapper.toDto(resume) : null;
+    if (!resume) throw new NotFoundException('Resume not found');
+    return ResumeDomainDtoMapper.toDto(resume);
   }
 
   @Get()
@@ -55,13 +59,14 @@ export class ResumeController {
   @Put(':id')
   async updateResume(
     @Param('id', ParseUUIDPipe) id: string,
-    @Body() dto: Partial<ResumeCreateDto>,
-  ): Promise<ResumeResponseDto | null> {
+    @Body() dto: ResumeUpdateDto,
+  ): Promise<ResumeResponseDto> {
     const input = ResumeDtoDomainMapper.toCreateResumeInput(
       dto as ResumeCreateDto,
     );
     const resume = await this.resumeService.updateResume(id, input);
-    return resume ? ResumeDomainDtoMapper.toDto(resume) : null;
+    if (!resume) throw new NotFoundException('Resume not found');
+    return ResumeDomainDtoMapper.toDto(resume);
   }
 
   @Delete(':id')

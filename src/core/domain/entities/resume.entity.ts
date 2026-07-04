@@ -19,23 +19,13 @@ export class ResumeEducation {
   ) {}
 }
 
-export enum SkillLevel {
-  ADVANCED = 'advanced',
-  INTERMEDIATE = 'intermediate',
-  ENTRY = 'entry',
-}
+import { SkillLevel, LanguageLevel } from '../enums';
 
 export class ResumeSkill {
   constructor(
     public name: string,
     public level?: SkillLevel,
   ) {}
-}
-
-export enum LanguageLevel {
-  ADVANCED = 'advanced',
-  INTERMEDIATE = 'intermediate',
-  ENTRY = 'entry',
 }
 
 export class ResumeLanguage {

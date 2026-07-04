@@ -9,6 +9,7 @@ import {
   ParseUUIDPipe,
   HttpCode,
   HttpStatus,
+  NotFoundException,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { UserService } from '../../../core/services/user.service';
@@ -27,17 +28,19 @@ export class UserController {
   @Get(':id')
   async getUserById(
     @Param('id', ParseUUIDPipe) id: string,
-  ): Promise<UserResponseDto | null> {
+  ): Promise<UserResponseDto> {
     const user = await this.userService.getUserById(id);
-    return user ? UserDomainDtoMapper.toDto(user) : null;
+    if (!user) throw new NotFoundException('User not found');
+    return UserDomainDtoMapper.toDto(user);
   }
 
   @Get('email/:email')
   async getUserByEmail(
     @Param('email') email: string,
-  ): Promise<UserResponseDto | null> {
+  ): Promise<UserResponseDto> {
     const user = await this.userService.getUserByEmail(email);
-    return user ? UserDomainDtoMapper.toDto(user) : null;
+    if (!user) throw new NotFoundException('User not found');
+    return UserDomainDtoMapper.toDto(user);
   }
 
   @Get()
@@ -70,10 +73,11 @@ export class UserController {
   async updateUser(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UserUpdateDto,
-  ): Promise<UserResponseDto | null> {
+  ): Promise<UserResponseDto> {
     const input = UserDtoDomainMapper.toUpdateUserInput(dto);
     const user = await this.userService.updateUser(id, input);
-    return user ? UserDomainDtoMapper.toDto(user) : null;
+    if (!user) throw new NotFoundException('User not found');
+    return UserDomainDtoMapper.toDto(user);
   }
 
   @Post(':id/views')

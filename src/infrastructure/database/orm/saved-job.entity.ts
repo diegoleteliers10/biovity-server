@@ -6,12 +6,15 @@ import {
   ManyToOne,
   JoinColumn,
   Unique,
+  Index,
 } from 'typeorm';
 import { JobEntity } from './job.entity';
 import { UserEntity } from './user.entity';
 
 @Entity('saved_job')
-@Unique(['userId', 'jobId']) // Prevent duplicate saves for same job by same user
+@Unique(['userId', 'jobId'])
+@Index('idx_saved_job_userId', ['userId'])
+@Index('idx_saved_job_jobId', ['jobId'])
 export class SavedJobEntity {
   @PrimaryGeneratedColumn('uuid')
   public id: string;

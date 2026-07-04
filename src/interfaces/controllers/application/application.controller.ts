@@ -20,7 +20,7 @@ import { ApplicationDomainDtoMapper } from '../../../shared/mappers/application/
 import { ApplicationQueryDto } from '../../dtos/application/application-query.dto';
 import { ApplicationPaginatedResponseDto } from '../../dtos/application/application-paginated.dto';
 import { ApplicationStatusUpdateDto } from '../../dtos/application/application-status.dto';
-import { ApplicationStatus } from '../../../core/domain/entities/application.entity';
+import { ApplicationStatus } from '../../../core/domain/enums';
 
 @ApiTags('applications')
 @Controller('applications')
@@ -130,7 +130,7 @@ export class ApplicationController {
       await this.applicationService.getApplicationsByOrganizationId(
         organizationId,
         pagination,
-        query.includeAnswers === 'true',
+        query.includeAnswers,
       );
 
     return {
@@ -149,7 +149,7 @@ export class ApplicationController {
   ): Promise<ApplicationResponseDto | null> {
     const application = await this.applicationService.updateApplicationStatus(
       id,
-      dto.status as ApplicationStatus,
+      dto.status,
     );
     return application ? ApplicationDomainDtoMapper.toDto(application) : null;
   }

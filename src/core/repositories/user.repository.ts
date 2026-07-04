@@ -1,4 +1,5 @@
 import { User } from '../domain/entities/index';
+import { UserType } from '../domain/enums';
 
 export interface UserFilters {
   type?: 'professional' | 'organization';
@@ -27,6 +28,10 @@ export interface IUserRepository {
     filters?: UserFilters,
     pagination?: PaginationOptions,
   ): Promise<PaginatedResult<User>>;
+  findIdsByOrganizationId(
+    organizationId: string,
+    type?: UserType,
+  ): Promise<string[]>;
   update(id: string, entity: Partial<User>): Promise<User | null>;
   incrementViews(id: string): Promise<User | null>;
   delete(id: string): Promise<boolean>;

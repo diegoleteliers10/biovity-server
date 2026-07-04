@@ -1,13 +1,14 @@
-import { IsOptional, IsInt, IsEnum, Min, Max, IsUUID } from 'class-validator';
-import { Type } from 'class-transformer';
-
-export enum ApplicationStatus {
-  PENDIENTE = 'pendiente',
-  OFERTA = 'oferta',
-  ENTREVISTA = 'entrevista',
-  RECHAZADO = 'rechazado',
-  CONTRATADO = 'contratado',
-}
+import {
+  IsOptional,
+  IsInt,
+  IsEnum,
+  IsBoolean,
+  Min,
+  Max,
+  IsUUID,
+} from 'class-validator';
+import { Type, Transform } from 'class-transformer';
+import { ApplicationStatus } from '../../../core/domain/enums';
 
 export class ApplicationQueryDto {
   @IsOptional()
@@ -36,6 +37,7 @@ export class ApplicationQueryDto {
   status?: 'pendiente' | 'oferta' | 'entrevista' | 'rechazado' | 'contratado';
 
   @IsOptional()
-  @IsUUID()
-  includeAnswers?: string;
+  @IsBoolean()
+  @Transform(({ value }) => value === 'true' || value === true)
+  includeAnswers?: boolean;
 }

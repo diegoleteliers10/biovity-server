@@ -8,7 +8,7 @@ import {
   IsDateString,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { QuestionType, QuestionStatus } from './question.dto';
+import { QuestionType, QuestionStatus } from '../../../core/domain/enums';
 
 export class QuestionResponseDto {
   @ApiProperty({ format: 'uuid' })

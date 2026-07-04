@@ -244,27 +244,21 @@ export class UserMetricsService {
   }
 
   private async calculateAvgResponseTime(userId: string): Promise<number> {
-    const applications = await this.applicationRepository
+    const result = await this.applicationRepository
       .createQueryBuilder('application')
       .where('application.candidateId = :userId', { userId })
       .andWhere('application.stageChangedAt > application.createdAt')
       .andWhere('application.status != :pendingStatus', {
         pendingStatus: ApplicationStatus.PENDIENTE,
       })
-      .getMany();
+      .select(
+        'AVG(EXTRACT(EPOCH FROM (application."stageChangedAt" - application."createdAt")) / 86400)',
+        'avg_days',
+      )
+      .getRawOne<{ avg_days: string | null }>();
 
-    if (applications.length === 0) return 0;
-
-    let totalDays = 0;
-    for (const app of applications) {
-      const diffTime = Math.abs(
-        app.stageChangedAt.getTime() - app.createdAt.getTime(),
-      );
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      totalDays += diffDays;
-    }
-
-    return Math.round((totalDays / applications.length) * 10) / 10;
+    const avgDays = result?.avg_days ? parseFloat(result.avg_days) : 0;
+    return Math.round(avgDays * 10) / 10;
   }
 
   async getProfileViews(userId: string): Promise<number> {
@@ -315,17 +309,20 @@ export class UserMetricsService {
       count: string;
     }
 
-    const applicationsByMonthTyped = applicationsByMonth as MonthRow[];
+    const resultsMap = new Map(
+      (applicationsByMonth as MonthRow[]).map(row => [
+        row.month,
+        parseInt(row.count, 10),
+      ]),
+    );
+
     const result: TrendDataPoint[] = [];
     const current = new Date(startDate);
     while (current <= now) {
       const monthStr = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, '0')}`;
-      const found = applicationsByMonthTyped.find(
-        (row: MonthRow) => row.month === monthStr,
-      );
       result.push({
         month: monthStr,
-        applications: found ? parseInt(found.count, 10) : 0,
+        applications: resultsMap.get(monthStr) ?? 0,
       });
       current.setMonth(current.getMonth() + 1);
     }
@@ -336,33 +333,42 @@ export class UserMetricsService {
   async getResponseTimeDistribution(
     userId: string,
   ): Promise<ApplicationBucket> {
-    const applications = await this.applicationRepository
+    const result = await this.applicationRepository
       .createQueryBuilder('application')
       .where('application.candidateId = :userId', { userId })
       .andWhere('application.stageChangedAt > application.createdAt')
       .andWhere('application.status != :pendingStatus', {
         pendingStatus: ApplicationStatus.PENDIENTE,
       })
-      .getMany();
+      .select(
+        `SUM(CASE WHEN EXTRACT(EPOCH FROM (application."stageChangedAt" - application."createdAt")) / 86400 < 1 THEN 1 ELSE 0 END)`,
+        'less_than_24h',
+      )
+      .addSelect(
+        `SUM(CASE WHEN EXTRACT(EPOCH FROM (application."stageChangedAt" - application."createdAt")) / 86400 >= 1 AND EXTRACT(EPOCH FROM (application."stageChangedAt" - application."createdAt")) / 86400 <= 3 THEN 1 ELSE 0 END)`,
+        'one_to_three_days',
+      )
+      .addSelect(
+        `SUM(CASE WHEN EXTRACT(EPOCH FROM (application."stageChangedAt" - application."createdAt")) / 86400 > 3 AND EXTRACT(EPOCH FROM (application."stageChangedAt" - application."createdAt")) / 86400 <= 7 THEN 1 ELSE 0 END)`,
+        'three_to_seven_days',
+      )
+      .addSelect(
+        `SUM(CASE WHEN EXTRACT(EPOCH FROM (application."stageChangedAt" - application."createdAt")) / 86400 > 7 THEN 1 ELSE 0 END)`,
+        'more_than_seven_days',
+      )
+      .getRawOne<{
+        less_than_24h: string;
+        one_to_three_days: string;
+        three_to_seven_days: string;
+        more_than_seven_days: string;
+      }>();
 
-    const bucket = {
-      lessThan24h: 0,
-      oneToThreeDays: 0,
-      threeToSevenDays: 0,
-      moreThanSevenDays: 0,
+    return {
+      lessThan24h: parseInt(result?.less_than_24h ?? '0', 10),
+      oneToThreeDays: parseInt(result?.one_to_three_days ?? '0', 10),
+      threeToSevenDays: parseInt(result?.three_to_seven_days ?? '0', 10),
+      moreThanSevenDays: parseInt(result?.more_than_seven_days ?? '0', 10),
     };
-
-    for (const app of applications) {
-      const diffTime = app.stageChangedAt.getTime() - app.createdAt.getTime();
-      const diffDays = diffTime / (1000 * 60 * 60 * 24);
-
-      if (diffDays < 1) bucket.lessThan24h++;
-      else if (diffDays <= 3) bucket.oneToThreeDays++;
-      else if (diffDays <= 7) bucket.threeToSevenDays++;
-      else bucket.moreThanSevenDays++;
-    }
-
-    return bucket;
   }
 
   async getHiringFunnel(userId: string): Promise<HiringFunnel> {
@@ -408,9 +414,9 @@ export class UserMetricsService {
       .createQueryBuilder('application')
       .innerJoin('application.job', 'job')
       .where('application.candidateId = :userId', { userId })
-      .select("COALESCE(job.\"employmentType\"::text, 'Other')", 'industry')
+      .select('COALESCE(job."employmentType"::text, \'Other\')', 'industry')
       .addSelect('COUNT(*)', 'count')
-      .groupBy("COALESCE(job.\"employmentType\"::text, 'Other')")
+      .groupBy('COALESCE(job."employmentType"::text, \'Other\')')
       .orderBy('count', 'DESC')
       .limit(10)
       .getRawMany();

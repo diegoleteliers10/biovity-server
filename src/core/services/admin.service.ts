@@ -100,17 +100,13 @@ export class AdminService {
   ) {}
 
   async getAdminStats(): Promise<AdminStats> {
-    const [
-      userStats,
-      waitlistStats,
-      platformStats,
-      previous7DaysCount,
-    ] = await Promise.all([
-      this.getUserStats(),
-      this.getWaitlistStats(),
-      this.getPlatformStats(),
-      this.getRecentUsersCount(7, 14), // count for 7-14 days ago
-    ]);
+    const [userStats, waitlistStats, platformStats, previous7DaysCount] =
+      await Promise.all([
+        this.getUserStats(),
+        this.getWaitlistStats(),
+        this.getPlatformStats(),
+        this.getRecentUsersCount(7, 14), // count for 7-14 days ago
+      ]);
 
     const recent7DaysCount = userStats.recent;
     const recentTrend =
@@ -118,7 +114,8 @@ export class AdminService {
         ? Math.min(
             Math.max(
               Math.round(
-                ((recent7DaysCount - previous7DaysCount) / previous7DaysCount) * 100,
+                ((recent7DaysCount - previous7DaysCount) / previous7DaysCount) *
+                  100,
               ),
               -100,
             ),
@@ -161,42 +158,54 @@ export class AdminService {
 
     const rows = await this.userRepo
       .createQueryBuilder('u')
-      .select("TO_CHAR(u.createdAt AT TIME ZONE 'America/Santiago', 'YYYY-MM-DD')", 'date')
-      .addSelect('SUM(CASE WHEN u.type = :professional THEN 1 ELSE 0 END)', 'professionals')
-      .addSelect('SUM(CASE WHEN u.type = :organization THEN 1 ELSE 0 END)', 'organizations')
-      .where("TO_CHAR(u.createdAt AT TIME ZONE 'America/Santiago', 'YYYY-MM-DD') >= :startDate", { startDate: startDateStr })
-      .setParameters({ professional: UserType.PROFESSIONAL, organization: UserType.ORGANIZATION })
+      .select(
+        "TO_CHAR(u.createdAt AT TIME ZONE 'America/Santiago', 'YYYY-MM-DD')",
+        'date',
+      )
+      .addSelect(
+        'SUM(CASE WHEN u.type = :professional THEN 1 ELSE 0 END)',
+        'professionals',
+      )
+      .addSelect(
+        'SUM(CASE WHEN u.type = :organization THEN 1 ELSE 0 END)',
+        'organizations',
+      )
+      .where(
+        "TO_CHAR(u.createdAt AT TIME ZONE 'America/Santiago', 'YYYY-MM-DD') >= :startDate",
+        { startDate: startDateStr },
+      )
+      .setParameters({
+        professional: UserType.PROFESSIONAL,
+        organization: UserType.ORGANIZATION,
+      })
       .groupBy('date')
       .orderBy('date', 'ASC')
-      .getRawMany<{ date: string; professionals: string; organizations: string }>();
+      .getRawMany<{
+        date: string;
+        professionals: string;
+        organizations: string;
+      }>();
 
-    const appsMap = new Map<string, number>();
-    const dateSet = new Set<string>();
-
-    const applicationsByDate = await this.applicationRepo
-      .createQueryBuilder('a')
-      .select("TO_CHAR(a.createdAt AT TIME ZONE 'America/Santiago', 'YYYY-MM-DD')", 'date')
-      .addSelect('COUNT(*)', 'count')
-      .where("TO_CHAR(a.createdAt AT TIME ZONE 'America/Santiago', 'YYYY-MM-DD') >= :startDate", { startDate: startDateStr })
-      .groupBy('date')
-      .orderBy('date', 'ASC')
-      .getRawMany<{ date: string; count: string }>();
-
-    for (const row of applicationsByDate) {
-      appsMap.set(row.date, parseInt(row.count, 10));
-      dateSet.add(row.date);
+    const registrationByDate = new Map<
+      string,
+      { professionals: number; organizations: number }
+    >();
+    for (const row of rows) {
+      registrationByDate.set(row.date, {
+        professionals: parseInt(row.professionals, 10),
+        organizations: parseInt(row.organizations, 10),
+      });
     }
 
     const data: RegistrationDataPoint[] = [];
     const current = new Date(startDate);
     while (current <= now) {
       const dateStr = current.toISOString().split('T')[0];
-      dateSet.add(dateStr);
-      const found = rows.find((r) => r.date === dateStr);
+      const found = registrationByDate.get(dateStr);
       data.push({
         date: dateStr,
-        professionals: found ? parseInt(found.professionals, 10) : 0,
-        organizations: found ? parseInt(found.organizations, 10) : 0,
+        professionals: found?.professionals ?? 0,
+        organizations: found?.organizations ?? 0,
       });
       current.setDate(current.getDate() + 1);
     }
@@ -213,6 +222,19 @@ export class AdminService {
   }
 
   async getTopJobs(limit: number = 10): Promise<TopJobsResponse> {
+    const countRows = await this.applicationRepo
+      .createQueryBuilder('app')
+      .innerJoin('app.job', 'job')
+      .select('app.jobId', 'jobId')
+      .addSelect('COUNT(*)', 'count')
+      .where('job.status = :status', { status: JobStatus.ACTIVE })
+      .groupBy('app.jobId')
+      .getRawMany<{ jobId: string; count: string }>();
+
+    const countMap = new Map(
+      countRows.map(r => [r.jobId, parseInt(r.count, 10)]),
+    );
+
     const jobs = await this.jobRepo
       .createQueryBuilder('job')
       .leftJoinAndSelect('job.organization', 'organization')
@@ -221,22 +243,18 @@ export class AdminService {
       .limit(limit)
       .getMany();
 
-    const topJobs: TopJob[] = [];
-
-    for (const job of jobs) {
-      const applicationsCount = await this.applicationRepo.count({
-        where: { jobId: job.id },
-      });
-
-      topJobs.push({
+    const topJobs: TopJob[] = jobs.map(job => {
+      const applicationsCount = countMap.get(job.id) ?? 0;
+      return {
         jobId: job.id,
         title: job.title,
         organizationName: job.organization?.name ?? '',
         applications: applicationsCount,
         views: job.views,
-        applicationRate: job.views > 0 ? Math.round((applicationsCount / job.views) * 100) : 0,
-      });
-    }
+        applicationRate:
+          job.views > 0 ? Math.round((applicationsCount / job.views) * 100) : 0,
+      };
+    });
 
     return { data: topJobs };
   }
@@ -251,35 +269,36 @@ export class AdminService {
 
     const rows = await this.applicationRepo
       .createQueryBuilder('a')
-      .select("TO_CHAR(a.createdAt AT TIME ZONE 'America/Santiago', 'YYYY-MM-DD')", 'date')
+      .select(
+        "TO_CHAR(a.createdAt AT TIME ZONE 'America/Santiago', 'YYYY-MM-DD')",
+        'date',
+      )
       .addSelect('COUNT(*)', 'count')
-      .where("TO_CHAR(a.createdAt AT TIME ZONE 'America/Santiago', 'YYYY-MM-DD') >= :startDate", { startDate: startDateStr })
+      .where(
+        "TO_CHAR(a.createdAt AT TIME ZONE 'America/Santiago', 'YYYY-MM-DD') >= :startDate",
+        { startDate: startDateStr },
+      )
       .groupBy('date')
       .orderBy('date', 'ASC')
       .getRawMany<{ date: string; count: string }>();
 
-    const data: ApplicationTrendPoint[] = [];
-    const current = new Date(startDate);
-    const dateSet = new Set<string>();
+    const countByDate = new Map<string, number>();
     for (const row of rows) {
-      dateSet.add(row.date);
+      countByDate.set(row.date, parseInt(row.count, 10));
     }
 
+    const data: ApplicationTrendPoint[] = [];
+    const current = new Date(startDate);
     while (current <= now) {
       const dateStr = current.toISOString().split('T')[0];
-      dateSet.add(dateStr);
-      const found = rows.find((r) => r.date === dateStr);
       data.push({
         date: dateStr,
-        count: found ? parseInt(found.count, 10) : 0,
+        count: countByDate.get(dateStr) ?? 0,
       });
       current.setDate(current.getDate() + 1);
     }
 
-    const total = rows.reduce(
-      (sum, row) => sum + parseInt(row.count, 10),
-      0,
-    );
+    const total = rows.reduce((sum, row) => sum + parseInt(row.count, 10), 0);
 
     return { data, total };
   }
@@ -295,10 +314,9 @@ export class AdminService {
       await this.dataSource.query('SELECT 1');
       dbStatus = 'up';
       dbMessage = 'Database connection is healthy';
-    } catch (err: unknown) {
-      const e = err as { message?: string };
+    } catch {
       dbMessage = 'Database connection failed';
-      dbError = e.message;
+      dbError = 'Database connection failed';
     }
 
     const latencyMs = Date.now() - start;
@@ -322,11 +340,23 @@ export class AdminService {
     const row = await this.userRepo
       .createQueryBuilder('u')
       .select('COUNT(*)', 'total')
-      .addSelect('SUM(CASE WHEN u.type = :professional THEN 1 ELSE 0 END)', 'professionals')
-      .addSelect('SUM(CASE WHEN u.type = :organization THEN 1 ELSE 0 END)', 'organizations')
+      .addSelect(
+        'SUM(CASE WHEN u.type = :professional THEN 1 ELSE 0 END)',
+        'professionals',
+      )
+      .addSelect(
+        'SUM(CASE WHEN u.type = :organization THEN 1 ELSE 0 END)',
+        'organizations',
+      )
       .addSelect('SUM(CASE WHEN u.isActive = true THEN 1 ELSE 0 END)', 'active')
-      .addSelect('SUM(CASE WHEN u.isActive = false THEN 1 ELSE 0 END)', 'inactive')
-      .addSelect('SUM(CASE WHEN u.createdAt >= NOW() - INTERVAL \'7 days\' THEN 1 ELSE 0 END)', 'recent')
+      .addSelect(
+        'SUM(CASE WHEN u.isActive = false THEN 1 ELSE 0 END)',
+        'inactive',
+      )
+      .addSelect(
+        "SUM(CASE WHEN u.createdAt >= NOW() - INTERVAL '7 days' THEN 1 ELSE 0 END)",
+        'recent',
+      )
       .setParameters({
         professional: UserType.PROFESSIONAL,
         organization: UserType.ORGANIZATION,
@@ -354,9 +384,19 @@ export class AdminService {
     const row = await this.waitlistRepo
       .createQueryBuilder('w')
       .select('COUNT(*)', 'total')
-      .addSelect("SUM(CASE WHEN w.role = 'professional' THEN 1 ELSE 0 END)", 'professionals')
-      .addSelect("SUM(CASE WHEN w.role = 'organization' THEN 1 ELSE 0 END)", 'organizations')
-      .getRawOne<{ total: string; professionals: string; organizations: string }>();
+      .addSelect(
+        "SUM(CASE WHEN w.role = 'professional' THEN 1 ELSE 0 END)",
+        'professionals',
+      )
+      .addSelect(
+        "SUM(CASE WHEN w.role = 'organization' THEN 1 ELSE 0 END)",
+        'organizations',
+      )
+      .getRawOne<{
+        total: string;
+        professionals: string;
+        organizations: string;
+      }>();
 
     return {
       total: parseInt(row?.total ?? '0', 10),
@@ -392,8 +432,14 @@ export class AdminService {
     const result = await this.userRepo
       .createQueryBuilder('u')
       .select('COUNT(*)', 'count')
-      .where("TO_CHAR(u.createdAt AT TIME ZONE 'America/Santiago', 'YYYY-MM-DD') >= :startOld", { startOld: startOldStr })
-      .andWhere("TO_CHAR(u.createdAt AT TIME ZONE 'America/Santiago', 'YYYY-MM-DD') < :endRecent", { endRecent: endRecentStr })
+      .where(
+        "TO_CHAR(u.createdAt AT TIME ZONE 'America/Santiago', 'YYYY-MM-DD') >= :startOld",
+        { startOld: startOldStr },
+      )
+      .andWhere(
+        "TO_CHAR(u.createdAt AT TIME ZONE 'America/Santiago', 'YYYY-MM-DD') < :endRecent",
+        { endRecent: endRecentStr },
+      )
       .getRawOne<{ count: string }>();
 
     return parseInt(result?.count ?? '0', 10);

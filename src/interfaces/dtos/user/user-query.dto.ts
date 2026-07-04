@@ -8,11 +8,7 @@ import {
   Max,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-
-export enum UserType {
-  PROFESSIONAL = 'professional',
-  ORGANIZATION = 'organization',
-}
+import { UserType } from '../../../core/domain/enums';
 
 export class UserQueryDto {
   @IsOptional()

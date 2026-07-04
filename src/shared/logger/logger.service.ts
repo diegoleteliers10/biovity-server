@@ -116,7 +116,7 @@ export class AppLogger implements LoggerService {
       // HTTP Context
       method,
       path,
-      query: request.query as Record<string, unknown>,
+      query: request.query,
       requestId: this.requestId || randomUUID(),
       correlationId: this.correlationId || '',
 
