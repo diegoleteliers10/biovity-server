@@ -16,6 +16,7 @@ import {
   EventNoteEntity,
   EventParticipantEntity,
   ApiKeyEntity,
+  AiCredentialEntity,
 } from '../database/orm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 
@@ -51,6 +52,7 @@ export const DatabaseConfig = TypeOrmModule.forRootAsync({
         EventNoteEntity,
         EventParticipantEntity,
         ApiKeyEntity,
+        AiCredentialEntity,
       ],
       synchronize: false,
       logging: true,

@@ -18,6 +18,8 @@ import { AdminModule } from './interfaces/controllers/admin/admin.module';
 import { EventModule } from './interfaces/controllers/event/event.module';
 import { SubscriptionModule } from './interfaces/controllers/subscription/subscription.module';
 import { ApiKeysModule } from './interfaces/controllers/api-keys/api-keys.module';
+import { AiCredentialsModule } from './interfaces/controllers/ai-credentials/ai-credentials.module';
+import { CryptoModule } from './shared/crypto/crypto.module';
 
 @Module({
   imports: [
@@ -26,6 +28,7 @@ import { ApiKeysModule } from './interfaces/controllers/api-keys/api-keys.module
     InterceptorsModule,
     NotificationModule,
     DatabaseConfig,
+    CryptoModule,
     JobModule,
     UserModule,
     OrganizationModule,
@@ -39,6 +42,7 @@ import { ApiKeysModule } from './interfaces/controllers/api-keys/api-keys.module
     SubscriptionModule,
     JobQuestionModule,
     ApiKeysModule,
+    AiCredentialsModule,
     AdminModule,
   ],
   controllers: [],

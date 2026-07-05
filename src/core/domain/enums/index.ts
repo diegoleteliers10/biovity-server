@@ -1,3 +1,5 @@
+export { AiProvider } from './ai-provider';
+
 export enum JobStatus {
   DRAFT = 'draft',
   ACTIVE = 'active',

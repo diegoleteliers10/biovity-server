@@ -21,6 +21,7 @@ export { UserEntity } from './user.entity';
 export { WaitlistEntity, WaitlistRole } from './waitlist.entity';
 export { SavedJobEntity } from './saved-job.entity';
 export { ApiKeyEntity } from './api-key.entity';
+export { AiCredentialEntity } from './ai-credential.entity';
 
 export {
   JobStatus,
