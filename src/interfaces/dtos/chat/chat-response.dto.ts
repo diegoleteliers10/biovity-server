@@ -32,4 +32,8 @@ export class ChatResponseDto {
   @IsOptional()
   @IsDate()
   updatedAt?: Date;
+
+  isPinned?: boolean;
+
+  isArchived?: boolean;
 }

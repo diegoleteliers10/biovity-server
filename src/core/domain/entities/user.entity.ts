@@ -24,5 +24,19 @@ export class User {
       street?: string;
     },
     public profileViews: number = 0,
+    public notificationPreferences?: {
+      digest?: 'none' | 'immediate' | 'daily' | 'weekly';
+      channels?: {
+        email?: boolean;
+        in_app?: boolean;
+      };
+      events?: {
+        application?: boolean;
+        interview?: boolean;
+        message?: boolean;
+        job_alert?: boolean;
+        system?: boolean;
+      };
+    },
   ) {}
 }

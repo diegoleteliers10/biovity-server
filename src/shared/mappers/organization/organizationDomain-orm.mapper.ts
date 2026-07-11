@@ -12,6 +12,11 @@ export class OrganizationDomainOrmMapper {
     orgOrm.createdAt = domain.createdAt;
     orgOrm.updatedAt = domain.updatedAt;
     orgOrm.subscriptionId = domain.subscriptionId;
+    orgOrm.integrations = domain.integrations;
+    orgOrm.logo = domain.logo;
+    orgOrm.description = domain.description;
+    orgOrm.industry = domain.industry;
+    orgOrm.size = domain.size;
     orgOrm.jobs = [];
 
     return orgOrm;
@@ -27,6 +32,12 @@ export class OrganizationDomainOrmMapper {
       entity.createdAt,
       entity.updatedAt,
       entity.subscriptionId,
+      undefined,
+      entity.integrations,
+      entity.logo,
+      entity.description,
+      entity.industry,
+      entity.size,
     );
   }
 }

@@ -29,6 +29,7 @@ export enum ApplicationStatus {
   ENTREVISTA = 'entrevista',
   RECHAZADO = 'rechazado',
   CONTRATADO = 'contratado',
+  DESISTIDO = 'desistido',
 }
 
 export enum UserType {

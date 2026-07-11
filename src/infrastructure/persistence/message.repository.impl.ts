@@ -29,15 +29,25 @@ export class MessageRepositoryImpl implements IMessageRepository {
 
   async findByChatId(
     chatId: string,
-    pagination?: { take?: number; skip?: number },
+    pagination?: { take?: number; skip?: number; search?: string },
   ): Promise<Message[]> {
-    const messagesOrm = await this.messageRepository.find({
-      where: { chatId },
-      relations: ['sender'],
-      order: { createdAt: 'ASC' },
-      take: pagination?.take ?? 50,
-      skip: pagination?.skip ?? 0,
-    });
+    const queryBuilder = this.messageRepository
+      .createQueryBuilder('message')
+      .leftJoinAndSelect('message.sender', 'sender')
+      .where('message.chatId = :chatId', { chatId });
+
+    if (pagination?.search) {
+      queryBuilder.andWhere('message.content ILIKE :search', {
+        search: `%${pagination.search}%`,
+      });
+    }
+
+    queryBuilder
+      .orderBy('message.createdAt', 'ASC')
+      .take(pagination?.take ?? 50)
+      .skip(pagination?.skip ?? 0);
+
+    const messagesOrm = await queryBuilder.getMany();
     return messagesOrm.map(msgOrm => MessageDomainOrmMapper.toDomain(msgOrm));
   }
 

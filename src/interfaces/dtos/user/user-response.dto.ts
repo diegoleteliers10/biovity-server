@@ -24,6 +24,66 @@ export class UserLocationDto {
   country?: string;
 }
 
+export class UserNotificationChannelsDto {
+  @ApiPropertyOptional({ example: false, description: 'Notificar por email' })
+  @IsOptional()
+  @IsBoolean()
+  email?: boolean;
+
+  @ApiPropertyOptional({ example: true, description: 'Notificar in-app' })
+  @IsOptional()
+  @IsBoolean()
+  in_app?: boolean;
+}
+
+export class UserNotificationEventsDto {
+  @ApiPropertyOptional({ example: true, description: 'Notificar postulaciones' })
+  @IsOptional()
+  @IsBoolean()
+  application?: boolean;
+
+  @ApiPropertyOptional({ example: true, description: 'Notificar entrevistas' })
+  @IsOptional()
+  @IsBoolean()
+  interview?: boolean;
+
+  @ApiPropertyOptional({ example: true, description: 'Notificar mensajes' })
+  @IsOptional()
+  @IsBoolean()
+  message?: boolean;
+
+  @ApiPropertyOptional({ example: true, description: 'Notificar alertas de empleo' })
+  @IsOptional()
+  @IsBoolean()
+  job_alert?: boolean;
+
+  @ApiPropertyOptional({ example: true, description: 'Notificar sistema' })
+  @IsOptional()
+  @IsBoolean()
+  system?: boolean;
+}
+
+export class UserNotificationPreferencesDto {
+  @ApiPropertyOptional({ example: 'none', description: 'Frecuencia de resumen' })
+  @IsOptional()
+  @IsString()
+  digest?: 'none' | 'immediate' | 'daily' | 'weekly';
+
+  @ApiPropertyOptional({ type: UserNotificationChannelsDto, description: 'Canales de notificacion' })
+  @IsOptional()
+  @IsObject()
+  @ValidateNested()
+  @Type(() => UserNotificationChannelsDto)
+  channels?: UserNotificationChannelsDto;
+
+  @ApiPropertyOptional({ type: UserNotificationEventsDto, description: 'Eventos a notificar' })
+  @IsOptional()
+  @IsObject()
+  @ValidateNested()
+  @Type(() => UserNotificationEventsDto)
+  events?: UserNotificationEventsDto;
+}
+
 export class UserResponseDto {
   @ApiProperty({ format: 'uuid', description: 'ID del usuario' })
   @IsUUID()
@@ -106,4 +166,11 @@ export class UserResponseDto {
   @ValidateNested()
   @Type(() => UserLocationDto)
   location?: UserLocationDto;
+
+  @ApiPropertyOptional({ type: UserNotificationPreferencesDto, description: 'Preferencias de notificación' })
+  @IsOptional()
+  @IsObject()
+  @ValidateNested()
+  @Type(() => UserNotificationPreferencesDto)
+  notificationPreferences?: UserNotificationPreferencesDto;
 }

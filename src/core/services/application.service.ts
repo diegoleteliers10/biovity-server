@@ -12,6 +12,7 @@ import { InjectDataSource } from '@nestjs/typeorm';
 import { IApplicationRepository } from '../repositories/application.respository';
 import { IJobRepository } from '../repositories/job.repository';
 import { IUserRepository } from '../repositories/user.repository';
+import { IOrganizationRepository } from '../repositories/organization.repository';
 import { IJobQuestionRepository } from '../repositories/job-question.repository';
 import { IApplicationAnswerRepository } from '../repositories/application-answer.repository';
 import {
@@ -53,6 +54,8 @@ export class ApplicationService implements IApplicationUseCase {
     private readonly jobQuestionRepository: IJobQuestionRepository,
     @Inject('IApplicationAnswerRepository')
     private readonly applicationAnswerRepository: IApplicationAnswerRepository,
+    @Inject('IOrganizationRepository')
+    private readonly organizationRepository: IOrganizationRepository,
     @InjectDataSource()
     private readonly dataSource: DataSource,
     private readonly notificationService: NotificationService,
@@ -304,9 +307,40 @@ export class ApplicationService implements IApplicationUseCase {
           dedupKey: `app:${context.applicationId}:created`,
         })),
       );
+
+      // Webhook delivery
+      const organization = await this.organizationRepository.findById(context.organizationId);
+      if (organization?.integrations?.enabled) {
+        const { slackWebhookUrl, discordWebhookUrl } = organization.integrations;
+        
+        const message = `📢 *Nueva Postulación en Biovity*\nEl candidato *${context.candidateName}* se ha postulado a la oferta *${context.jobTitle}*.\nVer más aquí: http://localhost:3000${APPLICATIONS_LINK}`;
+
+        if (slackWebhookUrl) {
+          await this.sendWebhook(slackWebhookUrl, { text: message });
+        }
+        if (discordWebhookUrl) {
+          await this.sendWebhook(discordWebhookUrl, { content: message });
+        }
+      }
     } catch (error) {
       this.logger.error(
         `new application notification failed: ${(error as Error).message}`,
+        (error as Error).stack,
+        'ApplicationService',
+      );
+    }
+  }
+
+  private async sendWebhook(url: string, payload: Record<string, any>): Promise<void> {
+    try {
+      await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+    } catch (error) {
+      this.logger.error(
+        `Failed to send webhook to ${url}: ${(error as Error).message}`,
         (error as Error).stack,
         'ApplicationService',
       );

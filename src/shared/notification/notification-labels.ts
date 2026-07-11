@@ -6,6 +6,7 @@ const APPLICATION_STATUS_LABELS: Record<ApplicationStatus, string> = {
   [ApplicationStatus.OFERTA]: 'Oferta',
   [ApplicationStatus.CONTRATADO]: 'Contratado',
   [ApplicationStatus.RECHAZADO]: 'Rechazado',
+  [ApplicationStatus.DESISTIDO]: 'Retirada',
 };
 
 export function applicationStatusLabel(status: ApplicationStatus): string {

@@ -57,6 +57,8 @@ export interface CreateJobInput {
   status?: string;
   expiresAt?: Date;
   category?: string;
+  requiredSkills?: string[];
+  minExperience?: number;
 }
 
 export interface UpdateJobInput {
@@ -70,4 +72,6 @@ export interface UpdateJobInput {
   status?: string;
   expiresAt?: Date;
   category?: string;
+  requiredSkills?: string[];
+  minExperience?: number;
 }

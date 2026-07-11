@@ -15,7 +15,19 @@ import {
   SavedJobEntity,
   EventEntity,
   EventNoteEntity,
+  EventParticipantEntity,
+  SavedCandidateEntity,
+  CandidateTagEntity,
+  CandidateTagAssignmentEntity,
+  MessageTemplateEntity,
+  ActivityLogEntity,
+  ApiKeyEntity,
+  AiCredentialEntity,
 } from './src/infrastructure/database/orm';
+import { JobTemplateEntity } from './src/infrastructure/database/orm/job-template.entity';
+import { OrganizationMemberEntity } from './src/infrastructure/database/orm/organization-member.entity';
+import { PipelineStageEntity } from './src/infrastructure/database/orm/pipeline-stage.entity';
+import { SavedSearchEntity } from './src/infrastructure/database/orm/saved-search.entity';
 
 config();
 
@@ -41,6 +53,18 @@ export const AppDataSource = new DataSource({
     SavedJobEntity,
     EventEntity,
     EventNoteEntity,
+    EventParticipantEntity,
+    JobTemplateEntity,
+    SavedCandidateEntity,
+    CandidateTagEntity,
+    CandidateTagAssignmentEntity,
+    MessageTemplateEntity,
+    ActivityLogEntity,
+    ApiKeyEntity,
+    AiCredentialEntity,
+    OrganizationMemberEntity,
+    PipelineStageEntity,
+    SavedSearchEntity,
   ],
   migrations: ['src/infrastructure/database/migrations/*.ts'],
   migrationsTableName: 'migrations',

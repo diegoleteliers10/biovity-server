@@ -84,9 +84,27 @@ export class UserRepositoryImpl implements IUserRepository {
 
     if (filters?.search) {
       queryBuilder.andWhere(
-        '(user.name ILIKE :search OR user.email ILIKE :search)',
+        '(user.name ILIKE :search OR user.email ILIKE :search OR user.profession ILIKE :search)',
         { search: `%${filters.search}%` },
       );
+    }
+
+    if (filters?.profession) {
+      queryBuilder.andWhere('user.profession ILIKE :profession', {
+        profession: `%${filters.profession}%`,
+      });
+    }
+
+    if (filters?.city) {
+      queryBuilder.andWhere("user.location->>'city' ILIKE :city", {
+        city: `%${filters.city}%`,
+      });
+    }
+
+    if (filters?.country) {
+      queryBuilder.andWhere("user.location->>'country' ILIKE :country", {
+        country: `%${filters.country}%`,
+      });
     }
 
     // Get total count

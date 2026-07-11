@@ -7,8 +7,10 @@ import {
   JobEntity,
   OrganizationEntity,
 } from '../../../infrastructure/database/orm';
+import { OrganizationMemberEntity } from '../../../infrastructure/database/orm/organization-member.entity';
 import { AdminController } from './admin.controller';
 import { AdminService } from '../../../core/services/admin.service';
+import { NotificationModule } from '../../../shared/notification';
 
 @Module({
   imports: [
@@ -18,7 +20,9 @@ import { AdminService } from '../../../core/services/admin.service';
       ApplicationEntity,
       JobEntity,
       OrganizationEntity,
+      OrganizationMemberEntity,
     ]),
+    NotificationModule,
   ],
   controllers: [AdminController],
   providers: [AdminService],

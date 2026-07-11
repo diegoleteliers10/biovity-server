@@ -181,4 +181,21 @@ export class JobResponseDto {
   @IsOptional()
   @IsString()
   category?: string;
+
+  @ApiPropertyOptional({
+    example: ['TypeScript', 'React'],
+    description: 'Habilidades requeridas',
+  })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  requiredSkills?: string[];
+
+  @ApiPropertyOptional({
+    example: 3,
+    description: 'Experiencia mínima en años',
+  })
+  @IsOptional()
+  @IsNumber()
+  minExperience?: number;
 }

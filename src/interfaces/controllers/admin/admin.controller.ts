@@ -1,4 +1,4 @@
-import { Controller, Get, Query, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Query, HttpCode, HttpStatus, ParseUUIDPipe } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
 import { AdminService } from '../../../core/services/admin.service';
 import {
@@ -10,6 +10,7 @@ import {
   ApplicationsTrendResponseDto,
   ApplicationsTrendQueryDto,
   AdminHealthDetailedResponseDto,
+  SystemBroadcastDto,
 } from '../../dtos/admin/admin.dto';
 
 @ApiTags('admin')
@@ -72,6 +73,21 @@ export class AdminController {
     @Query() query: ApplicationsTrendQueryDto,
   ): Promise<ApplicationsTrendResponseDto> {
     return this.adminService.getApplicationsTrend(query.period ?? 30);
+  }
+
+  @Post('notifications/system/broadcast')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Enviar notificacion system a todos los miembros de una organizacion' })
+  @ApiResponse({ status: 200, description: 'Notificaciones enviadas' })
+  async broadcastSystemNotification(
+    @Body() dto: SystemBroadcastDto,
+  ): Promise<{ sent: number }> {
+    await this.adminService.broadcastSystemNotification(
+      dto.organizationId,
+      dto.title,
+      dto.body,
+    );
+    return { sent: 1 };
   }
 
   @Get('health/detailed')

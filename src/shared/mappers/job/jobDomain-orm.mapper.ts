@@ -19,6 +19,8 @@ export class JobDomainOrmMapper {
     jobOrm.expiresAt = domain.expiresAt;
     jobOrm.location = domain.location;
     jobOrm.category = domain.category;
+    jobOrm.requiredSkills = domain.requiredSkills;
+    jobOrm.minExperience = domain.minExperience;
 
     return jobOrm;
   }
@@ -40,6 +42,8 @@ export class JobDomainOrmMapper {
       entity.expiresAt,
       entity.location,
       entity.category,
+      entity.requiredSkills,
+      entity.minExperience,
     );
   }
 }

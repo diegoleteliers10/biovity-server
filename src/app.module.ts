@@ -20,6 +20,15 @@ import { SubscriptionModule } from './interfaces/controllers/subscription/subscr
 import { ApiKeysModule } from './interfaces/controllers/api-keys/api-keys.module';
 import { AiCredentialsModule } from './interfaces/controllers/ai-credentials/ai-credentials.module';
 import { CryptoModule } from './shared/crypto/crypto.module';
+import { JobTemplateModule } from './interfaces/controllers/job-template/job-template.module';
+import { SavedCandidateModule } from './interfaces/controllers/saved-candidate/saved-candidate.module';
+import { CandidateTagModule } from './interfaces/controllers/candidate-tag/candidate-tag.module';
+import { MessageTemplateModule } from './interfaces/controllers/message-template/message-template.module';
+import { ActivityLogModule } from './interfaces/controllers/activity-log/activity-log.module';
+import { ReportsModule } from './interfaces/controllers/reports/reports.module';
+import { PipelineStageModule } from './interfaces/controllers/pipeline-stage/pipeline-stage.module';
+import { SavedSearchModule } from './interfaces/controllers/saved-search/saved-search.module';
+import { EmailService } from './core/services/email.service';
 
 @Module({
   imports: [
@@ -44,9 +53,17 @@ import { CryptoModule } from './shared/crypto/crypto.module';
     ApiKeysModule,
     AiCredentialsModule,
     AdminModule,
+    JobTemplateModule,
+    SavedCandidateModule,
+    CandidateTagModule,
+    MessageTemplateModule,
+    ActivityLogModule,
+    ReportsModule,
+    PipelineStageModule,
+    SavedSearchModule,
   ],
   controllers: [],
-  providers: [],
+  providers: [EmailService],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {

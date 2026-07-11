@@ -5,8 +5,9 @@ import {
   JobEntity,
   ApplicationEntity,
   EventEntity,
+  OrganizationMemberEntity,
 } from '../../infrastructure/database/orm';
-import { EventStatus, EventType, JobStatus } from '../domain/enums';
+import { EventStatus, EventType, JobStatus, ApplicationStatus } from '../domain/enums';
 import { OrganizationService } from './organization.service';
 
 export interface DashboardMetrics {
@@ -27,6 +28,11 @@ export interface PipelineMetrics {
     contratado: number;
   };
   conversionRate: number; // entrevistas / total * 100
+  avgTimeInStages: {
+    entrevista: number;
+    oferta: number;
+    contratado: number;
+  };
 }
 
 export interface JobPerformanceMetrics {
@@ -43,6 +49,15 @@ export interface GeographicDistribution {
   percentage: number;
 }
 
+export interface RecruiterProductivity {
+  userId: string;
+  userName: string;
+  userEmail: string;
+  applicationsProcessed: number;
+  interviewsConducted: number;
+  avgResponseTimeDays: number;
+}
+
 export interface OrganizationMetrics {
   dashboard: DashboardMetrics;
   pipeline: PipelineMetrics;
@@ -54,10 +69,13 @@ export interface OrganizationMetrics {
   }[];
   geographicDistribution: GeographicDistribution[];
   avgHiringTimeDays: number;
+  recruiterProductivity: RecruiterProductivity[];
 }
 
 export interface OrganizationMetricsFilters {
-  period?: 'week' | 'month' | 'year';
+  period?: 'week' | 'month' | 'year' | 'custom';
+  startDate?: string;
+  endDate?: string;
 }
 
 @Injectable()
@@ -69,6 +87,8 @@ export class OrganizationMetricsService {
     private readonly applicationRepository: Repository<ApplicationEntity>,
     @InjectRepository(EventEntity)
     private readonly eventRepository: Repository<EventEntity>,
+    @InjectRepository(OrganizationMemberEntity)
+    private readonly memberRepository: Repository<OrganizationMemberEntity>,
     private readonly organizationService: OrganizationService,
   ) {}
 
@@ -86,6 +106,8 @@ export class OrganizationMetricsService {
     }
 
     const period = filters?.period || 'month';
+    const startDate = filters?.startDate;
+    const endDate = filters?.endDate;
 
     const [
       dashboard,
@@ -94,13 +116,15 @@ export class OrganizationMetricsService {
       recentTrend,
       geographicDistribution,
       avgHiringTimeDays,
+      recruiterProductivity,
     ] = await Promise.all([
-      this.getDashboardMetrics(organizationId, period),
-      this.getPipelineMetrics(organizationId),
+      this.getDashboardMetrics(organizationId, period, startDate, endDate),
+      this.getPipelineMetrics(organizationId, startDate, endDate),
       this.getTopJobsMetrics(organizationId),
-      this.getRecentTrend(organizationId, period),
+      this.getRecentTrend(organizationId, period, startDate, endDate),
       this.getGeographicDistribution(organizationId),
       this.getAvgHiringTimeDays(organizationId),
+      this.getRecruiterProductivity(organizationId, startDate, endDate),
     ]);
 
     return {
@@ -110,16 +134,19 @@ export class OrganizationMetricsService {
       recentTrend,
       geographicDistribution,
       avgHiringTimeDays,
+      recruiterProductivity,
     };
   }
 
   async getDashboardMetrics(
     organizationId: string,
     period: string,
+    customStart?: string,
+    customEnd?: string,
   ): Promise<DashboardMetrics> {
     const now = new Date();
     const { startOfPeriod, endOfPeriod, startOfLastPeriod } =
-      this.getPeriodDates(now, period);
+      this.getPeriodDates(now, period, customStart, customEnd);
 
     // Active jobs count
     const activeJobs = await this.jobRepository.count({
@@ -230,23 +257,70 @@ export class OrganizationMetricsService {
     };
   }
 
-  async getPipelineMetrics(organizationId: string): Promise<PipelineMetrics> {
+  async getPipelineMetrics(
+    organizationId: string,
+    customStart?: string,
+    customEnd?: string,
+  ): Promise<PipelineMetrics> {
     // Total applications
-    const totalApplications = await this.applicationRepository
+    let queryTotal = this.applicationRepository
       .createQueryBuilder('application')
       .leftJoin('application.job', 'job')
-      .where('job.organizationId = :organizationId', { organizationId })
-      .getCount();
+      .where('job.organizationId = :organizationId', { organizationId });
 
     // By status
-    const statusCounts = await this.applicationRepository
+    let queryStatus = this.applicationRepository
       .createQueryBuilder('application')
       .leftJoin('application.job', 'job')
       .where('job.organizationId = :organizationId', { organizationId })
       .select('application.status', 'status')
       .addSelect('COUNT(*)', 'count')
-      .groupBy('application.status')
-      .getRawMany();
+      .groupBy('application.status');
+
+    // Avg days spent to reach each stage
+    let queryAvgDays = this.applicationRepository
+      .createQueryBuilder('application')
+      .leftJoin('application.job', 'job')
+      .where('job.organizationId = :organizationId', { organizationId })
+      .andWhere("application.status != 'pendiente'")
+      .select('application.status', 'status')
+      .addSelect('AVG(EXTRACT(EPOCH FROM (application.stageChangedAt - application.createdAt)) / 86400)', 'avgDays')
+      .groupBy('application.status');
+
+    if (customStart) {
+      queryTotal = queryTotal.andWhere(
+        "TO_CHAR(application.createdAt AT TIME ZONE 'America/Santiago', 'YYYY-MM-DD') >= :customStart",
+        { customStart },
+      );
+      queryStatus = queryStatus.andWhere(
+        "TO_CHAR(application.createdAt AT TIME ZONE 'America/Santiago', 'YYYY-MM-DD') >= :customStart",
+        { customStart },
+      );
+      queryAvgDays = queryAvgDays.andWhere(
+        "TO_CHAR(application.createdAt AT TIME ZONE 'America/Santiago', 'YYYY-MM-DD') >= :customStart",
+        { customStart },
+      );
+    }
+    if (customEnd) {
+      queryTotal = queryTotal.andWhere(
+        "TO_CHAR(application.createdAt AT TIME ZONE 'America/Santiago', 'YYYY-MM-DD') <= :customEnd",
+        { customEnd },
+      );
+      queryStatus = queryStatus.andWhere(
+        "TO_CHAR(application.createdAt AT TIME ZONE 'America/Santiago', 'YYYY-MM-DD') <= :customEnd",
+        { customEnd },
+      );
+      queryAvgDays = queryAvgDays.andWhere(
+        "TO_CHAR(application.createdAt AT TIME ZONE 'America/Santiago', 'YYYY-MM-DD') <= :customEnd",
+        { customEnd },
+      );
+    }
+
+    const [totalApplications, statusCounts, avgDaysRaw] = await Promise.all([
+      queryTotal.getCount(),
+      queryStatus.getRawMany(),
+      queryAvgDays.getRawMany(),
+    ]);
 
     const byStatus = {
       pendiente: 0,
@@ -268,10 +342,25 @@ export class OrganizationMetricsService {
         ? Math.round((byStatus.entrevista / totalApplications) * 100)
         : 0;
 
+    const avgTimeInStages = {
+      entrevista: 0,
+      oferta: 0,
+      contratado: 0,
+    };
+
+    avgDaysRaw.forEach((row: { status: string; avgDays: string }) => {
+      const status = row.status;
+      if (status in avgTimeInStages) {
+        avgTimeInStages[status as keyof typeof avgTimeInStages] =
+          Math.round((parseFloat(row.avgDays) || 0) * 10) / 10;
+      }
+    });
+
     return {
       totalApplications,
       byStatus,
       conversionRate,
+      avgTimeInStages,
     };
   }
 
@@ -317,12 +406,23 @@ export class OrganizationMetricsService {
   async getRecentTrend(
     organizationId: string,
     period: string,
+    customStart?: string,
+    customEnd?: string,
   ): Promise<{ date: string; applications: number; interviews: number }[]> {
-    const now = new Date();
-    const days = period === 'week' ? 7 : period === 'month' ? 30 : 365;
-    const startDate = new Date(now);
-    startDate.setDate(startDate.getDate() - days);
-    const startDateStr = startDate.toISOString().split('T')[0];
+    let startDateObj: Date;
+    let endDateObj: Date = new Date();
+
+    if (period === 'custom' && customStart && customEnd) {
+      startDateObj = new Date(customStart);
+      endDateObj = new Date(customEnd);
+    } else {
+      const days = period === 'week' ? 7 : period === 'month' ? 30 : 365;
+      startDateObj = new Date();
+      startDateObj.setDate(startDateObj.getDate() - days);
+    }
+
+    const startDateStr = startDateObj.toISOString().split('T')[0];
+    const endDateStr = endDateObj.toISOString().split('T')[0];
 
     const applicationsByDate = await this.applicationRepository
       .createQueryBuilder('application')
@@ -331,6 +431,10 @@ export class OrganizationMetricsService {
       .andWhere(
         "TO_CHAR(application.createdAt AT TIME ZONE 'America/Santiago', 'YYYY-MM-DD') >= :startDateStr",
         { startDateStr },
+      )
+      .andWhere(
+        "TO_CHAR(application.createdAt AT TIME ZONE 'America/Santiago', 'YYYY-MM-DD') <= :endDateStr",
+        { endDateStr },
       )
       .select(
         "TO_CHAR(application.createdAt AT TIME ZONE 'America/Santiago', 'YYYY-MM-DD')",
@@ -350,6 +454,10 @@ export class OrganizationMetricsService {
       .andWhere(
         "TO_CHAR(event.startAt AT TIME ZONE 'America/Santiago', 'YYYY-MM-DD') >= :startDateStr",
         { startDateStr },
+      )
+      .andWhere(
+        "TO_CHAR(event.startAt AT TIME ZONE 'America/Santiago', 'YYYY-MM-DD') <= :endDateStr",
+        { endDateStr },
       )
       .select(
         "TO_CHAR(event.startAt AT TIME ZONE 'America/Santiago', 'YYYY-MM-DD')",
@@ -379,8 +487,8 @@ export class OrganizationMetricsService {
     // Generate all dates in range
     const result: { date: string; applications: number; interviews: number }[] =
       [];
-    const current = new Date(startDate);
-    while (current <= now) {
+    const current = new Date(startDateObj);
+    while (current <= endDateObj) {
       const dateStr = current.toISOString().split('T')[0];
       result.push({
         date: dateStr,
@@ -438,10 +546,92 @@ export class OrganizationMetricsService {
     return Math.round(avgDays * 10) / 10;
   }
 
+  async getRecruiterProductivity(
+    organizationId: string,
+    customStart?: string,
+    customEnd?: string,
+  ): Promise<RecruiterProductivity[]> {
+    const members = await this.memberRepository.find({
+      where: { organizationId },
+      relations: ['user'],
+    });
+
+    if (members.length === 0) return [];
+
+    const results = await Promise.all(
+      members.map(async (member) => {
+        const userId = member.userId;
+
+        let appQuery = this.applicationRepository
+          .createQueryBuilder('app')
+          .leftJoin('app.job', 'job')
+          .where('job.organizationId = :orgId', { orgId: organizationId });
+
+        let interviewQuery = this.eventRepository
+          .createQueryBuilder('event')
+          .where('event.organizationId = :orgId', { orgId: organizationId })
+          .andWhere('event.type = :type', { type: EventType.INTERVIEW });
+
+        if (customStart) {
+          appQuery = appQuery.andWhere('app.createdAt >= :customStart', { customStart });
+          interviewQuery = interviewQuery.andWhere('event.createdAt >= :customStart', { customStart });
+        }
+        if (customEnd) {
+          appQuery = appQuery.andWhere('app.createdAt <= :customEnd', { customEnd });
+          interviewQuery = interviewQuery.andWhere('event.createdAt <= :customEnd', { customEnd });
+        }
+
+        const [appsProcessed, interviews, avgDaysRaw] = await Promise.all([
+          appQuery.andWhere('app.status != :status', { status: ApplicationStatus.PENDIENTE }).getCount(),
+          interviewQuery.getCount(),
+          this.applicationRepository
+            .createQueryBuilder('app')
+            .leftJoin('app.job', 'job')
+            .where('job.organizationId = :orgId', { orgId: organizationId })
+            .andWhere('app.stageChangedAt > app.createdAt')
+            .andWhere('app.status != :pending', { pending: ApplicationStatus.PENDIENTE })
+            .select(
+              'AVG(EXTRACT(EPOCH FROM (app."stageChangedAt" - app."createdAt")) / 86400)',
+              'avgDays',
+            )
+            .getRawOne<{ avgDays: string | null }>(),
+        ]);
+
+        const avgDays = avgDaysRaw?.avgDays ? parseFloat(avgDaysRaw.avgDays) : 0;
+
+        return {
+          userId,
+          userName: member.user?.name ?? 'Unknown',
+          userEmail: member.user?.email ?? '',
+          applicationsProcessed: appsProcessed,
+          interviewsConducted: interviews,
+          avgResponseTimeDays: Math.round(avgDays * 10) / 10,
+        };
+      }),
+    );
+
+    return results;
+  }
+
   private getPeriodDates(
     date: Date,
     period: string,
+    customStart?: string,
+    customEnd?: string,
   ): { startOfPeriod: string; endOfPeriod: string; startOfLastPeriod: string } {
+    if (period === 'custom' && customStart && customEnd) {
+      const startOfPeriod = new Date(customStart);
+      const endOfPeriod = new Date(customEnd);
+      const durationMs = endOfPeriod.getTime() - startOfPeriod.getTime();
+      const startOfLastPeriod = new Date(startOfPeriod.getTime() - durationMs);
+
+      return {
+        startOfPeriod: startOfPeriod.toISOString().split('T')[0],
+        endOfPeriod: endOfPeriod.toISOString().split('T')[0],
+        startOfLastPeriod: startOfLastPeriod.toISOString().split('T')[0],
+      };
+    }
+
     const now = new Date(date);
 
     let startOfPeriod: Date;

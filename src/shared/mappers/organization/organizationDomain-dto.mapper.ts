@@ -9,6 +9,12 @@ export class OrganizationDomainDtoMapper {
     dto.website = domain.website;
     dto.phone = domain.phone;
     dto.address = domain.address;
+    dto.integrations = domain.integrations;
+    dto.logo = domain.logo;
+    dto.description = domain.description;
+    dto.industry = domain.industry;
+    dto.size = domain.size;
+    dto.subscriptionId = domain.subscriptionId;
     dto.createdAt = domain.createdAt;
     dto.updatedAt = domain.updatedAt;
     return dto;

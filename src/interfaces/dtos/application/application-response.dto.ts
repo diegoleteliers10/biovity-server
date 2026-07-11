@@ -132,8 +132,8 @@ export class ApplicationResponseDto {
 
   @ApiProperty({ enum: ApplicationStatus })
   @IsString()
-  @IsIn(['pendiente', 'oferta', 'entrevista', 'rechazado', 'contratado'])
-  status: 'pendiente' | 'oferta' | 'entrevista' | 'rechazado' | 'contratado';
+  @IsIn(['pendiente', 'oferta', 'entrevista', 'rechazado', 'contratado', 'desistido'])
+  status: 'pendiente' | 'oferta' | 'entrevista' | 'rechazado' | 'contratado' | 'desistido';
 
   @ApiPropertyOptional({ type: [AnswerSummaryDto] })
   @IsOptional()

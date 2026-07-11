@@ -17,4 +17,28 @@ export class OrganizationUpdateDto {
   @IsOptional()
   @IsObject()
   address?: OrganizationAddressDto;
+
+  @IsOptional()
+  @IsObject()
+  integrations?: {
+    slackWebhookUrl?: string;
+    discordWebhookUrl?: string;
+    enabled?: boolean;
+  };
+
+  @IsOptional()
+  @IsString()
+  logo?: string;
+
+  @IsOptional()
+  @IsString()
+  description?: string;
+
+  @IsOptional()
+  @IsString()
+  industry?: string;
+
+  @IsOptional()
+  @IsString()
+  size?: string;
 }

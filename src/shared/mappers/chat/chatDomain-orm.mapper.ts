@@ -10,6 +10,8 @@ export class ChatDomainOrmMapper {
     chatOrm.lastMessage = domain.lastMessage;
     chatOrm.unreadCountRecruiter = domain.unreadCountRecruiter;
     chatOrm.unreadCountProfessional = domain.unreadCountProfessional;
+    chatOrm.isPinned = domain.isPinned;
+    chatOrm.isArchived = domain.isArchived;
     chatOrm.createdAt = domain.createdAt;
     chatOrm.updatedAt = domain.updatedAt;
 
@@ -26,6 +28,8 @@ export class ChatDomainOrmMapper {
       entity.unreadCountProfessional,
       entity.createdAt,
       entity.updatedAt,
+      entity.isPinned,
+      entity.isArchived,
     );
   }
 }

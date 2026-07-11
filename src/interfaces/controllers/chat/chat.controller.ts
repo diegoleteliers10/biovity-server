@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Put,
+  Patch,
   Delete,
   Body,
   Param,
@@ -76,6 +77,26 @@ export class ChatController {
     @Body() dto: ChatUpdateDto,
   ): Promise<ChatResponseDto> {
     const chat = await this.chatService.updateChat(id, dto);
+    if (!chat) throw new NotFoundException('Chat not found');
+    return ChatDomainDtoMapper.toDto(chat);
+  }
+
+  @Patch(':id/pin')
+  @HttpCode(HttpStatus.OK)
+  async togglePin(
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<ChatResponseDto> {
+    const chat = await this.chatService.togglePin(id);
+    if (!chat) throw new NotFoundException('Chat not found');
+    return ChatDomainDtoMapper.toDto(chat);
+  }
+
+  @Patch(':id/archive')
+  @HttpCode(HttpStatus.OK)
+  async toggleArchive(
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<ChatResponseDto> {
+    const chat = await this.chatService.toggleArchive(id);
     if (!chat) throw new NotFoundException('Chat not found');
     return ChatDomainDtoMapper.toDto(chat);
   }

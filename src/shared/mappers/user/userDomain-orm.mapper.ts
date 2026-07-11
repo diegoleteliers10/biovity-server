@@ -18,6 +18,7 @@ export class UserDomainOrmMapper {
     userOrm.birthday = domain.birthday;
     userOrm.phone = domain.phone;
     userOrm.location = domain.location;
+    userOrm.notificationPreferences = domain.notificationPreferences;
     userOrm.profileViews = domain.profileViews;
     userOrm.createdAt = domain.createdAt;
     userOrm.updatedAt = domain.updatedAt;
@@ -53,6 +54,7 @@ export class UserDomainOrmMapper {
       entity.phone,
       entity.location,
       entity.profileViews,
+      entity.notificationPreferences,
     );
   }
 }

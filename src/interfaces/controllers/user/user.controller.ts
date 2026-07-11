@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Put,
+  Patch,
   Post,
   Body,
   Param,
@@ -14,7 +15,7 @@ import {
 import { ApiTags } from '@nestjs/swagger';
 import { UserService } from '../../../core/services/user.service';
 import { UserDtoDomainMapper } from '../../../shared/mappers/user/userDto-domain.mapper';
-import { UserUpdateDto } from '../../dtos/user/user-update.dto';
+import { UserUpdateDto, UserNotificationPreferencesDto } from '../../dtos/user/user-update.dto';
 import { UserResponseDto } from '../../dtos/user/user-response.dto';
 import { UserDomainDtoMapper } from '../../../shared/mappers/user/userDomain-dto.mapper';
 import { UserQueryDto } from '../../dtos/user/user-query.dto';
@@ -51,6 +52,15 @@ export class UserController {
       type: query.type,
       isActive: query.isActive,
       search: query.search,
+      // F8.1 — Filtros faceted
+      profession: query.profession,
+      experienceLevel: query.experienceLevel,
+      city: query.city,
+      country: query.country,
+      availability: query.availability,
+      skills: query.skills ? query.skills.split(',').map(s => s.trim()).filter(Boolean) : undefined,
+      minExperience: query.minExperience,
+      maxExperience: query.maxExperience,
     };
 
     const pagination = {
@@ -76,6 +86,19 @@ export class UserController {
   ): Promise<UserResponseDto> {
     const input = UserDtoDomainMapper.toUpdateUserInput(dto);
     const user = await this.userService.updateUser(id, input);
+    if (!user) throw new NotFoundException('User not found');
+    return UserDomainDtoMapper.toDto(user);
+  }
+
+  @Patch(':id/notification-preferences')
+  @HttpCode(HttpStatus.OK)
+  async updateNotificationPreferences(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UserNotificationPreferencesDto,
+  ): Promise<UserResponseDto> {
+    const user = await this.userService.updateUser(id, {
+      notificationPreferences: dto as any,
+    });
     if (!user) throw new NotFoundException('User not found');
     return UserDomainDtoMapper.toDto(user);
   }
