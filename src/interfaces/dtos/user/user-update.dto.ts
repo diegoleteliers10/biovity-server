@@ -24,6 +24,56 @@ export class UserLocationDto {
   street?: string;
 }
 
+export class UserNotificationChannelsDto {
+  @IsOptional()
+  @IsBoolean()
+  email?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  in_app?: boolean;
+}
+
+export class UserNotificationEventsDto {
+  @IsOptional()
+  @IsBoolean()
+  application?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  interview?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  message?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  job_alert?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  system?: boolean;
+}
+
+export class UserNotificationPreferencesDto {
+  @IsOptional()
+  @IsString()
+  digest?: 'none' | 'immediate' | 'daily' | 'weekly';
+
+  @IsOptional()
+  @IsObject()
+  @ValidateNested()
+  @Type(() => UserNotificationChannelsDto)
+  channels?: UserNotificationChannelsDto;
+
+  @IsOptional()
+  @IsObject()
+  @ValidateNested()
+  @Type(() => UserNotificationEventsDto)
+  events?: UserNotificationEventsDto;
+}
+
 export class UserUpdateDto {
   @IsOptional()
   @IsString()
@@ -66,4 +116,10 @@ export class UserUpdateDto {
   @ValidateNested()
   @Type(() => UserLocationDto)
   location?: UserLocationDto;
+
+  @IsOptional()
+  @IsObject()
+  @ValidateNested()
+  @Type(() => UserNotificationPreferencesDto)
+  notificationPreferences?: UserNotificationPreferencesDto;
 }

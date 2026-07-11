@@ -3,7 +3,7 @@ import { Application } from '../domain/entities/application.entity';
 export interface ApplicationFilters {
   jobId?: string;
   candidateId?: string;
-  status?: 'pendiente' | 'oferta' | 'entrevista' | 'rechazado' | 'contratado';
+  status?: 'pendiente' | 'oferta' | 'entrevista' | 'rechazado' | 'contratado' | 'desistido';
 }
 
 export interface PaginationOptions {

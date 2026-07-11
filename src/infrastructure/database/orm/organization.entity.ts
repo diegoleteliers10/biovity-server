@@ -11,6 +11,7 @@ import {
 import { SubscriptionEntity } from './subscription.entity';
 import { JobEntity } from './job.entity';
 import { UserEntity } from './user.entity';
+import { OrganizationMemberEntity } from './organization-member.entity';
 
 @Entity('organization')
 export class OrganizationEntity {
@@ -35,11 +36,30 @@ export class OrganizationEntity {
     zipCode?: string;
   };
 
+  @Column({ nullable: true })
+  public logo?: string;
+
+  @Column({ nullable: true, type: 'text' })
+  public description?: string;
+
+  @Column({ nullable: true })
+  public industry?: string;
+
+  @Column({ nullable: true })
+  public size?: string;
+
   @CreateDateColumn()
   public createdAt: Date = new Date();
 
   @UpdateDateColumn()
   public updatedAt: Date = new Date();
+
+  @Column({ type: 'jsonb', nullable: true })
+  public integrations?: {
+    slackWebhookUrl?: string;
+    discordWebhookUrl?: string;
+    enabled?: boolean;
+  };
 
   @Column({ nullable: true, unique: true })
   public subscriptionId?: string;
@@ -53,4 +73,7 @@ export class OrganizationEntity {
 
   @OneToMany(() => UserEntity, user => user.organization)
   public users: UserEntity[];
+
+  @OneToMany(() => OrganizationMemberEntity, member => member.organization)
+  public members: OrganizationMemberEntity[];
 }

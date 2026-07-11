@@ -42,6 +42,12 @@ export class ChatEntity {
   @Column({ default: 0 })
   public unreadCountProfessional: number;
 
+  @Column({ name: 'is_pinned', default: false })
+  public isPinned: boolean;
+
+  @Column({ name: 'is_archived', default: false })
+  public isArchived: boolean;
+
   @CreateDateColumn()
   public createdAt: Date = new Date();
 

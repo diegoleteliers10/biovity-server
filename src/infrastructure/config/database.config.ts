@@ -16,7 +16,17 @@ import {
   EventNoteEntity,
   EventParticipantEntity,
   ApiKeyEntity,
+  AiCredentialEntity,
+  OrganizationMemberEntity,
+  SavedCandidateEntity,
+  CandidateTagEntity,
+  CandidateTagAssignmentEntity,
+  MessageTemplateEntity,
+  ActivityLogEntity,
 } from '../database/orm';
+import { JobTemplateEntity } from '../database/orm/job-template.entity';
+import { PipelineStageEntity } from '../database/orm/pipeline-stage.entity';
+import { SavedSearchEntity } from '../database/orm/saved-search.entity';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 
 export const DatabaseConfig = TypeOrmModule.forRootAsync({
@@ -51,6 +61,16 @@ export const DatabaseConfig = TypeOrmModule.forRootAsync({
         EventNoteEntity,
         EventParticipantEntity,
         ApiKeyEntity,
+        AiCredentialEntity,
+        OrganizationMemberEntity,
+        JobTemplateEntity,
+        SavedCandidateEntity,
+        CandidateTagEntity,
+        CandidateTagAssignmentEntity,
+        MessageTemplateEntity,
+        ActivityLogEntity,
+        PipelineStageEntity,
+        SavedSearchEntity,
       ],
       synchronize: false,
       logging: true,

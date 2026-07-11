@@ -34,8 +34,20 @@ export class OrganizationMetricsController {
   @ApiQuery({
     name: 'period',
     required: false,
-    enum: ['week', 'month', 'year'],
+    enum: ['week', 'month', 'year', 'custom'],
     description: 'Período para las métricas (default: month)',
+  })
+  @ApiQuery({
+    name: 'startDate',
+    required: false,
+    type: String,
+    description: 'Fecha de inicio para rango personalizado (YYYY-MM-DD)',
+  })
+  @ApiQuery({
+    name: 'endDate',
+    required: false,
+    type: String,
+    description: 'Fecha de término para rango personalizado (YYYY-MM-DD)',
   })
   @ApiResponse({
     status: 200,
@@ -45,10 +57,14 @@ export class OrganizationMetricsController {
   @ApiResponse({ status: 404, description: 'Organización no encontrada' })
   async getMetrics(
     @Param('id', ParseUUIDPipe) id: string,
-    @Query('period') period?: 'week' | 'month' | 'year',
+    @Query('period') period?: 'week' | 'month' | 'year' | 'custom',
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
   ): Promise<OrganizationMetricsDto> {
     return this.metricsService.getMetrics(id, {
       period,
+      startDate,
+      endDate,
     });
   }
 }

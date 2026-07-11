@@ -6,8 +6,9 @@ import {
   IsInt,
   Min,
   Max,
+  IsArray,
 } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Type, Transform } from 'class-transformer';
 import { UserType } from '../../../core/domain/enums';
 
 export class UserQueryDto {
@@ -36,4 +37,44 @@ export class UserQueryDto {
   @IsOptional()
   @IsString()
   search?: string;
+
+  // F8.1 — Filtros faceted
+  @IsOptional()
+  @IsString()
+  profession?: string;
+
+  @IsOptional()
+  @IsString()
+  experienceLevel?: string;
+
+  @IsOptional()
+  @IsString()
+  city?: string;
+
+  @IsOptional()
+  @IsString()
+  country?: string;
+
+  @IsOptional()
+  @IsString()
+  availability?: string;
+
+  /** Comma-separated list of skills */
+  @IsOptional()
+  @IsString()
+  skills?: string;
+
+  /** Minimum years of experience */
+  @IsOptional()
+  @IsInt()
+  @Type(() => Number)
+  @Min(0)
+  minExperience?: number;
+
+  /** Maximum years of experience */
+  @IsOptional()
+  @IsInt()
+  @Type(() => Number)
+  @Min(0)
+  maxExperience?: number;
 }

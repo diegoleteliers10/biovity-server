@@ -5,6 +5,15 @@ export interface UserFilters {
   type?: 'professional' | 'organization';
   isActive?: boolean;
   search?: string; // searches in name or email
+  // F8.1 — Filtros faceted
+  profession?: string;
+  experienceLevel?: string;
+  city?: string;
+  country?: string;
+  availability?: string;
+  skills?: string[]; // skills array — match any
+  minExperience?: number;
+  maxExperience?: number;
 }
 
 export interface PaginationOptions {

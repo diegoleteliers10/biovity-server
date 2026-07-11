@@ -15,6 +15,7 @@ export class UserDtoDomainMapper {
       birthday: dto.birthday,
       phone: dto.phone,
       location: dto.location,
+      notificationPreferences: dto.notificationPreferences,
     };
   }
 

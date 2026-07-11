@@ -2,6 +2,9 @@ import { User } from '../../../core/domain/entities/user.entity';
 import {
   UserResponseDto,
   UserLocationDto,
+  UserNotificationPreferencesDto,
+  UserNotificationChannelsDto,
+  UserNotificationEventsDto,
 } from '../../../interfaces/dtos/user/user-response.dto';
 import { OrganizationDomainOrmMapper } from '../organization/organizationDomain-orm.mapper';
 import { UserType } from '../../../core/domain/enums';
@@ -26,6 +29,27 @@ export class UserDomainDtoMapper {
       locationDto.city = domain.location.city;
       locationDto.country = domain.location.country;
       dto.location = locationDto;
+    }
+
+    if (domain.notificationPreferences) {
+      const prefsDto = new UserNotificationPreferencesDto();
+      prefsDto.digest = domain.notificationPreferences.digest;
+      if (domain.notificationPreferences.channels) {
+        const channelsDto = new UserNotificationChannelsDto();
+        channelsDto.email = domain.notificationPreferences.channels.email;
+        channelsDto.in_app = domain.notificationPreferences.channels.in_app;
+        prefsDto.channels = channelsDto;
+      }
+      if (domain.notificationPreferences.events) {
+        const eventsDto = new UserNotificationEventsDto();
+        eventsDto.application = domain.notificationPreferences.events.application;
+        eventsDto.interview = domain.notificationPreferences.events.interview;
+        eventsDto.message = domain.notificationPreferences.events.message;
+        eventsDto.job_alert = domain.notificationPreferences.events.job_alert;
+        eventsDto.system = domain.notificationPreferences.events.system;
+        prefsDto.events = eventsDto;
+      }
+      dto.notificationPreferences = prefsDto;
     }
 
     if (domain.organization) {

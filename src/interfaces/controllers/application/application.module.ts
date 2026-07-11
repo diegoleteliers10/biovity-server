@@ -6,6 +6,7 @@ import {
   UserEntity,
   JobQuestionEntity,
   ApplicationAnswerEntity,
+  OrganizationEntity,
 } from '../../../infrastructure/database/orm';
 import { ApplicationController } from './application.controller';
 import { ApplicationService } from '../../../core/services/application.service';
@@ -14,6 +15,7 @@ import { JobRepositoryImpl } from '../../../infrastructure/persistence/job.repos
 import { UserRepositoryImpl } from '../../../infrastructure/persistence/user.repository.impl';
 import { JobQuestionRepositoryImpl } from '../../../infrastructure/persistence/job-question.repository.impl';
 import { ApplicationAnswerRepositoryImpl } from '../../../infrastructure/persistence/application-answer.repository.impl';
+import { OrganizationRepositoryImpl } from '../../../infrastructure/persistence/organization.repository.impl';
 
 @Module({
   imports: [
@@ -23,6 +25,7 @@ import { ApplicationAnswerRepositoryImpl } from '../../../infrastructure/persist
       UserEntity,
       JobQuestionEntity,
       ApplicationAnswerEntity,
+      OrganizationEntity,
     ]),
   ],
   controllers: [ApplicationController],
@@ -47,6 +50,10 @@ import { ApplicationAnswerRepositoryImpl } from '../../../infrastructure/persist
     {
       provide: 'IApplicationAnswerRepository',
       useClass: ApplicationAnswerRepositoryImpl,
+    },
+    {
+      provide: 'IOrganizationRepository',
+      useClass: OrganizationRepositoryImpl,
     },
   ],
   exports: [ApplicationService],

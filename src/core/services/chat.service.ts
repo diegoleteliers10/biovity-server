@@ -93,4 +93,20 @@ export class ChatService implements IChatUseCase {
 
     return this.chatRepository.delete(id);
   }
+
+  async togglePin(id: string): Promise<Chat | null> {
+    const existingChat = await this.chatRepository.findById(id);
+    if (!existingChat) {
+      throw new NotFoundException(`Chat with id ${id} not found`);
+    }
+    return this.chatRepository.update(id, { isPinned: !existingChat.isPinned });
+  }
+
+  async toggleArchive(id: string): Promise<Chat | null> {
+    const existingChat = await this.chatRepository.findById(id);
+    if (!existingChat) {
+      throw new NotFoundException(`Chat with id ${id} not found`);
+    }
+    return this.chatRepository.update(id, { isArchived: !existingChat.isArchived });
+  }
 }

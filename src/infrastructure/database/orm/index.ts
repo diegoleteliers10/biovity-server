@@ -7,6 +7,8 @@ export { JobEntity, JobSalary, JobLocation, JobBenefits } from './job.entity';
 export { JobQuestionEntity } from './job-question.entity';
 export { MessageEntity } from './message.entity';
 export { OrganizationEntity } from './organization.entity';
+export { OrganizationMemberEntity } from './organization-member.entity';
+export { PipelineStageEntity } from './pipeline-stage.entity';
 export {
   ResumeEntity,
   ResumeExperienceEntity,
@@ -16,11 +18,19 @@ export {
   ResumeCertificationEntity,
   CvFileEntity,
 } from './resume.entity';
+export { SavedSearchEntity } from './saved-search.entity';
 export { SubscriptionEntity } from './subscription.entity';
 export { UserEntity } from './user.entity';
 export { WaitlistEntity, WaitlistRole } from './waitlist.entity';
 export { SavedJobEntity } from './saved-job.entity';
 export { ApiKeyEntity } from './api-key.entity';
+export { AiCredentialEntity } from './ai-credential.entity';
+export { JobTemplateEntity } from './job-template.entity';
+export { SavedCandidateEntity } from './saved-candidate.entity';
+export { CandidateTagEntity } from './candidate-tag.entity';
+export { CandidateTagAssignmentEntity } from './candidate-tag-assignment.entity';
+export { MessageTemplateEntity } from './message-template.entity';
+export { ActivityLogEntity } from './activity-log.entity';
 
 export {
   JobStatus,

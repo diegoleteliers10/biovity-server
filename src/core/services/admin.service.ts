@@ -10,6 +10,9 @@ import {
   UserType,
   JobStatus,
 } from '../../infrastructure/database/orm';
+import { OrganizationMemberEntity } from '../../infrastructure/database/orm/organization-member.entity';
+import { NotificationService } from '../../shared/notification/notification.service';
+import { CreateNotificationInput } from '../../shared/notification/notification.types';
 
 export interface AdminStats {
   users: {
@@ -96,7 +99,10 @@ export class AdminService {
     private readonly jobRepo: Repository<JobEntity>,
     @InjectRepository(OrganizationEntity)
     private readonly organizationRepo: Repository<OrganizationEntity>,
+    @InjectRepository(OrganizationMemberEntity)
+    private readonly organizationMemberRepo: Repository<OrganizationMemberEntity>,
     private readonly dataSource: DataSource,
+    private readonly notificationService: NotificationService,
   ) {}
 
   async getAdminStats(): Promise<AdminStats> {
@@ -414,6 +420,25 @@ export class AdminService {
       ]);
 
     return { activeJobs, totalApplications, totalOrganizations };
+  }
+
+  async broadcastSystemNotification(
+    organizationId: string,
+    title: string,
+    body: string,
+  ): Promise<void> {
+    const members = await this.organizationMemberRepo.find({
+      where: { organizationId },
+    });
+
+    const inputs: CreateNotificationInput[] = members.map(member => ({
+      userId: member.userId,
+      type: 'system' as any,
+      title,
+      body,
+    }));
+
+    await this.notificationService.createMany(inputs);
   }
 
   private async getRecentUsersCount(

@@ -19,6 +19,8 @@ export class JobDomainDtoMapper {
     dto.createdAt = domain.createdAt;
     dto.updatedAt = domain.updatedAt;
     dto.category = domain.category;
+    dto.requiredSkills = domain.requiredSkills;
+    dto.minExperience = domain.minExperience;
     return dto;
   }
 }

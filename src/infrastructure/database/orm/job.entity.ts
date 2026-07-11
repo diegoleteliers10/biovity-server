@@ -102,6 +102,12 @@ export class JobEntity {
   @Column({ nullable: true })
   public category?: string;
 
+  @Column({ name: 'required_skills', type: 'jsonb', nullable: true, default: '[]' })
+  public requiredSkills?: string[];
+
+  @Column({ name: 'min_experience', type: 'int', nullable: true, default: 0 })
+  public minExperience?: number;
+
   @OneToMany(() => ApplicationEntity, application => application.job)
   public applications: ApplicationEntity[];
 }

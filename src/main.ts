@@ -10,9 +10,13 @@ async function bootstrap() {
     logger: ['error', 'warn', 'log', 'debug', 'verbose'],
   });
 
-  // Configure CORS - Allow all origins for MCP agents
+  // Configure CORS. Credentials mode ('include') forbids the '*' wildcard for
+  // Access-Control-Allow-Origin, so we echo the request origin. Same-origin and
+  // non-browser callers have no Origin header and bypass CORS entirely.
   app.enableCors({
-    origin: '*',
+    origin: (origin: string | undefined, callback: (err: Error | null, origin?: string) => void) => {
+      callback(null, origin ?? '*');
+    },
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
     allowedHeaders: 'Content-Type, Accept, Authorization, Origin',

@@ -17,5 +17,14 @@ export class Organization {
     public updatedAt: Date = new Date(),
     public subscriptionId?: string,
     public subscription?: Subscription,
+    public integrations?: {
+      slackWebhookUrl?: string;
+      discordWebhookUrl?: string;
+      enabled?: boolean;
+    },
+    public logo?: string,
+    public description?: string,
+    public industry?: string,
+    public size?: string,
   ) {}
 }

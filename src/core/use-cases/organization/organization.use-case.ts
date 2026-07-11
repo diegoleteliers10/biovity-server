@@ -9,6 +9,7 @@ export interface IOrganizationUseCase {
     data: UpdateOrganizationInput,
   ): Promise<Organization | null>;
   deleteOrganization(id: string): Promise<boolean>;
+  transferOwnership(organizationId: string, newOwnerUserId: string): Promise<Organization>;
 }
 
 export interface CreateOrganizationInput {
@@ -24,4 +25,13 @@ export interface UpdateOrganizationInput {
   phone?: string;
   address?: Record<string, unknown>;
   subscriptionId?: string;
+  integrations?: {
+    slackWebhookUrl?: string;
+    discordWebhookUrl?: string;
+    enabled?: boolean;
+  };
+  logo?: string;
+  description?: string;
+  industry?: string;
+  size?: string;
 }

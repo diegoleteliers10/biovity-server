@@ -38,6 +38,8 @@ export class Job {
     public expiresAt?: Date,
     public location: JobLocation = {},
     public category?: string,
+    public requiredSkills: string[] = [],
+    public minExperience?: number,
   ) {}
 
   public isActive(): boolean {

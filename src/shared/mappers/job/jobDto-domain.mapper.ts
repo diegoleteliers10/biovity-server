@@ -22,6 +22,8 @@ export class JobDtoDomainMapper {
       status: dto.status,
       expiresAt: dto.expiresAt ? new Date(dto.expiresAt) : undefined,
       category: dto.category,
+      requiredSkills: dto.requiredSkills,
+      minExperience: dto.minExperience,
     };
   }
 

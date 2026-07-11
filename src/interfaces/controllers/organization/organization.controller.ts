@@ -10,12 +10,14 @@ import {
   HttpCode,
   HttpStatus,
   NotFoundException,
+  BadRequestException,
 } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { OrganizationService } from '../../../core/services/organization.service';
 import { OrganizationCreateDto } from '../../dtos/organization/organization-create.dto';
 import { OrganizationUpdateDto } from '../../dtos/organization/organization-update.dto';
 import { OrganizationResponseDto } from '../../dtos/organization/organization-response.dto';
+import { TransferOwnershipDto } from '../../dtos/organization/transfer-ownership.dto';
 import { OrganizationDomainDtoMapper } from '../../../shared/mappers/organization/organizationDomain-dto.mapper';
 import {
   CreateOrganizationInput,
@@ -26,6 +28,7 @@ import {
 @Controller('organizations')
 export class OrganizationController {
   constructor(private readonly organizationService: OrganizationService) {}
+
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
@@ -68,6 +71,11 @@ export class OrganizationController {
       website: dto.website,
       phone: dto.phone,
       address: dto.address as Record<string, unknown> | undefined,
+      integrations: dto.integrations,
+      logo: dto.logo,
+      description: dto.description,
+      industry: dto.industry,
+      size: dto.size,
     };
     const organization = await this.organizationService.updateOrganization(
       id,
@@ -83,5 +91,22 @@ export class OrganizationController {
     @Param('id', ParseUUIDPipe) id: string,
   ): Promise<void> {
     await this.organizationService.deleteOrganization(id);
+  }
+
+  @Post(':id/transfer')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Transferir ownership de la organización a otro miembro' })
+  async transferOwnership(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: TransferOwnershipDto,
+  ): Promise<OrganizationResponseDto> {
+    if (!dto.newOwnerUserId) {
+      throw new BadRequestException('newOwnerUserId is required');
+    }
+    const organization = await this.organizationService.transferOwnership(
+      id,
+      dto.newOwnerUserId,
+    );
+    return OrganizationDomainDtoMapper.toDto(organization);
   }
 }

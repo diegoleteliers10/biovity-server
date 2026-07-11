@@ -12,6 +12,8 @@ export class ChatDomainDtoMapper {
     dto.unreadCountProfessional = domain.unreadCountProfessional;
     dto.createdAt = domain.createdAt;
     dto.updatedAt = domain.updatedAt;
+    dto.isPinned = domain.isPinned;
+    dto.isArchived = domain.isArchived;
     return dto;
   }
 }

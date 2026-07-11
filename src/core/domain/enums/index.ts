@@ -1,3 +1,5 @@
+export { AiProvider } from './ai-provider';
+
 export enum JobStatus {
   DRAFT = 'draft',
   ACTIVE = 'active',
@@ -27,6 +29,7 @@ export enum ApplicationStatus {
   ENTREVISTA = 'entrevista',
   RECHAZADO = 'rechazado',
   CONTRATADO = 'contratado',
+  DESISTIDO = 'desistido',
 }
 
 export enum UserType {

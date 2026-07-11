@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsEnum, IsInt, IsOptional, Max, Min } from 'class-validator';
+import { IsEnum, IsInt, IsOptional, IsString, IsUUID, Max, Min } from 'class-validator';
 
 export class AdminStatsResponseDto {
   @ApiProperty({ example: 1240 })
@@ -145,4 +145,18 @@ export class ApplicationsTrendQueryDto {
   @Max(90)
   @Type(() => Number)
   period?: 30 | 90 = 30;
+}
+
+export class SystemBroadcastDto {
+  @ApiProperty({ example: 'org-uuid' })
+  @IsUUID()
+  organizationId: string;
+
+  @ApiProperty({ example: 'Mantenimiento programado' })
+  @IsString()
+  title: string;
+
+  @ApiProperty({ example: 'El sistema estara en mantenimiento...' })
+  @IsString()
+  body: string;
 }

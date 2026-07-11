@@ -43,6 +43,17 @@ export class PipelineByStatusDto {
   contratado: number;
 }
 
+export class PipelineAvgTimeDto {
+  @ApiProperty({ example: 4.5, description: 'Días promedio hasta entrevista' })
+  entrevista: number;
+
+  @ApiProperty({ example: 10.2, description: 'Días promedio hasta oferta' })
+  oferta: number;
+
+  @ApiProperty({ example: 14.1, description: 'Días promedio hasta contratación' })
+  contratado: number;
+}
+
 export class PipelineMetricsDto {
   @ApiProperty({ example: 11, description: 'Total de postulaciones' })
   totalApplications: number;
@@ -55,6 +66,9 @@ export class PipelineMetricsDto {
     description: 'Tasa de conversión: entrevistas / total %',
   })
   conversionRate: number;
+
+  @ApiProperty({ type: PipelineAvgTimeDto })
+  avgTimeInStages: PipelineAvgTimeDto;
 }
 
 export class JobPerformanceDto {

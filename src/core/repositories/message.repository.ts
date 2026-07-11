@@ -3,6 +3,7 @@ import { Message } from '../domain/entities/index';
 export interface MessagePagination {
   take?: number;
   skip?: number;
+  search?: string;
 }
 
 export interface IMessageRepository {

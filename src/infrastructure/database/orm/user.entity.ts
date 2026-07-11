@@ -69,6 +69,22 @@ export class UserEntity {
     street?: string;
   };
 
+  @Column({ name: 'notification_preferences', type: 'jsonb', nullable: true })
+  public notificationPreferences?: {
+    digest?: 'none' | 'immediate' | 'daily' | 'weekly';
+    channels?: {
+      email?: boolean;
+      in_app?: boolean;
+    };
+    events?: {
+      application?: boolean;
+      interview?: boolean;
+      message?: boolean;
+      job_alert?: boolean;
+      system?: boolean;
+    };
+  };
+
   @CreateDateColumn()
   public createdAt: Date = new Date();
 
