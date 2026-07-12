@@ -12,7 +12,7 @@ export class QuickMetricsDto {
 
   @ApiProperty({
     example: 45,
-    description: '% de postulaciones que salieron de pendiente',
+    description: '% de postulaciones que alcanzaron entrevista/oferta/contratado',
   })
   responseRate: number;
 }
@@ -56,9 +56,9 @@ export class FunnelDto {
   contratado: FunnelStageDto;
 }
 
-export class IndustryDistributionDto {
-  @ApiProperty({ example: 'Tech', description: 'Nombre de la industria' })
-  industry: string;
+export class CategoryDistributionDto {
+  @ApiProperty({ example: 'Biotecnología', description: 'Categoría del trabajo' })
+  category: string;
 
   @ApiProperty({ example: 8, description: 'Cantidad de postulaciones' })
   count: number;
@@ -68,69 +68,14 @@ export class IndustryDistributionDto {
 }
 
 export class TrendDataPointDto {
-  @ApiProperty({ example: '2024-01', description: 'Mes en formato YYYY-MM' })
-  month: string;
+  @ApiProperty({
+    example: '2024-01-01',
+    description: 'Inicio del bucket en formato YYYY-MM-DD',
+  })
+  date: string;
 
   @ApiProperty({ example: 5, description: 'Cantidad de postulaciones' })
   applications: number;
-}
-
-export class UpcomingInterviewDto {
-  @ApiProperty({ example: 'uuid', description: 'ID del evento' })
-  eventId: string;
-
-  @ApiProperty({
-    example: 'Entrevista técnica',
-    description: 'Título del evento',
-  })
-  title: string;
-
-  @ApiProperty({ example: '2024-01-20T10:00:00Z', description: 'Fecha y hora' })
-  startAt: string;
-
-  @ApiProperty({ example: 'uuid', description: 'ID del trabajo' })
-  jobId: string;
-
-  @ApiProperty({
-    example: 'Backend Developer',
-    description: 'Título del trabajo',
-  })
-  jobTitle: string;
-
-  @ApiProperty({ example: 'uuid', description: 'ID de la organización' })
-  organizationId: string;
-
-  @ApiProperty({
-    example: 'Tech Corp',
-    description: 'Nombre de la organización',
-  })
-  organizationName: string;
-}
-
-export class RecentApplicationDto {
-  @ApiProperty({ example: 'uuid', description: 'ID de la postulación' })
-  applicationId: string;
-
-  @ApiProperty({
-    example: 'Backend Developer',
-    description: 'Título del trabajo',
-  })
-  jobTitle: string;
-
-  @ApiProperty({
-    example: 'Tech Corp',
-    description: 'Nombre de la organización',
-  })
-  organizationName: string;
-
-  @ApiProperty({
-    example: 'pendiente',
-    description: 'Estado de la postulación',
-  })
-  status: string;
-
-  @ApiProperty({ example: '2024-01-15', description: 'Fecha de postulación' })
-  appliedAt: string;
 }
 
 export class UserKPIsDto {
@@ -140,20 +85,24 @@ export class UserKPIsDto {
   })
   applicationsLast30Days: number;
 
-  @ApiProperty({ example: 35, description: '% de avanzadas vs totales' })
-  responseRate: number;
-
-  @ApiProperty({ example: 4, description: 'Total con estado entrevista' })
+  @ApiProperty({
+    example: 4,
+    description: 'Aplicaciones que alguna vez alcanzaron entrevista (acumulado)',
+  })
   interviews: number;
 
-  @ApiProperty({ example: 1, description: 'Total con estado oferta' })
+  @ApiProperty({
+    example: 1,
+    description: 'Aplicaciones que alguna vez alcanzaron oferta (acumulado)',
+  })
   offers: number;
 
   @ApiProperty({
     example: 5.2,
-    description: 'Días promedio hasta primer cambio de estado',
+    nullable: true,
+    description: 'Días promedio hasta primer cambio de estado (null si sin datos)',
   })
-  avgResponseTimeDays: number;
+  avgResponseTimeDays: number | null;
 
   @ApiProperty({ example: 42, description: 'Vistas del perfil' })
   profileViews: number;
@@ -175,12 +124,6 @@ export class UserMetricsDto {
   @ApiProperty({ type: FunnelDto })
   hiringFunnel: FunnelDto;
 
-  @ApiProperty({ type: [IndustryDistributionDto] })
-  industriesApplied: IndustryDistributionDto[];
-
-  @ApiProperty({ type: [UpcomingInterviewDto] })
-  upcomingInterviews: UpcomingInterviewDto[];
-
-  @ApiProperty({ type: [RecentApplicationDto] })
-  recentApplications: RecentApplicationDto[];
+  @ApiProperty({ type: [CategoryDistributionDto] })
+  categoriesApplied: CategoryDistributionDto[];
 }
