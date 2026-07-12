@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
+import { corsOptions } from './infrastructure/config/cors.config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 async function bootstrap() {
@@ -10,17 +11,7 @@ async function bootstrap() {
     logger: ['error', 'warn', 'log', 'debug', 'verbose'],
   });
 
-  // Configure CORS. Credentials mode ('include') forbids the '*' wildcard for
-  // Access-Control-Allow-Origin, so we echo the request origin. Same-origin and
-  // non-browser callers have no Origin header and bypass CORS entirely.
-  app.enableCors({
-    origin: (origin: string | undefined, callback: (err: Error | null, origin?: string) => void) => {
-      callback(null, origin ?? '*');
-    },
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
-    credentials: true,
-    allowedHeaders: 'Content-Type, Accept, Authorization, Origin',
-  });
+  app.enableCors(corsOptions);
 
   // Configure cookie parser
   app.use(cookieParser());
