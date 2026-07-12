@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { ApplicationEntity } from '../database/orm';
+import { InjectRepository, InjectDataSource } from '@nestjs/typeorm';
+import { Repository, DataSource } from 'typeorm';
+import { ApplicationEntity, ApplicationStatusHistoryEntity } from '../database/orm';
 import { Application } from '../../core/domain/entities/application.entity';
 import { ApplicationDomainOrmMapper } from '../../shared/mappers/application/applicationDomain-orm.mapper';
 import {
@@ -16,12 +16,23 @@ export class ApplicationRepositoryImpl implements IApplicationRepository {
   constructor(
     @InjectRepository(ApplicationEntity)
     private readonly applicationRepository: Repository<ApplicationEntity>,
+    @InjectDataSource()
+    private readonly dataSource: DataSource,
   ) {}
 
   async create(entity: Application): Promise<Application> {
     const applicationOrm = ApplicationDomainOrmMapper.toOrm(entity);
-    const savedApplication =
-      await this.applicationRepository.save(applicationOrm);
+    const savedApplication = await this.dataSource.transaction(async manager => {
+      const saved = await manager.save(ApplicationEntity, applicationOrm);
+      await manager.insert(ApplicationStatusHistoryEntity, {
+        applicationId: saved.id,
+        previousStatus: null,
+        newStatus: saved.status,
+        changedAt: saved.createdAt,
+        changedById: saved.candidateId,
+      });
+      return saved;
+    });
     return ApplicationDomainOrmMapper.toDomain(savedApplication);
   }
 
@@ -167,28 +178,46 @@ export class ApplicationRepositoryImpl implements IApplicationRepository {
   async update(
     id: string,
     entity: Partial<Application>,
+    changedById?: string | null,
   ): Promise<Application | null> {
-    // Build update object with only defined values
     const updateData: Partial<ApplicationEntity> = {};
+    const statusChanging = entity.status !== undefined;
+    const newStatus = entity.status;
 
-    if (entity.status !== undefined) {
-      updateData.status = entity.status;
+    if (statusChanging) {
+      updateData.status = newStatus;
       updateData.stageChangedAt = new Date();
     }
 
     if (Object.keys(updateData).length === 0) {
-      // No fields to update, return existing
       return this.findById(id);
     }
 
-    const result = await this.applicationRepository.update(id, {
-      ...updateData,
-      updatedAt: new Date(),
-    });
+    await this.dataSource.transaction(async manager => {
+      const current = statusChanging
+        ? await manager.findOne(ApplicationEntity, {
+            where: { id },
+            select: ['status'],
+            lock: { mode: 'pessimistic_write' },
+          })
+        : null;
+      const previousStatus = current ? current.status : null;
 
-    if (result.affected === 0) {
-      return null;
-    }
+      await manager.update(ApplicationEntity, id, {
+        ...updateData,
+        updatedAt: new Date(),
+      });
+
+      if (statusChanging && newStatus !== previousStatus) {
+        await manager.insert(ApplicationStatusHistoryEntity, {
+          applicationId: id,
+          previousStatus,
+          newStatus,
+          changedAt: new Date(),
+          changedById: changedById ?? null,
+        });
+      }
+    });
 
     return this.findById(id);
   }

@@ -2,6 +2,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import {
   UserEntity,
   ApplicationEntity,
+  ApplicationStatusHistoryEntity,
   ApplicationAnswerEntity,
   OrganizationEntity,
   SubscriptionEntity,
@@ -48,6 +49,7 @@ export const DatabaseConfig = TypeOrmModule.forRootAsync({
         UserEntity,
         OrganizationEntity,
         ApplicationEntity,
+        ApplicationStatusHistoryEntity,
         ApplicationAnswerEntity,
         SubscriptionEntity,
         JobEntity,

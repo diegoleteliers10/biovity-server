@@ -34,6 +34,7 @@ export interface IApplicationUseCase {
   updateApplicationStatus(
     id: string,
     status: ApplicationStatus,
+    changedById?: string | null,
   ): Promise<Application | null>;
   deleteApplication(id: string): Promise<boolean>;
   checkExistingApplication(

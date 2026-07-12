@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import {
   JobEntity,
   ApplicationEntity,
+  ApplicationStatusHistoryEntity,
   EventEntity,
   OrganizationMemberEntity,
 } from '../../infrastructure/database/orm';
@@ -58,6 +59,13 @@ export interface RecruiterProductivity {
   avgResponseTimeDays: number;
 }
 
+export interface ResponseTimeDistribution {
+  lessThan24h: number;
+  oneToThreeDays: number;
+  threeToSevenDays: number;
+  moreThanSevenDays: number;
+}
+
 export interface OrganizationMetrics {
   dashboard: DashboardMetrics;
   pipeline: PipelineMetrics;
@@ -70,6 +78,8 @@ export interface OrganizationMetrics {
   geographicDistribution: GeographicDistribution[];
   avgHiringTimeDays: number;
   recruiterProductivity: RecruiterProductivity[];
+  responseTimeDistribution: ResponseTimeDistribution;
+  unansweredCount: number;
 }
 
 export interface OrganizationMetricsFilters {
@@ -89,6 +99,8 @@ export class OrganizationMetricsService {
     private readonly eventRepository: Repository<EventEntity>,
     @InjectRepository(OrganizationMemberEntity)
     private readonly memberRepository: Repository<OrganizationMemberEntity>,
+    @InjectRepository(ApplicationStatusHistoryEntity)
+    private readonly statusHistoryRepository: Repository<ApplicationStatusHistoryEntity>,
     private readonly organizationService: OrganizationService,
   ) {}
 
@@ -117,6 +129,7 @@ export class OrganizationMetricsService {
       geographicDistribution,
       avgHiringTimeDays,
       recruiterProductivity,
+      responseTime,
     ] = await Promise.all([
       this.getDashboardMetrics(organizationId, period, startDate, endDate),
       this.getPipelineMetrics(organizationId, startDate, endDate),
@@ -125,6 +138,7 @@ export class OrganizationMetricsService {
       this.getGeographicDistribution(organizationId),
       this.getAvgHiringTimeDays(organizationId),
       this.getRecruiterProductivity(organizationId, startDate, endDate),
+      this.getResponseTimeDistribution(organizationId, period, startDate, endDate),
     ]);
 
     return {
@@ -135,6 +149,8 @@ export class OrganizationMetricsService {
       geographicDistribution,
       avgHiringTimeDays,
       recruiterProductivity,
+      responseTimeDistribution: responseTime.distribution,
+      unansweredCount: responseTime.unansweredCount,
     };
   }
 
@@ -611,6 +627,85 @@ export class OrganizationMetricsService {
     );
 
     return results;
+  }
+
+  async getResponseTimeDistribution(
+    organizationId: string,
+    period: string,
+    customStart?: string,
+    customEnd?: string,
+  ): Promise<{ distribution: ResponseTimeDistribution; unansweredCount: number }> {
+    const now = new Date();
+    const { startOfPeriod, endOfPeriod } = this.getPeriodDates(
+      now,
+      period,
+      customStart,
+      customEnd,
+    );
+
+    const firstResponseRows = await this.statusHistoryRepository
+      .createQueryBuilder('history')
+      .innerJoin('history.application', 'application')
+      .innerJoin('application.job', 'job')
+      .where('job.organizationId = :organizationId', { organizationId })
+      .andWhere('history.new_status IN (:...statuses)', {
+        statuses: ['entrevista', 'oferta', 'contratado', 'rechazado'],
+      })
+      .andWhere(
+        "TO_CHAR(application.createdAt AT TIME ZONE 'America/Santiago', 'YYYY-MM-DD') >= :startOfPeriod",
+        { startOfPeriod },
+      )
+      .andWhere(
+        "TO_CHAR(application.createdAt AT TIME ZONE 'America/Santiago', 'YYYY-MM-DD') < :endOfPeriod",
+        { endOfPeriod },
+      )
+      .select('application.id', 'applicationId')
+      .addSelect('MIN(history.changed_at)', 'firstResponseAt')
+      .addSelect('MIN(application.createdAt)', 'createdAt')
+      .groupBy('application.id')
+      .getRawMany<{
+        applicationId: string;
+        firstResponseAt: Date;
+        createdAt: Date;
+      }>();
+
+    const distribution: ResponseTimeDistribution = {
+      lessThan24h: 0,
+      oneToThreeDays: 0,
+      threeToSevenDays: 0,
+      moreThanSevenDays: 0,
+    };
+
+    for (const row of firstResponseRows) {
+      const days =
+        (new Date(row.firstResponseAt).getTime() -
+          new Date(row.createdAt).getTime()) /
+        86_400_000;
+      if (days < 1) distribution.lessThan24h += 1;
+      else if (days < 3) distribution.oneToThreeDays += 1;
+      else if (days < 7) distribution.threeToSevenDays += 1;
+      else distribution.moreThanSevenDays += 1;
+    }
+
+    const unansweredCount = await this.applicationRepository
+      .createQueryBuilder('application')
+      .leftJoin('application.job', 'job')
+      .where('job.organizationId = :organizationId', { organizationId })
+      .andWhere('application.status = :status', { status: 'pendiente' })
+      .andWhere(
+        "TO_CHAR(application.createdAt AT TIME ZONE 'America/Santiago', 'YYYY-MM-DD') >= :startOfPeriod",
+        { startOfPeriod },
+      )
+      .andWhere(
+        "TO_CHAR(application.createdAt AT TIME ZONE 'America/Santiago', 'YYYY-MM-DD') < :endOfPeriod",
+        { endOfPeriod },
+      )
+      .getCount();
+
+    return {
+      distribution,
+      unansweredCount,
+    };
   }
 
   private getPeriodDates(

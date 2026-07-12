@@ -42,6 +42,10 @@ export interface IApplicationRepository {
     organizationId: string,
     pagination?: PaginationOptions,
   ): Promise<PaginatedResult<Application>>;
-  update(id: string, entity: Partial<Application>): Promise<Application | null>;
+  update(
+    id: string,
+    entity: Partial<Application>,
+    changedById?: string | null,
+  ): Promise<Application | null>;
   delete(id: string): Promise<boolean>;
 }

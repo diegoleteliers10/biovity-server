@@ -116,6 +116,20 @@ export class GeographicDistributionDto {
   percentage: number;
 }
 
+export class ResponseTimeDistributionDto {
+  @ApiProperty({ example: 4, description: 'Postulaciones respondidas en menos de 24h' })
+  lessThan24h: number;
+
+  @ApiProperty({ example: 6, description: 'Postulaciones respondidas entre 1 y 3 días' })
+  oneToThreeDays: number;
+
+  @ApiProperty({ example: 3, description: 'Postulaciones respondidas entre 3 y 7 días' })
+  threeToSevenDays: number;
+
+  @ApiProperty({ example: 1, description: 'Postulaciones respondidas en 7 días o más' })
+  moreThanSevenDays: number;
+}
+
 export class OrganizationMetricsDto {
   @ApiProperty({ type: DashboardMetricsDto })
   dashboard: DashboardMetricsDto;
@@ -137,4 +151,10 @@ export class OrganizationMetricsDto {
     description: 'Días promedio hasta contratación',
   })
   avgHiringTimeDays: number;
+
+  @ApiProperty({ type: ResponseTimeDistributionDto })
+  responseTimeDistribution: ResponseTimeDistributionDto;
+
+  @ApiProperty({ example: 7, description: 'Postulaciones del período aún sin responder' })
+  unansweredCount: number;
 }
