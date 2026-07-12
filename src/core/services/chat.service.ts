@@ -94,19 +94,36 @@ export class ChatService implements IChatUseCase {
     return this.chatRepository.delete(id);
   }
 
-  async togglePin(id: string): Promise<Chat | null> {
+  async togglePin(id: string, role: "recruiter" | "professional"): Promise<Chat | null> {
     const existingChat = await this.chatRepository.findById(id);
     if (!existingChat) {
       throw new NotFoundException(`Chat with id ${id} not found`);
     }
-    return this.chatRepository.update(id, { isPinned: !existingChat.isPinned });
+    const next =
+      role === "recruiter" ? !existingChat.isPinnedByRecruiter : !existingChat.isPinnedByProfessional;
+    const partial: Partial<Chat> =
+      role === "recruiter"
+        ? { isPinnedByRecruiter: next }
+        : { isPinnedByProfessional: next };
+    return this.chatRepository.update(id, partial);
   }
 
-  async toggleArchive(id: string): Promise<Chat | null> {
+  async toggleArchive(
+    id: string,
+    role: "recruiter" | "professional",
+  ): Promise<Chat | null> {
     const existingChat = await this.chatRepository.findById(id);
     if (!existingChat) {
       throw new NotFoundException(`Chat with id ${id} not found`);
     }
-    return this.chatRepository.update(id, { isArchived: !existingChat.isArchived });
+    const next =
+      role === "recruiter"
+        ? !existingChat.isArchivedByRecruiter
+        : !existingChat.isArchivedByProfessional;
+    const partial: Partial<Chat> =
+      role === "recruiter"
+        ? { isArchivedByRecruiter: next }
+        : { isArchivedByProfessional: next };
+    return this.chatRepository.update(id, partial);
   }
 }

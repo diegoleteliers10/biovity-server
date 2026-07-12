@@ -7,10 +7,12 @@ import {
   Delete,
   Body,
   Param,
+  Query,
   ParseUUIDPipe,
   HttpCode,
   HttpStatus,
   NotFoundException,
+  BadRequestException,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { ChatService } from '../../../core/services/chat.service';
@@ -20,10 +22,19 @@ import { ChatUpdateDto } from '../../dtos/chat/chat-update.dto';
 import { ChatResponseDto } from '../../dtos/chat/chat-response.dto';
 import { ChatDomainDtoMapper } from '../../../shared/mappers/chat/chatDomain-dto.mapper';
 
+type ChatRole = 'recruiter' | 'professional';
+
 @ApiTags('chat')
 @Controller('chats')
 export class ChatController {
   constructor(private readonly chatService: ChatService) {}
+
+  private assertChatRole(role: string): ChatRole {
+    if (role !== 'recruiter' && role !== 'professional') {
+      throw new BadRequestException("role must be 'recruiter' or 'professional'");
+    }
+    return role;
+  }
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
@@ -47,7 +58,7 @@ export class ChatController {
     @Param('recruiterId', ParseUUIDPipe) recruiterId: string,
   ): Promise<ChatResponseDto[]> {
     const chats = await this.chatService.getChatsByRecruiter(recruiterId);
-    return chats.map(chat => ChatDomainDtoMapper.toDto(chat));
+    return chats.map(chat => ChatDomainDtoMapper.toDto(chat, 'recruiter'));
   }
 
   @Get('professional/:professionalId')
@@ -55,7 +66,7 @@ export class ChatController {
     @Param('professionalId', ParseUUIDPipe) professionalId: string,
   ): Promise<ChatResponseDto[]> {
     const chats = await this.chatService.getChatsByProfessional(professionalId);
-    return chats.map(chat => ChatDomainDtoMapper.toDto(chat));
+    return chats.map(chat => ChatDomainDtoMapper.toDto(chat, 'professional'));
   }
 
   @Get('participants/:recruiterId/:professionalId')
@@ -85,20 +96,24 @@ export class ChatController {
   @HttpCode(HttpStatus.OK)
   async togglePin(
     @Param('id', ParseUUIDPipe) id: string,
+    @Query('role') role: string,
   ): Promise<ChatResponseDto> {
-    const chat = await this.chatService.togglePin(id);
+    const assertedRole = this.assertChatRole(role);
+    const chat = await this.chatService.togglePin(id, assertedRole);
     if (!chat) throw new NotFoundException('Chat not found');
-    return ChatDomainDtoMapper.toDto(chat);
+    return ChatDomainDtoMapper.toDto(chat, assertedRole);
   }
 
   @Patch(':id/archive')
   @HttpCode(HttpStatus.OK)
   async toggleArchive(
     @Param('id', ParseUUIDPipe) id: string,
+    @Query('role') role: string,
   ): Promise<ChatResponseDto> {
-    const chat = await this.chatService.toggleArchive(id);
+    const assertedRole = this.assertChatRole(role);
+    const chat = await this.chatService.toggleArchive(id, assertedRole);
     if (!chat) throw new NotFoundException('Chat not found');
-    return ChatDomainDtoMapper.toDto(chat);
+    return ChatDomainDtoMapper.toDto(chat, assertedRole);
   }
 
   @Delete(':id')
