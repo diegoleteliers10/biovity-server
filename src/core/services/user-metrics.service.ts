@@ -5,13 +5,20 @@ import {
   ApplicationEntity,
   ApplicationStatus,
   EventEntity,
-  EventType,
-  EventStatus,
   JobEntity,
   OrganizationEntity,
   UserEntity,
 } from '../../infrastructure/database/orm';
 import { UserService } from './user.service';
+
+type MetricsPeriod = 'week' | 'month' | 'year';
+
+const SANTIAGO_TZ = 'America/Santiago';
+const REACHED_STATUSES = [
+  ApplicationStatus.ENTREVISTA,
+  ApplicationStatus.OFERTA,
+  ApplicationStatus.CONTRATADO,
+];
 
 export interface QuickMetrics {
   totalApplications: number;
@@ -21,15 +28,14 @@ export interface QuickMetrics {
 
 export interface UserKPIs {
   applicationsLast30Days: number;
-  responseRate: number;
   interviews: number;
   offers: number;
-  avgResponseTimeDays: number;
+  avgResponseTimeDays: number | null;
   profileViews: number;
 }
 
 export interface TrendDataPoint {
-  month: string;
+  date: string;
   applications: number;
 }
 
@@ -52,28 +58,10 @@ export interface HiringFunnel {
   contratado: FunnelStage;
 }
 
-export interface IndustryDistribution {
-  industry: string;
+export interface CategoryDistribution {
+  category: string;
   count: number;
   percentage: number;
-}
-
-export interface UpcomingInterview {
-  eventId: string;
-  title: string;
-  startAt: string;
-  jobId: string;
-  jobTitle: string;
-  organizationId: string;
-  organizationName: string;
-}
-
-export interface RecentApplication {
-  applicationId: string;
-  jobTitle: string;
-  organizationName: string;
-  status: ApplicationStatus;
-  appliedAt: string;
 }
 
 export interface UserMetrics {
@@ -82,9 +70,12 @@ export interface UserMetrics {
   applicationsTrend: TrendDataPoint[];
   responseTimeDistribution: ApplicationBucket;
   hiringFunnel: HiringFunnel;
-  industriesApplied: IndustryDistribution[];
-  upcomingInterviews: UpcomingInterview[];
-  recentApplications: RecentApplication[];
+  categoriesApplied: CategoryDistribution[];
+}
+
+interface TrendBucket {
+  labelDate: string;
+  days: string[];
 }
 
 @Injectable()
@@ -105,32 +96,22 @@ export class UserMetricsService {
 
   async getMetrics(
     userId: string,
-    period: 'week' | 'month' | 'year' = 'month',
+    period: MetricsPeriod = 'month',
   ): Promise<UserMetrics> {
     const user = await this.userService.getUserById(userId);
     if (!user) {
       throw new NotFoundException(`User with id ${userId} not found`);
     }
 
-    const [
-      quickMetrics,
-      kpis,
-      applicationsTrend,
-      responseTimeDistribution,
-      hiringFunnel,
-      industriesApplied,
-      upcomingInterviews,
-      recentApplications,
-    ] = await Promise.all([
-      this.getQuickMetrics(userId),
-      this.getKPIs(userId),
-      this.getApplicationsTrend(userId, period),
-      this.getResponseTimeDistribution(userId),
-      this.getHiringFunnel(userId),
-      this.getIndustriesApplied(userId),
-      this.getUpcomingInterviews(userId),
-      this.getRecentApplications(userId),
-    ]);
+    const [quickMetrics, kpis, applicationsTrend, responseTimeDistribution, hiringFunnel, categoriesApplied] =
+      await Promise.all([
+        this.getQuickMetrics(userId),
+        this.getKPIs(userId),
+        this.getApplicationsTrend(userId, period),
+        this.getResponseTimeDistribution(userId),
+        this.getHiringFunnel(userId),
+        this.getCategoriesApplied(userId),
+      ]);
 
     return {
       quickMetrics,
@@ -138,9 +119,7 @@ export class UserMetricsService {
       applicationsTrend,
       responseTimeDistribution,
       hiringFunnel,
-      industriesApplied,
-      upcomingInterviews,
-      recentApplications,
+      categoriesApplied,
     };
   }
 
@@ -161,17 +140,10 @@ export class UserMetricsService {
       })
       .getCount();
 
-    const nonPendingCount = await this.applicationRepository
-      .createQueryBuilder('application')
-      .where('application.candidateId = :userId', { userId })
-      .andWhere('application.status != :pendingStatus', {
-        pendingStatus: ApplicationStatus.PENDIENTE,
-      })
-      .getCount();
-
+    const reachedCount = await this.countDistinctReached(userId, REACHED_STATUSES);
     const responseRate =
       totalApplications > 0
-        ? Math.round((nonPendingCount / totalApplications) * 100)
+        ? Math.round((reachedCount / totalApplications) * 100)
         : 0;
 
     return {
@@ -196,46 +168,18 @@ export class UserMetricsService {
       )
       .getCount();
 
-    const totalApplications = await this.applicationRepository.count({
-      where: { candidateId: userId },
-    });
-
-    const advancedCount = await this.applicationRepository
-      .createQueryBuilder('application')
-      .where('application.candidateId = :userId', { userId })
-      .andWhere('application.status != :pendingStatus', {
-        pendingStatus: ApplicationStatus.PENDIENTE,
-      })
-      .getCount();
-
-    const responseRate =
-      totalApplications > 0
-        ? Math.round((advancedCount / totalApplications) * 100)
-        : 0;
-
-    const interviews = await this.applicationRepository
-      .createQueryBuilder('application')
-      .where('application.candidateId = :userId', { userId })
-      .andWhere('application.status = :status', {
-        status: ApplicationStatus.ENTREVISTA,
-      })
-      .getCount();
-
-    const offers = await this.applicationRepository
-      .createQueryBuilder('application')
-      .where('application.candidateId = :userId', { userId })
-      .andWhere('application.status = :status', {
-        status: ApplicationStatus.OFERTA,
-      })
-      .getCount();
+    const interviews = await this.countDistinctReached(userId, [
+      ApplicationStatus.ENTREVISTA,
+    ]);
+    const offers = await this.countDistinctReached(userId, [
+      ApplicationStatus.OFERTA,
+    ]);
 
     const avgResponseTimeDays = await this.calculateAvgResponseTime(userId);
-
     const profileViews = await this.getProfileViews(userId);
 
     return {
       applicationsLast30Days,
-      responseRate,
       interviews,
       offers,
       avgResponseTimeDays,
@@ -243,7 +187,21 @@ export class UserMetricsService {
     };
   }
 
-  private async calculateAvgResponseTime(userId: string): Promise<number> {
+  private async countDistinctReached(
+    userId: string,
+    statuses: ApplicationStatus[],
+  ): Promise<number> {
+    const rows = await this.applicationRepository.query(
+      `SELECT COUNT(DISTINCT h.application_id)::int AS n
+         FROM application_status_history h
+         JOIN application a ON a.id = h.application_id
+        WHERE a."candidateId" = $1 AND h.new_status = ANY($2::text[])`,
+      [userId, statuses],
+    );
+    return Number(rows?.[0]?.n ?? 0);
+  }
+
+  private async calculateAvgResponseTime(userId: string): Promise<number | null> {
     const result = await this.applicationRepository
       .createQueryBuilder('application')
       .where('application.candidateId = :userId', { userId })
@@ -257,8 +215,10 @@ export class UserMetricsService {
       )
       .getRawOne<{ avg_days: string | null }>();
 
-    const avgDays = result?.avg_days ? parseFloat(result.avg_days) : 0;
-    return Math.round(avgDays * 10) / 10;
+    if (!result?.avg_days) {
+      return null;
+    }
+    return Math.round(parseFloat(result.avg_days) * 10) / 10;
   }
 
   async getProfileViews(userId: string): Promise<number> {
@@ -271,68 +231,156 @@ export class UserMetricsService {
 
   async getApplicationsTrend(
     userId: string,
-    period: 'week' | 'month' | 'year',
+    period: MetricsPeriod,
   ): Promise<TrendDataPoint[]> {
-    const now = new Date();
-    let startDate: Date;
-
-    if (period === 'week') {
-      startDate = new Date(now);
-      startDate.setDate(startDate.getDate() - 7);
-    } else if (period === 'month') {
-      startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-    } else {
-      startDate = new Date(now.getFullYear(), 0, 1);
+    const buckets = await this.buildTrendBuckets(userId, period);
+    if (buckets.length === 0) {
+      return [];
     }
-    const startDateStr = startDate.toISOString().split('T')[0];
 
-    const applicationsByMonth = await this.applicationRepository
+    const rangeStart = buckets[0].days[0];
+    const rows = await this.applicationRepository
       .createQueryBuilder('application')
       .where('application.candidateId = :userId', { userId })
       .andWhere(
-        "TO_CHAR(application.createdAt AT TIME ZONE 'America/Santiago', 'YYYY-MM-DD') >= :startDate",
-        { startDate: startDateStr },
+        "TO_CHAR(application.createdAt AT TIME ZONE 'America/Santiago', 'YYYY-MM-DD') >= :rangeStart",
+        { rangeStart },
       )
       .select(
-        "TO_CHAR(application.createdAt AT TIME ZONE 'America/Santiago', 'YYYY-MM')",
-        'month',
+        "TO_CHAR(application.createdAt AT TIME ZONE 'America/Santiago', 'YYYY-MM-DD')",
+        'day',
       )
       .addSelect('COUNT(*)', 'count')
       .groupBy(
-        "TO_CHAR(application.createdAt AT TIME ZONE 'America/Santiago', 'YYYY-MM')",
+        "TO_CHAR(application.createdAt AT TIME ZONE 'America/Santiago', 'YYYY-MM-DD')",
       )
-      .orderBy('month', 'ASC')
-      .getRawMany();
+      .getRawMany<{ day: string; count: string }>();
 
-    interface MonthRow {
-      month: string;
-      count: string;
-    }
+    const dayMap = new Map(rows.map(row => [row.day, parseInt(row.count, 10)]));
 
-    const resultsMap = new Map(
-      (applicationsByMonth as MonthRow[]).map(row => [
-        row.month,
-        parseInt(row.count, 10),
-      ]),
-    );
-
-    const result: TrendDataPoint[] = [];
-    const current = new Date(startDate);
-    while (current <= now) {
-      const monthStr = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, '0')}`;
-      result.push({
-        month: monthStr,
-        applications: resultsMap.get(monthStr) ?? 0,
-      });
-      current.setMonth(current.getMonth() + 1);
-    }
-
-    return result;
+    return buckets.map(bucket => ({
+      date: bucket.labelDate,
+      applications: bucket.days.reduce(
+        (sum, day) => sum + (dayMap.get(day) ?? 0),
+        0,
+      ),
+    }));
   }
 
-  async getResponseTimeDistribution(
+  private async buildTrendBuckets(
     userId: string,
-  ): Promise<ApplicationBucket> {
+    period: MetricsPeriod,
+  ): Promise<TrendBucket[]> {
+    const now = this.santiagoNow();
+
+    if (period === 'week') {
+      return this.buildWeekBuckets(now, 12);
+    }
+    if (period === 'month') {
+      return this.buildMonthBuckets(now, 12);
+    }
+    return this.buildYearBuckets(userId, now);
+  }
+
+  private buildWeekBuckets(now: Date, count: number): TrendBucket[] {
+    const dayOfWeek = now.getUTCDay();
+    const mondayOffset = (dayOfWeek + 6) % 7;
+    const currentMonday = Date.UTC(
+      now.getUTCFullYear(),
+      now.getUTCMonth(),
+      now.getUTCDate() - mondayOffset,
+    );
+    const firstMonday = currentMonday - (count - 1) * 7 * 86_400_000;
+
+    const buckets: TrendBucket[] = [];
+    for (let i = 0; i < count; i++) {
+      const start = firstMonday + i * 7 * 86_400_000;
+      const days: string[] = [];
+      for (let d = 0; d < 7; d++) {
+        days.push(this.toDateStr(new Date(start + d * 86_400_000)));
+      }
+      buckets.push({ labelDate: this.toDateStr(new Date(start)), days });
+    }
+    return buckets;
+  }
+
+  private buildMonthBuckets(now: Date, count: number): TrendBucket[] {
+    const buckets: TrendBucket[] = [];
+    for (let i = count - 1; i >= 0; i--) {
+      const monthStart = new Date(
+        Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1),
+      );
+      const monthEnd = new Date(
+        Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i + 1, 1),
+      );
+      const days: string[] = [];
+      const cursor = new Date(monthStart);
+      while (cursor < monthEnd) {
+        days.push(this.toDateStr(cursor));
+        cursor.setUTCDate(cursor.getUTCDate() + 1);
+      }
+      buckets.push({ labelDate: this.toDateStr(monthStart), days });
+    }
+    return buckets;
+  }
+
+  private async buildYearBuckets(
+    userId: string,
+    now: Date,
+  ): Promise<TrendBucket[]> {
+    const minRow = await this.applicationRepository
+      .createQueryBuilder('application')
+      .where('application.candidateId = :userId', { userId })
+      .select(
+        `EXTRACT(YEAR FROM (application.createdAt AT TIME ZONE '${SANTIAGO_TZ}'))::int`,
+        'min_year',
+      )
+      .orderBy('min_year', 'ASC')
+      .limit(1)
+      .getRawOne<{ min_year: number | null }>();
+
+    const currentYear = now.getUTCFullYear();
+    const minYear = minRow?.min_year ?? currentYear;
+
+    const buckets: TrendBucket[] = [];
+    for (let year = minYear; year <= currentYear; year++) {
+      const days: string[] = [];
+      const cursor = new Date(Date.UTC(year, 0, 1));
+      const yearEnd = new Date(Date.UTC(year + 1, 0, 1));
+      while (cursor < yearEnd) {
+        days.push(this.toDateStr(cursor));
+        cursor.setUTCDate(cursor.getUTCDate() + 1);
+      }
+      buckets.push({ labelDate: this.toDateStr(new Date(Date.UTC(year, 0, 1))), days });
+    }
+    return buckets;
+  }
+
+  private santiagoNow(): Date {
+    const utcNow = new Date();
+    const shifted = new Date(
+      utcNow.toLocaleString('en-US', { timeZone: SANTIAGO_TZ }),
+    );
+    return new Date(
+      Date.UTC(
+        shifted.getFullYear(),
+        shifted.getMonth(),
+        shifted.getDate(),
+        shifted.getHours(),
+        shifted.getMinutes(),
+        shifted.getSeconds(),
+      ),
+    );
+  }
+
+  private toDateStr(d: Date): string {
+    const y = d.getUTCFullYear();
+    const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(d.getUTCDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  }
+
+  async getResponseTimeDistribution(userId: string): Promise<ApplicationBucket> {
     const result = await this.applicationRepository
       .createQueryBuilder('application')
       .where('application.candidateId = :userId', { userId })
@@ -386,6 +434,7 @@ export class UserMetricsService {
       [ApplicationStatus.OFERTA]: 0,
       [ApplicationStatus.RECHAZADO]: 0,
       [ApplicationStatus.CONTRATADO]: 0,
+      [ApplicationStatus.DESISTIDO]: 0,
     };
 
     statusCounts.forEach((row: { status: string; count: string }) => {
@@ -409,83 +458,28 @@ export class UserMetricsService {
     };
   }
 
-  async getIndustriesApplied(userId: string): Promise<IndustryDistribution[]> {
+  async getCategoriesApplied(userId: string): Promise<CategoryDistribution[]> {
     const results = await this.applicationRepository
       .createQueryBuilder('application')
       .innerJoin('application.job', 'job')
       .where('application.candidateId = :userId', { userId })
-      .select('COALESCE(job."employmentType"::text, \'Other\')', 'industry')
+      .select("COALESCE(job.category, 'Other')", 'category')
       .addSelect('COUNT(*)', 'count')
-      .groupBy('COALESCE(job."employmentType"::text, \'Other\')')
+      .groupBy("COALESCE(job.category, 'Other')")
       .orderBy('count', 'DESC')
       .limit(10)
-      .getRawMany();
+      .getRawMany<{ category: string; count: string }>();
 
-    interface IndustryRow {
-      industry: string;
-      count: string;
-    }
-
-    const resultsTyped = results as IndustryRow[];
-    const total = resultsTyped.reduce(
+    const total = results.reduce(
       (sum, row) => sum + parseInt(row.count, 10),
       0,
     );
 
-    return resultsTyped.map(row => ({
-      industry: row.industry || 'Other',
+    return results.map(row => ({
+      category: row.category || 'Other',
       count: parseInt(row.count, 10),
       percentage:
         total > 0 ? Math.round((parseInt(row.count, 10) / total) * 100) : 0,
-    }));
-  }
-
-  async getUpcomingInterviews(userId: string): Promise<UpcomingInterview[]> {
-    const now = new Date();
-    const nowStr = now.toISOString();
-
-    const events = await this.eventRepository
-      .createQueryBuilder('event')
-      .leftJoin('event.application', 'application')
-      .leftJoin('application.job', 'job')
-      .leftJoin('job.organization', 'org')
-      .where('event.candidateId = :userId', { userId })
-      .andWhere('event.type = :type', { type: EventType.INTERVIEW })
-      .andWhere('event.status = :status', { status: EventStatus.SCHEDULED })
-      .andWhere('event.startAt > :now', { now: nowStr })
-      .orderBy('event.startAt', 'ASC')
-      .limit(5)
-      .getMany();
-
-    return events.map(event => ({
-      eventId: event.id,
-      title: event.title,
-      startAt: event.startAt.toISOString(),
-      jobId: event.application?.jobId || '',
-      jobTitle: event.application?.job?.title || '',
-      organizationId: event.application?.job?.organizationId || '',
-      organizationName: event.application?.job?.organization?.name || '',
-    }));
-  }
-
-  async getRecentApplications(userId: string): Promise<RecentApplication[]> {
-    const applications = await this.applicationRepository
-      .createQueryBuilder('application')
-      .leftJoin('application.job', 'job')
-      .leftJoin('job.organization', 'org')
-      .where('application.candidateId = :userId', { userId })
-      .orderBy('application.createdAt', 'DESC')
-      .limit(10)
-      .getMany();
-
-    return applications.map(app => ({
-      applicationId: app.id,
-      jobTitle: app.job?.title || '',
-      organizationName: app.job?.organization
-        ? app.job.organization?.name || ''
-        : '',
-      status: app.status,
-      appliedAt: app.createdAt.toISOString(),
     }));
   }
 }
