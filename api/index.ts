@@ -4,6 +4,7 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from '../src/app.module';
 import { ExpressAdapter } from '@nestjs/platform-express';
 import express from 'express';
+import { corsOptions } from '../src/infrastructure/config/cors.config';
 
 const server = express();
 
@@ -14,7 +15,7 @@ export const createNestServer = async (expressInstance: express.Express) => {
   );
 
   app.setGlobalPrefix('api/v1');
-  app.enableCors();
+  app.enableCors(corsOptions);
 
   await app.init();
   return app;
