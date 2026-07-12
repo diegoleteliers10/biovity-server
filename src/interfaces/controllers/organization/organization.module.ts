@@ -4,6 +4,7 @@ import {
   OrganizationEntity,
   JobEntity,
   ApplicationEntity,
+  ApplicationStatusHistoryEntity,
   EventEntity,
 } from '../../../infrastructure/database/orm';
 import { OrganizationMemberEntity } from '../../../infrastructure/database/orm/organization-member.entity';
@@ -22,6 +23,7 @@ import { OrganizationMemberRepositoryImpl } from '../../../infrastructure/persis
       OrganizationEntity,
       JobEntity,
       ApplicationEntity,
+      ApplicationStatusHistoryEntity,
       EventEntity,
       OrganizationMemberEntity,
     ]),

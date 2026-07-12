@@ -10,6 +10,7 @@ import {
   HttpCode,
   HttpStatus,
   ParseUUIDPipe,
+  Req,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { ApplicationService } from '../../../core/services/application.service';
@@ -146,10 +147,12 @@ export class ApplicationController {
   async updateApplicationStatus(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: ApplicationStatusUpdateDto,
+    @Req() req: any,
   ): Promise<ApplicationResponseDto | null> {
     const application = await this.applicationService.updateApplicationStatus(
       id,
       dto.status,
+      req.user?.id || null,
     );
     return application ? ApplicationDomainDtoMapper.toDto(application) : null;
   }

@@ -116,17 +116,17 @@ export class GeographicDistributionDto {
   percentage: number;
 }
 
-export class ApplicationBucketDto {
-  @ApiProperty({ example: 3 })
+export class ResponseTimeDistributionDto {
+  @ApiProperty({ example: 4, description: 'Postulaciones respondidas en menos de 24h' })
   lessThan24h: number;
 
-  @ApiProperty({ example: 5 })
+  @ApiProperty({ example: 6, description: 'Postulaciones respondidas entre 1 y 3 días' })
   oneToThreeDays: number;
 
-  @ApiProperty({ example: 4 })
+  @ApiProperty({ example: 3, description: 'Postulaciones respondidas entre 3 y 7 días' })
   threeToSevenDays: number;
 
-  @ApiProperty({ example: 3 })
+  @ApiProperty({ example: 1, description: 'Postulaciones respondidas en 7 días o más' })
   moreThanSevenDays: number;
 }
 
@@ -152,15 +152,9 @@ export class OrganizationMetricsDto {
   })
   avgHiringTimeDays: number;
 
-  @ApiProperty({
-    type: ApplicationBucketDto,
-    description: 'Distribución de postulaciones por tiempo de respuesta',
-  })
-  responseTimeDistribution: ApplicationBucketDto;
+  @ApiProperty({ type: ResponseTimeDistributionDto })
+  responseTimeDistribution: ResponseTimeDistributionDto;
 
-  @ApiProperty({
-    example: 2,
-    description: 'Postulaciones en estado pendiente sin responder en el período',
-  })
+  @ApiProperty({ example: 7, description: 'Postulaciones del período aún sin responder' })
   unansweredCount: number;
 }

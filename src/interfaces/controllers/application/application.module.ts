@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import {
   ApplicationEntity,
+  ApplicationStatusHistoryEntity,
   JobEntity,
   UserEntity,
   JobQuestionEntity,
@@ -21,6 +22,7 @@ import { OrganizationRepositoryImpl } from '../../../infrastructure/persistence/
   imports: [
     TypeOrmModule.forFeature([
       ApplicationEntity,
+      ApplicationStatusHistoryEntity,
       JobEntity,
       UserEntity,
       JobQuestionEntity,

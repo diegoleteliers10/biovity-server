@@ -246,6 +246,7 @@ export class ApplicationService implements IApplicationUseCase {
   async updateApplicationStatus(
     id: string,
     status: ApplicationStatus,
+    changedById?: string | null,
   ): Promise<Application | null> {
     const existingApplication = await this.applicationRepository.findById(id);
     if (!existingApplication) {
@@ -256,7 +257,7 @@ export class ApplicationService implements IApplicationUseCase {
       return existingApplication;
     }
 
-    const updated = await this.applicationRepository.update(id, { status });
+    const updated = await this.applicationRepository.update(id, { status }, changedById);
     if (!updated) {
       return null;
     }
