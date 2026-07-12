@@ -42,11 +42,17 @@ export class ChatEntity {
   @Column({ default: 0 })
   public unreadCountProfessional: number;
 
-  @Column({ name: 'is_pinned', default: false })
-  public isPinned: boolean;
+  @Column({ name: 'is_pinned_recruiter', default: false })
+  public isPinnedByRecruiter: boolean;
 
-  @Column({ name: 'is_archived', default: false })
-  public isArchived: boolean;
+  @Column({ name: 'is_pinned_professional', default: false })
+  public isPinnedByProfessional: boolean;
+
+  @Column({ name: 'is_archived_recruiter', default: false })
+  public isArchivedByRecruiter: boolean;
+
+  @Column({ name: 'is_archived_professional', default: false })
+  public isArchivedByProfessional: boolean;
 
   @CreateDateColumn()
   public createdAt: Date = new Date();

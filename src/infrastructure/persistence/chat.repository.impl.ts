@@ -72,7 +72,7 @@ export class ChatRepositoryImpl implements IChatRepository {
 
     const updatedChatOrm = {
       ...existingChat,
-      ...ChatDomainOrmMapper.toOrm(entity as Chat),
+      ...ChatDomainOrmMapper.toPartialOrm(entity),
     };
     const savedChat = await this.chatRepository.save(updatedChatOrm);
     return ChatDomainOrmMapper.toDomain(savedChat);

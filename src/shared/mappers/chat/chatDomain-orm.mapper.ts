@@ -10,12 +10,36 @@ export class ChatDomainOrmMapper {
     chatOrm.lastMessage = domain.lastMessage;
     chatOrm.unreadCountRecruiter = domain.unreadCountRecruiter;
     chatOrm.unreadCountProfessional = domain.unreadCountProfessional;
-    chatOrm.isPinned = domain.isPinned;
-    chatOrm.isArchived = domain.isArchived;
+    chatOrm.isPinnedByRecruiter = domain.isPinnedByRecruiter;
+    chatOrm.isPinnedByProfessional = domain.isPinnedByProfessional;
+    chatOrm.isArchivedByRecruiter = domain.isArchivedByRecruiter;
+    chatOrm.isArchivedByProfessional = domain.isArchivedByProfessional;
     chatOrm.createdAt = domain.createdAt;
     chatOrm.updatedAt = domain.updatedAt;
 
     return chatOrm;
+  }
+
+  static toPartialOrm(domain: Partial<Chat>): Partial<ChatEntity> {
+    const partial: Partial<ChatEntity> = {};
+    if (domain.recruiterId !== undefined) partial.recruiterId = domain.recruiterId;
+    if (domain.professionalId !== undefined) partial.professionalId = domain.professionalId;
+    if (domain.lastMessage !== undefined) partial.lastMessage = domain.lastMessage;
+    if (domain.unreadCountRecruiter !== undefined)
+      partial.unreadCountRecruiter = domain.unreadCountRecruiter;
+    if (domain.unreadCountProfessional !== undefined)
+      partial.unreadCountProfessional = domain.unreadCountProfessional;
+    if (domain.isPinnedByRecruiter !== undefined)
+      partial.isPinnedByRecruiter = domain.isPinnedByRecruiter;
+    if (domain.isPinnedByProfessional !== undefined)
+      partial.isPinnedByProfessional = domain.isPinnedByProfessional;
+    if (domain.isArchivedByRecruiter !== undefined)
+      partial.isArchivedByRecruiter = domain.isArchivedByRecruiter;
+    if (domain.isArchivedByProfessional !== undefined)
+      partial.isArchivedByProfessional = domain.isArchivedByProfessional;
+    if (domain.createdAt !== undefined) partial.createdAt = domain.createdAt;
+    if (domain.updatedAt !== undefined) partial.updatedAt = domain.updatedAt;
+    return partial;
   }
 
   static toDomain(entity: ChatEntity): Chat {
@@ -28,8 +52,10 @@ export class ChatDomainOrmMapper {
       entity.unreadCountProfessional,
       entity.createdAt,
       entity.updatedAt,
-      entity.isPinned,
-      entity.isArchived,
+      entity.isPinnedByRecruiter,
+      entity.isPinnedByProfessional,
+      entity.isArchivedByRecruiter,
+      entity.isArchivedByProfessional,
     );
   }
 }

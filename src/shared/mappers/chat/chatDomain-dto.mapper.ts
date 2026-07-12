@@ -2,7 +2,10 @@ import { Chat } from '../../../core/domain/entities/chat.entity';
 import { ChatResponseDto } from '../../../interfaces/dtos/chat/chat-response.dto';
 
 export class ChatDomainDtoMapper {
-  static toDto(domain: Chat): ChatResponseDto {
+  static toDto(
+    domain: Chat,
+    role: "recruiter" | "professional" = "recruiter",
+  ): ChatResponseDto {
     const dto = new ChatResponseDto();
     dto.id = domain.id;
     dto.recruiterId = domain.recruiterId;
@@ -12,8 +15,10 @@ export class ChatDomainDtoMapper {
     dto.unreadCountProfessional = domain.unreadCountProfessional;
     dto.createdAt = domain.createdAt;
     dto.updatedAt = domain.updatedAt;
-    dto.isPinned = domain.isPinned;
-    dto.isArchived = domain.isArchived;
+    dto.isPinned =
+      role === "recruiter" ? domain.isPinnedByRecruiter : domain.isPinnedByProfessional;
+    dto.isArchived =
+      role === "recruiter" ? domain.isArchivedByRecruiter : domain.isArchivedByProfessional;
     return dto;
   }
 }

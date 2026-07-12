@@ -8,7 +8,9 @@ export class Chat {
     public unreadCountProfessional: number = 0,
     public createdAt: Date = new Date(),
     public updatedAt?: Date,
-    public isPinned: boolean = false,
-    public isArchived: boolean = false,
+    public isPinnedByRecruiter: boolean = false,
+    public isPinnedByProfessional: boolean = false,
+    public isArchivedByRecruiter: boolean = false,
+    public isArchivedByProfessional: boolean = false,
   ) {}
 }
