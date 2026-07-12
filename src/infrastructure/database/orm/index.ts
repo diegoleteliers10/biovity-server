@@ -1,4 +1,5 @@
 export { ApplicationEntity } from './application.entity';
+export { ApplicationStatusHistoryEntity } from './application-status-history.entity';
 export { ApplicationAnswerEntity } from './application-answer.entity';
 export { ChatEntity } from './chat.entity';
 export { EventEntity, EventNoteEntity } from './event.entity';
