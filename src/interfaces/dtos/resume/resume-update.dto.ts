@@ -17,6 +17,7 @@ import {
   ResumeLanguageDto,
   ResumeCertificationDto,
   CvFileDto,
+  ResumeLinkDto,
 } from './resume-create.dto';
 
 export class ResumeUpdateDto {
@@ -65,12 +66,12 @@ export class ResumeUpdateDto {
   @Type(() => ResumeLanguageDto)
   languages?: ResumeLanguageDto[];
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ type: [ResumeLinkDto] })
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
-  @Type(() => Object)
-  links?: { url: string }[];
+  @Type(() => ResumeLinkDto)
+  links?: ResumeLinkDto[];
 
   @ApiPropertyOptional({ type: CvFileDto })
   @IsOptional()

@@ -107,6 +107,11 @@ export class CvFileDto {
   uploadedAt?: Date;
 }
 
+export class ResumeLinkDto {
+  @IsString()
+  url: string;
+}
+
 export class ResumeCreateDto {
   @IsUUID()
   userId: string;
@@ -148,8 +153,8 @@ export class ResumeCreateDto {
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
-  @Type(() => Object)
-  links?: { url: string }[];
+  @Type(() => ResumeLinkDto)
+  links?: ResumeLinkDto[];
 
   @IsOptional()
   @IsObject()

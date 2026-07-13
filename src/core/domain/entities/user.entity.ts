@@ -39,5 +39,6 @@ export class User {
       };
     },
     public skills?: string[],
+    public cvUpdatedAt?: Date,
   ) {}
 }
