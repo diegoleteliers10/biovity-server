@@ -34,6 +34,19 @@ export class UserDomainOrmMapper {
   }
 
   static toDomain(entity: UserEntity): User {
+    let skills: string[] | undefined = undefined;
+    let updatedAt = entity.updatedAt;
+
+    if (entity.resumes && entity.resumes.length > 0) {
+      const resume = entity.resumes[0];
+      if (resume.skills) {
+        skills = resume.skills.map(s => typeof s === 'string' ? s : (s as any).name);
+      }
+      if (resume.updatedAt) {
+        updatedAt = resume.updatedAt;
+      }
+    }
+
     return new User(
       entity.id,
       entity.email,
@@ -47,7 +60,7 @@ export class UserDomainOrmMapper {
         ? OrganizationDomainOrmMapper.toDomain(entity.organization)
         : undefined,
       entity.createdAt,
-      entity.updatedAt,
+      updatedAt,
       entity.avatar,
       entity.profession,
       entity.birthday,
@@ -55,6 +68,7 @@ export class UserDomainOrmMapper {
       entity.location,
       entity.profileViews,
       entity.notificationPreferences,
+      skills,
     );
   }
 }

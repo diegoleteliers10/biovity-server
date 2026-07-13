@@ -38,5 +38,6 @@ export class User {
         system?: boolean;
       };
     },
+    public skills?: string[],
   ) {}
 }
