@@ -173,4 +173,8 @@ export class UserResponseDto {
   @ValidateNested()
   @Type(() => UserNotificationPreferencesDto)
   notificationPreferences?: UserNotificationPreferencesDto;
+
+  @ApiPropertyOptional({ type: [String], description: 'Habilidades del candidato' })
+  @IsOptional()
+  skills?: string[];
 }

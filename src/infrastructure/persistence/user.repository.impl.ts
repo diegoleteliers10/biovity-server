@@ -69,7 +69,8 @@ export class UserRepositoryImpl implements IUserRepository {
     // Build query builder
     const queryBuilder = this.userRepository
       .createQueryBuilder('user')
-      .leftJoinAndSelect('user.organization', 'organization');
+      .leftJoinAndSelect('user.organization', 'organization')
+      .leftJoinAndSelect('user.resumes', 'resumes');
 
     // Apply filters
     if (filters?.type) {

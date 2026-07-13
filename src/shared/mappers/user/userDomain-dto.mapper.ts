@@ -56,6 +56,10 @@ export class UserDomainDtoMapper {
       dto.organization = OrganizationDomainOrmMapper.toOrm(domain.organization);
     }
 
+    if (domain.skills) {
+      dto.skills = domain.skills;
+    }
+
     return dto;
   }
 }
