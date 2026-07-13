@@ -35,15 +35,18 @@ export class UserDomainOrmMapper {
 
   static toDomain(entity: UserEntity): User {
     let skills: string[] | undefined = undefined;
-    let updatedAt = entity.updatedAt;
+    let cvUpdatedAt: Date | undefined = undefined;
 
     if (entity.resumes && entity.resumes.length > 0) {
       const resume = entity.resumes[0];
       if (resume.skills) {
         skills = resume.skills.map(s => typeof s === 'string' ? s : (s as any).name);
       }
-      if (resume.updatedAt) {
-        updatedAt = resume.updatedAt;
+      if (resume.updatedAt && resume.createdAt) {
+        const isUpdated = new Date(resume.updatedAt).getTime() - new Date(resume.createdAt).getTime() > 5000;
+        if (isUpdated) {
+          cvUpdatedAt = resume.updatedAt;
+        }
       }
     }
 
@@ -60,7 +63,7 @@ export class UserDomainOrmMapper {
         ? OrganizationDomainOrmMapper.toDomain(entity.organization)
         : undefined,
       entity.createdAt,
-      updatedAt,
+      entity.updatedAt,
       entity.avatar,
       entity.profession,
       entity.birthday,
@@ -69,6 +72,7 @@ export class UserDomainOrmMapper {
       entity.profileViews,
       entity.notificationPreferences,
       skills,
+      cvUpdatedAt,
     );
   }
 }

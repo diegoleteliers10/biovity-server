@@ -177,4 +177,14 @@ export class UserResponseDto {
   @ApiPropertyOptional({ type: [String], description: 'Habilidades del candidato' })
   @IsOptional()
   skills?: string[];
+
+  @ApiPropertyOptional({ description: 'Fecha de creación' })
+  @IsOptional()
+  @Type(() => Date)
+  createdAt?: Date;
+
+  @ApiPropertyOptional({ description: 'Fecha de última actualización del CV' })
+  @IsOptional()
+  @Type(() => Date)
+  updatedAt?: Date;
 }

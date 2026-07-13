@@ -23,6 +23,8 @@ export class UserDomainDtoMapper {
     dto.profession = domain.profession;
     dto.birthday = domain.birthday;
     dto.phone = domain.phone;
+    dto.createdAt = domain.createdAt;
+    dto.updatedAt = domain.cvUpdatedAt;
 
     if (domain.location) {
       const locationDto = new UserLocationDto();
