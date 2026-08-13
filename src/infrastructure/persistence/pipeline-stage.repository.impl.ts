@@ -32,11 +32,17 @@ export class PipelineStageRepositoryImpl implements IPipelineStageRepository {
     return orms.map(orm => PipelineStageDomainOrmMapper.toDomain(orm));
   }
 
-  async update(id: string, entity: Partial<PipelineStage>): Promise<PipelineStage | null> {
+  async update(
+    id: string,
+    entity: Partial<PipelineStage>,
+  ): Promise<PipelineStage | null> {
     const existing = await this.repository.findOne({ where: { id } });
     if (!existing) return null;
 
-    const updated = { ...existing, ...PipelineStageDomainOrmMapper.toOrm(entity as PipelineStage) };
+    const updated = {
+      ...existing,
+      ...PipelineStageDomainOrmMapper.toOrm(entity as PipelineStage),
+    };
     const saved = await this.repository.save(updated);
     return PipelineStageDomainOrmMapper.toDomain(saved);
   }

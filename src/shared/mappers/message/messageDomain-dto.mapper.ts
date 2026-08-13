@@ -10,8 +10,7 @@ export class MessageDomainDtoMapper {
     dto.content = domain.content;
     dto.type = domain.type;
     dto.contentType = domain.contentType as unknown as
-      | Record<string, unknown>
-      | undefined;
+      Record<string, unknown> | undefined;
     dto.isRead = domain.isRead;
     dto.createdAt = domain.createdAt;
     return dto;

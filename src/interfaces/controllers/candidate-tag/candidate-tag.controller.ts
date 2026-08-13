@@ -32,7 +32,9 @@ export class CandidateTagController {
   @Get()
   @ApiOperation({ summary: 'Obtener etiquetas de la organización' })
   @ApiQuery({ name: 'organizationId', type: String })
-  async findAll(@Query('organizationId', ParseUUIDPipe) organizationId: string) {
+  async findAll(
+    @Query('organizationId', ParseUUIDPipe) organizationId: string,
+  ) {
     return this.service.findByOrganization(organizationId);
   }
 

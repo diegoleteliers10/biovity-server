@@ -1,4 +1,10 @@
-import { IsUUID, IsString, IsBoolean, IsDateString, IsObject } from 'class-validator';
+import {
+  IsUUID,
+  IsString,
+  IsBoolean,
+  IsDateString,
+  IsObject,
+} from 'class-validator';
 
 export class SavedSearchResponseDto {
   @IsUUID()

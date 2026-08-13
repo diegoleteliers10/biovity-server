@@ -38,7 +38,9 @@ export class SavedCandidateController {
   @ApiOperation({ summary: 'Guardar candidato en favoritos' })
   async create(@Body() dto: SaveCandidateDto) {
     if (!dto.organizationId || !dto.candidateId) {
-      throw new BadRequestException('organizationId y candidateId son requeridos');
+      throw new BadRequestException(
+        'organizationId y candidateId son requeridos',
+      );
     }
     return this.service.save(dto.organizationId, dto.candidateId, dto.note);
   }
@@ -53,7 +55,9 @@ export class SavedCandidateController {
     @Query('candidateId') candidateId: string,
   ) {
     if (!organizationId || !candidateId) {
-      throw new BadRequestException('organizationId y candidateId son requeridos');
+      throw new BadRequestException(
+        'organizationId y candidateId son requeridos',
+      );
     }
     await this.service.unsave(organizationId, candidateId);
   }
@@ -67,7 +71,9 @@ export class SavedCandidateController {
     @Query('candidateId') candidateId: string,
   ) {
     if (!organizationId || !candidateId) {
-      throw new BadRequestException('organizationId y candidateId son requeridos');
+      throw new BadRequestException(
+        'organizationId y candidateId son requeridos',
+      );
     }
     const saved = await this.service.isSaved(organizationId, candidateId);
     return { saved };

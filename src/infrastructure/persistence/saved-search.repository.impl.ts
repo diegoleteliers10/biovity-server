@@ -35,11 +35,17 @@ export class SavedSearchRepositoryImpl implements ISavedSearchRepository {
     return orms.map(orm => SavedSearchDomainOrmMapper.toDomain(orm));
   }
 
-  async update(id: string, entity: Partial<SavedSearch>): Promise<SavedSearch | null> {
+  async update(
+    id: string,
+    entity: Partial<SavedSearch>,
+  ): Promise<SavedSearch | null> {
     const existing = await this.repository.findOne({ where: { id } });
     if (!existing) return null;
 
-    const updated = { ...existing, ...SavedSearchDomainOrmMapper.toOrm(entity as SavedSearch) };
+    const updated = {
+      ...existing,
+      ...SavedSearchDomainOrmMapper.toOrm(entity as SavedSearch),
+    };
     const saved = await this.repository.save(updated);
     return SavedSearchDomainOrmMapper.toDomain(saved);
   }

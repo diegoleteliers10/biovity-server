@@ -162,12 +162,19 @@ export class EventService implements IEventUseCase {
     // EXCEPTION. REASON: best-effort side-effect after successful update.
     try {
       if (wasCancelled) {
-        await this.notifyEventCancelled(updated.id, updated.title, updated.organizerId);
+        await this.notifyEventCancelled(
+          updated.id,
+          updated.title,
+          updated.organizerId,
+        );
       } else {
         await this.notifyEventUpdated(updated, updated.organizerId);
       }
     } catch (error) {
-      this.logNotificationFailure(wasCancelled ? 'event-cancelled' : 'event-updated', error);
+      this.logNotificationFailure(
+        wasCancelled ? 'event-cancelled' : 'event-updated',
+        error,
+      );
     }
 
     return updated;
@@ -186,7 +193,11 @@ export class EventService implements IEventUseCase {
 
     if (!wasAlreadyCancelled) {
       try {
-        await this.notifyEventCancelled(existing.id, existing.title, existing.organizerId);
+        await this.notifyEventCancelled(
+          existing.id,
+          existing.title,
+          existing.organizerId,
+        );
       } catch (error) {
         this.logNotificationFailure('event-cancelled', error);
       }
@@ -210,7 +221,8 @@ export class EventService implements IEventUseCase {
     // so the path userId is trusted. Wire a Passport JWT strategy + guard and
     // compare against req.user.id before shipping to production.
 
-    const existingParticipant = await this.participantRepository.findByEventAndUser(eventId, userId);
+    const existingParticipant =
+      await this.participantRepository.findByEventAndUser(eventId, userId);
     if (!existingParticipant) {
       throw new NotFoundException(
         `Participant ${userId} not found in event ${eventId}`,
@@ -266,7 +278,10 @@ export class EventService implements IEventUseCase {
     }
   }
 
-  private async notifyEventUpdated(event: Event, excludeUserId: string): Promise<void> {
+  private async notifyEventUpdated(
+    event: Event,
+    excludeUserId: string,
+  ): Promise<void> {
     // EXCEPTION. REASON: post-commit best-effort side-effect.
     try {
       const userIds = await this.participantRepository.findUserIdsByEventId(

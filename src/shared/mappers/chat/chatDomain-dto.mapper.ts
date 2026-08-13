@@ -4,7 +4,7 @@ import { ChatResponseDto } from '../../../interfaces/dtos/chat/chat-response.dto
 export class ChatDomainDtoMapper {
   static toDto(
     domain: Chat,
-    role: "recruiter" | "professional" = "recruiter",
+    role: 'recruiter' | 'professional' = 'recruiter',
   ): ChatResponseDto {
     const dto = new ChatResponseDto();
     dto.id = domain.id;
@@ -16,9 +16,13 @@ export class ChatDomainDtoMapper {
     dto.createdAt = domain.createdAt;
     dto.updatedAt = domain.updatedAt;
     dto.isPinned =
-      role === "recruiter" ? domain.isPinnedByRecruiter : domain.isPinnedByProfessional;
+      role === 'recruiter'
+        ? domain.isPinnedByRecruiter
+        : domain.isPinnedByProfessional;
     dto.isArchived =
-      role === "recruiter" ? domain.isArchivedByRecruiter : domain.isArchivedByProfessional;
+      role === 'recruiter'
+        ? domain.isArchivedByRecruiter
+        : domain.isArchivedByProfessional;
     return dto;
   }
 }

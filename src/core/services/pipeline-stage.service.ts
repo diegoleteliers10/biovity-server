@@ -34,7 +34,10 @@ export class PipelineStageService {
     return this.repository.findByJobId(jobId);
   }
 
-  async update(id: string, data: { name?: string; color?: string }): Promise<PipelineStage | null> {
+  async update(
+    id: string,
+    data: { name?: string; color?: string },
+  ): Promise<PipelineStage | null> {
     const existing = await this.repository.findById(id);
     if (!existing) {
       throw new NotFoundException(`Pipeline stage with id ${id} not found`);

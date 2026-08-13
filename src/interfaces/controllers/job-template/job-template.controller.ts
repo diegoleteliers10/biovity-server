@@ -56,7 +56,9 @@ export class JobTemplateController {
   @ApiOperation({ summary: 'Listar plantillas de la organización' })
   @ApiParam({ name: 'organizationId', type: String })
   @ApiResponse({ status: 200, description: 'Lista de plantillas' })
-  async findAll(@Param('organizationId', ParseUUIDPipe) organizationId: string) {
+  async findAll(
+    @Param('organizationId', ParseUUIDPipe) organizationId: string,
+  ) {
     return this.service.findByOrganization(organizationId);
   }
 

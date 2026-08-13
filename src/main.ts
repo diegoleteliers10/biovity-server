@@ -43,6 +43,7 @@ async function bootstrap() {
       .addTag('chat', 'Operaciones de chats')
       .addTag('message', 'Operaciones de mensajes')
       .addTag('resume', 'Operaciones de currículums')
+      .addTag('salaries', 'Inteligencia salarial del mercado chileno (CLP)')
       .addTag('health', 'Verificación de estado de la API')
       .build();
 

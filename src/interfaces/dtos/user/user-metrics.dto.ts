@@ -12,7 +12,8 @@ export class QuickMetricsDto {
 
   @ApiProperty({
     example: 45,
-    description: '% de postulaciones que alcanzaron entrevista/oferta/contratado',
+    description:
+      '% de postulaciones que alcanzaron entrevista/oferta/contratado',
   })
   responseRate: number;
 }
@@ -57,7 +58,10 @@ export class FunnelDto {
 }
 
 export class CategoryDistributionDto {
-  @ApiProperty({ example: 'Biotecnología', description: 'Categoría del trabajo' })
+  @ApiProperty({
+    example: 'Biotecnología',
+    description: 'Categoría del trabajo',
+  })
   category: string;
 
   @ApiProperty({ example: 8, description: 'Cantidad de postulaciones' })
@@ -87,7 +91,8 @@ export class UserKPIsDto {
 
   @ApiProperty({
     example: 4,
-    description: 'Aplicaciones que alguna vez alcanzaron entrevista (acumulado)',
+    description:
+      'Aplicaciones que alguna vez alcanzaron entrevista (acumulado)',
   })
   interviews: number;
 
@@ -100,7 +105,8 @@ export class UserKPIsDto {
   @ApiProperty({
     example: 5.2,
     nullable: true,
-    description: 'Días promedio hasta primer cambio de estado (null si sin datos)',
+    description:
+      'Días promedio hasta primer cambio de estado (null si sin datos)',
   })
   avgResponseTimeDays: number | null;
 

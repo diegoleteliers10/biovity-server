@@ -26,7 +26,9 @@ export class OrganizationMemberDomainOrmMapper {
       entity.updatedAt,
     );
     if (entity.organization) {
-      member.organization = OrganizationDomainOrmMapper.toDomain(entity.organization as OrganizationEntity);
+      member.organization = OrganizationDomainOrmMapper.toDomain(
+        entity.organization,
+      );
     }
     if (entity.user) {
       member.user = UserDomainOrmMapper.toDomain(entity.user);

@@ -27,11 +27,7 @@ export interface EventContent {
 }
 
 export type MessageContent =
-  | string
-  | FileContent
-  | AudioContent
-  | ImageContent
-  | EventContent;
+  string | FileContent | AudioContent | ImageContent | EventContent;
 
 export class Message {
   constructor(

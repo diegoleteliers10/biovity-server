@@ -16,7 +16,9 @@ export class EmailService {
     const fromEmail = process.env.EMAIL_FROM || 'Biovity <no-reply@biovity.cl>';
 
     if (!this.resend) {
-      console.log(`[EmailService Mock] To: ${to}, Subject: ${subject}, Body: ${body.slice(0, 100)}...`);
+      console.log(
+        `[EmailService Mock] To: ${to}, Subject: ${subject}, Body: ${body.slice(0, 100)}...`,
+      );
       return;
     }
 

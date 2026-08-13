@@ -26,8 +26,8 @@ export class InternalSecretGuard implements CanActivate {
 
     const provided = request.headers[INTERNAL_SECRET_HEADER];
     const providedStr = Array.isArray(provided)
-      ? provided[0] ?? ''
-      : provided ?? '';
+      ? (provided[0] ?? '')
+      : (provided ?? '');
 
     if (!providedStr || !this.crypto.constantTimeEqual(providedStr, expected)) {
       throw new UnauthorizedException('Invalid internal credentials');

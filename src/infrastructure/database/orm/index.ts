@@ -32,6 +32,7 @@ export { CandidateTagEntity } from './candidate-tag.entity';
 export { CandidateTagAssignmentEntity } from './candidate-tag-assignment.entity';
 export { MessageTemplateEntity } from './message-template.entity';
 export { ActivityLogEntity } from './activity-log.entity';
+export { SalarySubmissionEntity } from './salary-submission.entity';
 
 export {
   JobStatus,
@@ -51,4 +52,8 @@ export {
   NotificationType,
   ParticipantRole,
   ParticipantStatus,
+  SalaryExperienceLevel,
+  SalaryEducationLevel,
+  SalaryWorkMode,
+  ChileanRegion,
 } from '../../../core/domain/enums';

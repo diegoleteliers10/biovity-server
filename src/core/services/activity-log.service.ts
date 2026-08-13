@@ -18,7 +18,9 @@ export class ActivityLogService {
     private readonly repo: Repository<ActivityLogEntity>,
   ) {}
 
-  async findByOrganization(organizationId: string): Promise<ActivityLogEntity[]> {
+  async findByOrganization(
+    organizationId: string,
+  ): Promise<ActivityLogEntity[]> {
     return this.repo.find({
       where: { organizationId },
       relations: ['user'],

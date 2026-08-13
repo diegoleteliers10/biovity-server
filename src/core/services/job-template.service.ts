@@ -62,7 +62,7 @@ export class JobTemplateService {
       experienceLevel: input.experienceLevel,
       salary: input.salary as JobTemplateEntity['salary'],
       location: input.location as JobTemplateEntity['location'],
-      benefits: input.benefits as JobTemplateEntity['benefits'],
+      benefits: input.benefits,
       requiredSkills: input.requiredSkills,
       minExperience: input.minExperience,
       category: input.category,
@@ -99,9 +99,7 @@ export class JobTemplateService {
       experienceLevel: entity.experienceLevel,
       salary: entity.salary as Record<string, unknown> | undefined,
       location: entity.location as Record<string, unknown> | undefined,
-      benefits: entity.benefits as
-        | Array<{ tipo: string; title: string }>
-        | undefined,
+      benefits: entity.benefits,
       requiredSkills: entity.requiredSkills,
       minExperience: entity.minExperience,
       category: entity.category,

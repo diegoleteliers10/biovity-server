@@ -17,8 +17,7 @@ export class JobDtoDomainMapper {
       salary: dto.salary as unknown as Record<string, unknown> | undefined,
       location: dto.location as unknown as Record<string, unknown> | undefined,
       benefits: dto.benefits as unknown as
-        | Record<string, unknown>[]
-        | undefined,
+        Record<string, unknown>[] | undefined,
       status: dto.status,
       expiresAt: dto.expiresAt ? new Date(dto.expiresAt) : undefined,
       category: dto.category,

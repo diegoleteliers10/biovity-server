@@ -38,7 +38,7 @@ export class AiCredentialsService {
       where: { organizationId },
       order: { isActive: 'DESC', createdAt: 'DESC' },
     });
-    return credentials.map((c) => ({
+    return credentials.map(c => ({
       id: c.id,
       provider: c.provider,
       modelId: c.modelId,
@@ -104,7 +104,10 @@ export class AiCredentialsService {
     await this.deactivateActive(organizationId);
   }
 
-  async removeById(organizationId: string, credentialId: string): Promise<void> {
+  async removeById(
+    organizationId: string,
+    credentialId: string,
+  ): Promise<void> {
     const result = await this.repo.delete({
       id: credentialId,
       organizationId,

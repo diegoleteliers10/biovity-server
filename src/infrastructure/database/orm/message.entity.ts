@@ -38,11 +38,7 @@ export interface EventContent {
 }
 
 export type MessageContent =
-  | string
-  | FileContent
-  | AudioContent
-  | ImageContent
-  | EventContent;
+  string | FileContent | AudioContent | ImageContent | EventContent;
 
 @Entity('message')
 @Index('idx_message_chat', ['chatId'])

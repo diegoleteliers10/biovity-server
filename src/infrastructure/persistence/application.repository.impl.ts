@@ -1,7 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository, InjectDataSource } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
-import { ApplicationEntity, ApplicationStatusHistoryEntity } from '../database/orm';
+import {
+  ApplicationEntity,
+  ApplicationStatusHistoryEntity,
+} from '../database/orm';
 import { Application } from '../../core/domain/entities/application.entity';
 import { ApplicationDomainOrmMapper } from '../../shared/mappers/application/applicationDomain-orm.mapper';
 import {
@@ -22,17 +25,19 @@ export class ApplicationRepositoryImpl implements IApplicationRepository {
 
   async create(entity: Application): Promise<Application> {
     const applicationOrm = ApplicationDomainOrmMapper.toOrm(entity);
-    const savedApplication = await this.dataSource.transaction(async manager => {
-      const saved = await manager.save(ApplicationEntity, applicationOrm);
-      await manager.insert(ApplicationStatusHistoryEntity, {
-        applicationId: saved.id,
-        previousStatus: null,
-        newStatus: saved.status,
-        changedAt: saved.createdAt,
-        changedById: saved.candidateId,
-      });
-      return saved;
-    });
+    const savedApplication = await this.dataSource.transaction(
+      async manager => {
+        const saved = await manager.save(ApplicationEntity, applicationOrm);
+        await manager.insert(ApplicationStatusHistoryEntity, {
+          applicationId: saved.id,
+          previousStatus: null,
+          newStatus: saved.status,
+          changedAt: saved.createdAt,
+          changedById: saved.candidateId,
+        });
+        return saved;
+      },
+    );
     return ApplicationDomainOrmMapper.toDomain(savedApplication);
   }
 

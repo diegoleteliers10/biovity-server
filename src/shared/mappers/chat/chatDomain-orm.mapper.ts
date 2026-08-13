@@ -22,9 +22,12 @@ export class ChatDomainOrmMapper {
 
   static toPartialOrm(domain: Partial<Chat>): Partial<ChatEntity> {
     const partial: Partial<ChatEntity> = {};
-    if (domain.recruiterId !== undefined) partial.recruiterId = domain.recruiterId;
-    if (domain.professionalId !== undefined) partial.professionalId = domain.professionalId;
-    if (domain.lastMessage !== undefined) partial.lastMessage = domain.lastMessage;
+    if (domain.recruiterId !== undefined)
+      partial.recruiterId = domain.recruiterId;
+    if (domain.professionalId !== undefined)
+      partial.professionalId = domain.professionalId;
+    if (domain.lastMessage !== undefined)
+      partial.lastMessage = domain.lastMessage;
     if (domain.unreadCountRecruiter !== undefined)
       partial.unreadCountRecruiter = domain.unreadCountRecruiter;
     if (domain.unreadCountProfessional !== undefined)

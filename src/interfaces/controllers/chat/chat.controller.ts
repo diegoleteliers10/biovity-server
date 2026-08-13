@@ -31,7 +31,9 @@ export class ChatController {
 
   private assertChatRole(role: string): ChatRole {
     if (role !== 'recruiter' && role !== 'professional') {
-      throw new BadRequestException("role must be 'recruiter' or 'professional'");
+      throw new BadRequestException(
+        "role must be 'recruiter' or 'professional'",
+      );
     }
     return role;
   }

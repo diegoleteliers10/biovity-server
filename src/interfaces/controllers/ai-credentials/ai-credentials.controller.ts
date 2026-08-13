@@ -24,7 +24,9 @@ export class AiCredentialsController {
   constructor(private readonly service: AiCredentialsService) {}
 
   @Get()
-  @ApiOperation({ summary: 'Get masked AI credential preview for an organization' })
+  @ApiOperation({
+    summary: 'Get masked AI credential preview for an organization',
+  })
   @ApiResponse({ status: 200, type: AiCredentialResponseDto })
   @ApiParam({ name: 'orgId', type: 'string', format: 'uuid' })
   async getMasked(@Param('orgId', ParseUUIDPipe) orgId: string) {
@@ -51,7 +53,9 @@ export class AiCredentialsController {
   }
 
   @Post(':credId/activate')
-  @ApiOperation({ summary: 'Activate a specific credential (deactivates the current one)' })
+  @ApiOperation({
+    summary: 'Activate a specific credential (deactivates the current one)',
+  })
   @ApiResponse({ status: 200, type: AiCredentialResponseDto })
   @ApiParam({ name: 'orgId', type: 'string', format: 'uuid' })
   @ApiParam({ name: 'credId', type: 'string', format: 'uuid' })
@@ -63,7 +67,9 @@ export class AiCredentialsController {
   }
 
   @Delete()
-  @ApiOperation({ summary: 'Remove the active AI credential for an organization' })
+  @ApiOperation({
+    summary: 'Remove the active AI credential for an organization',
+  })
   @ApiResponse({ status: 200 })
   @ApiParam({ name: 'orgId', type: 'string', format: 'uuid' })
   async remove(@Param('orgId', ParseUUIDPipe) orgId: string) {

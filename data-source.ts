@@ -24,6 +24,7 @@ import {
   ActivityLogEntity,
   ApiKeyEntity,
   AiCredentialEntity,
+  SalarySubmissionEntity,
 } from './src/infrastructure/database/orm';
 import { JobTemplateEntity } from './src/infrastructure/database/orm/job-template.entity';
 import { OrganizationMemberEntity } from './src/infrastructure/database/orm/organization-member.entity';
@@ -67,6 +68,7 @@ export const AppDataSource = new DataSource({
     OrganizationMemberEntity,
     PipelineStageEntity,
     SavedSearchEntity,
+    SalarySubmissionEntity,
   ],
   migrations: ['src/infrastructure/database/migrations/*.ts'],
   migrationsTableName: 'migrations',

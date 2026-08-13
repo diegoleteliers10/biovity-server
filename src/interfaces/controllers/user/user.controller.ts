@@ -15,7 +15,10 @@ import {
 import { ApiTags } from '@nestjs/swagger';
 import { UserService } from '../../../core/services/user.service';
 import { UserDtoDomainMapper } from '../../../shared/mappers/user/userDto-domain.mapper';
-import { UserUpdateDto, UserNotificationPreferencesDto } from '../../dtos/user/user-update.dto';
+import {
+  UserUpdateDto,
+  UserNotificationPreferencesDto,
+} from '../../dtos/user/user-update.dto';
 import { UserResponseDto } from '../../dtos/user/user-response.dto';
 import { UserDomainDtoMapper } from '../../../shared/mappers/user/userDomain-dto.mapper';
 import { UserQueryDto } from '../../dtos/user/user-query.dto';
@@ -58,7 +61,12 @@ export class UserController {
       city: query.city,
       country: query.country,
       availability: query.availability,
-      skills: query.skills ? query.skills.split(',').map(s => s.trim()).filter(Boolean) : undefined,
+      skills: query.skills
+        ? query.skills
+            .split(',')
+            .map(s => s.trim())
+            .filter(Boolean)
+        : undefined,
       minExperience: query.minExperience,
       maxExperience: query.maxExperience,
     };
@@ -97,7 +105,7 @@ export class UserController {
     @Body() dto: UserNotificationPreferencesDto,
   ): Promise<UserResponseDto> {
     const user = await this.userService.updateUser(id, {
-      notificationPreferences: dto as any,
+      notificationPreferences: dto,
     });
     if (!user) throw new NotFoundException('User not found');
     return UserDomainDtoMapper.toDto(user);

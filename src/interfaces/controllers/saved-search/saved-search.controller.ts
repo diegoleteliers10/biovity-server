@@ -26,7 +26,9 @@ export class SavedSearchController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  async create(@Body() dto: CreateSavedSearchDto): Promise<SavedSearchResponseDto> {
+  async create(
+    @Body() dto: CreateSavedSearchDto,
+  ): Promise<SavedSearchResponseDto> {
     const input = SavedSearchDtoDomainMapper.toCreateInput(dto);
     const savedSearch = await this.service.create(input);
     return SavedSearchDomainDtoMapper.toDto(savedSearch);

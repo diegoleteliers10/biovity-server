@@ -11,8 +11,14 @@ export interface IChatUseCase {
   ): Promise<Chat | null>;
   updateChat(id: string, data: UpdateChatInput): Promise<Chat | null>;
   deleteChat(id: string): Promise<boolean>;
-  togglePin(id: string, role: 'recruiter' | 'professional'): Promise<Chat | null>;
-  toggleArchive(id: string, role: 'recruiter' | 'professional'): Promise<Chat | null>;
+  togglePin(
+    id: string,
+    role: 'recruiter' | 'professional',
+  ): Promise<Chat | null>;
+  toggleArchive(
+    id: string,
+    role: 'recruiter' | 'professional',
+  ): Promise<Chat | null>;
 }
 
 export interface CreateChatInput {

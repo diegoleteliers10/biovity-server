@@ -50,7 +50,10 @@ export class MessageController {
     @Param('chatId', ParseUUIDPipe) chatId: string,
     @Query('search') search?: string,
   ): Promise<MessageResponseDto[]> {
-    const messages = await this.messageService.getMessagesByChatId(chatId, search);
+    const messages = await this.messageService.getMessagesByChatId(
+      chatId,
+      search,
+    );
     return messages.map(msg => MessageDomainDtoMapper.toDto(msg));
   }
 

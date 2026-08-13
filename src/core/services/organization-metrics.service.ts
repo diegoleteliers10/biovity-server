@@ -8,7 +8,12 @@ import {
   EventEntity,
   OrganizationMemberEntity,
 } from '../../infrastructure/database/orm';
-import { EventStatus, EventType, JobStatus, ApplicationStatus } from '../domain/enums';
+import {
+  EventStatus,
+  EventType,
+  JobStatus,
+  ApplicationStatus,
+} from '../domain/enums';
 import { OrganizationService } from './organization.service';
 
 export interface DashboardMetrics {
@@ -138,7 +143,12 @@ export class OrganizationMetricsService {
       this.getGeographicDistribution(organizationId),
       this.getAvgHiringTimeDays(organizationId),
       this.getRecruiterProductivity(organizationId, startDate, endDate),
-      this.getResponseTimeDistribution(organizationId, period, startDate, endDate),
+      this.getResponseTimeDistribution(
+        organizationId,
+        period,
+        startDate,
+        endDate,
+      ),
     ]);
 
     return {
@@ -300,7 +310,10 @@ export class OrganizationMetricsService {
       .where('job.organizationId = :organizationId', { organizationId })
       .andWhere("application.status != 'pendiente'")
       .select('application.status', 'status')
-      .addSelect('AVG(EXTRACT(EPOCH FROM (application.stageChangedAt - application.createdAt)) / 86400)', 'avgDays')
+      .addSelect(
+        'AVG(EXTRACT(EPOCH FROM (application.stageChangedAt - application.createdAt)) / 86400)',
+        'avgDays',
+      )
       .groupBy('application.status');
 
     if (customStart) {
@@ -575,7 +588,7 @@ export class OrganizationMetricsService {
     if (members.length === 0) return [];
 
     const results = await Promise.all(
-      members.map(async (member) => {
+      members.map(async member => {
         const userId = member.userId;
 
         let appQuery = this.applicationRepository
@@ -589,23 +602,39 @@ export class OrganizationMetricsService {
           .andWhere('event.type = :type', { type: EventType.INTERVIEW });
 
         if (customStart) {
-          appQuery = appQuery.andWhere('app.createdAt >= :customStart', { customStart });
-          interviewQuery = interviewQuery.andWhere('event.createdAt >= :customStart', { customStart });
+          appQuery = appQuery.andWhere('app.createdAt >= :customStart', {
+            customStart,
+          });
+          interviewQuery = interviewQuery.andWhere(
+            'event.createdAt >= :customStart',
+            { customStart },
+          );
         }
         if (customEnd) {
-          appQuery = appQuery.andWhere('app.createdAt <= :customEnd', { customEnd });
-          interviewQuery = interviewQuery.andWhere('event.createdAt <= :customEnd', { customEnd });
+          appQuery = appQuery.andWhere('app.createdAt <= :customEnd', {
+            customEnd,
+          });
+          interviewQuery = interviewQuery.andWhere(
+            'event.createdAt <= :customEnd',
+            { customEnd },
+          );
         }
 
         const [appsProcessed, interviews, avgDaysRaw] = await Promise.all([
-          appQuery.andWhere('app.status != :status', { status: ApplicationStatus.PENDIENTE }).getCount(),
+          appQuery
+            .andWhere('app.status != :status', {
+              status: ApplicationStatus.PENDIENTE,
+            })
+            .getCount(),
           interviewQuery.getCount(),
           this.applicationRepository
             .createQueryBuilder('app')
             .leftJoin('app.job', 'job')
             .where('job.organizationId = :orgId', { orgId: organizationId })
             .andWhere('app.stageChangedAt > app.createdAt')
-            .andWhere('app.status != :pending', { pending: ApplicationStatus.PENDIENTE })
+            .andWhere('app.status != :pending', {
+              pending: ApplicationStatus.PENDIENTE,
+            })
             .select(
               'AVG(EXTRACT(EPOCH FROM (app."stageChangedAt" - app."createdAt")) / 86400)',
               'avgDays',
@@ -613,7 +642,9 @@ export class OrganizationMetricsService {
             .getRawOne<{ avgDays: string | null }>(),
         ]);
 
-        const avgDays = avgDaysRaw?.avgDays ? parseFloat(avgDaysRaw.avgDays) : 0;
+        const avgDays = avgDaysRaw?.avgDays
+          ? parseFloat(avgDaysRaw.avgDays)
+          : 0;
 
         return {
           userId,
@@ -634,7 +665,10 @@ export class OrganizationMetricsService {
     period: string,
     customStart?: string,
     customEnd?: string,
-  ): Promise<{ distribution: ResponseTimeDistribution; unansweredCount: number }> {
+  ): Promise<{
+    distribution: ResponseTimeDistribution;
+    unansweredCount: number;
+  }> {
     const now = new Date();
     const { startOfPeriod, endOfPeriod } = this.getPeriodDates(
       now,

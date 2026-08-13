@@ -63,9 +63,7 @@ export class OrganizationMemberController {
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Eliminar miembro de la organización' })
-  async removeMember(
-    @Param('id', ParseUUIDPipe) id: string,
-  ): Promise<void> {
+  async removeMember(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
     await this.memberService.removeMember(id);
   }
 }
