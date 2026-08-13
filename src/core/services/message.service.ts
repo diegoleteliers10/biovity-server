@@ -94,7 +94,10 @@ export class MessageService implements IMessageUseCase {
     return this.messageRepository.findById(id);
   }
 
-  async getMessagesByChatId(chatId: string, search?: string): Promise<Message[]> {
+  async getMessagesByChatId(
+    chatId: string,
+    search?: string,
+  ): Promise<Message[]> {
     return this.messageRepository.findByChatId(chatId, { search });
   }
 

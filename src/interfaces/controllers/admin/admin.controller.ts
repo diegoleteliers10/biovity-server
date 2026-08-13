@@ -1,4 +1,14 @@
-import { Controller, Get, Post, Body, Param, Query, HttpCode, HttpStatus, ParseUUIDPipe } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Query,
+  HttpCode,
+  HttpStatus,
+  ParseUUIDPipe,
+} from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
 import { AdminService } from '../../../core/services/admin.service';
 import {
@@ -77,7 +87,10 @@ export class AdminController {
 
   @Post('notifications/system/broadcast')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Enviar notificacion system a todos los miembros de una organizacion' })
+  @ApiOperation({
+    summary:
+      'Enviar notificacion system a todos los miembros de una organizacion',
+  })
   @ApiResponse({ status: 200, description: 'Notificaciones enviadas' })
   async broadcastSystemNotification(
     @Body() dto: SystemBroadcastDto,

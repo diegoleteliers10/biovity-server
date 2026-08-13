@@ -40,10 +40,15 @@ export class UserDomainOrmMapper {
     if (entity.resumes && entity.resumes.length > 0) {
       const resume = entity.resumes[0];
       if (resume.skills) {
-        skills = resume.skills.map(s => typeof s === 'string' ? s : (s as any).name);
+        skills = resume.skills.map(s =>
+          typeof s === 'string' ? s : (s as any).name,
+        );
       }
       if (resume.updatedAt && resume.createdAt) {
-        const isUpdated = new Date(resume.updatedAt).getTime() - new Date(resume.createdAt).getTime() > 5000;
+        const isUpdated =
+          new Date(resume.updatedAt).getTime() -
+            new Date(resume.createdAt).getTime() >
+          5000;
         if (isUpdated) {
           cvUpdatedAt = resume.updatedAt;
         }

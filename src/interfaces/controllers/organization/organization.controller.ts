@@ -29,7 +29,6 @@ import {
 export class OrganizationController {
   constructor(private readonly organizationService: OrganizationService) {}
 
-
   @Post()
   @HttpCode(HttpStatus.CREATED)
   async createOrganization(
@@ -95,7 +94,9 @@ export class OrganizationController {
 
   @Post(':id/transfer')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Transferir ownership de la organización a otro miembro' })
+  @ApiOperation({
+    summary: 'Transferir ownership de la organización a otro miembro',
+  })
   async transferOwnership(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: TransferOwnershipDto,

@@ -87,9 +87,12 @@ export class OrganizationService implements IOrganizationUseCase {
     organizationId: string,
     newOwnerUserId: string,
   ): Promise<Organization> {
-    const organization = await this.organizationRepository.findById(organizationId);
+    const organization =
+      await this.organizationRepository.findById(organizationId);
     if (!organization) {
-      throw new NotFoundException(`Organization with id ${organizationId} not found`);
+      throw new NotFoundException(
+        `Organization with id ${organizationId} not found`,
+      );
     }
 
     // Verify the new owner is a member
@@ -108,7 +111,9 @@ export class OrganizationService implements IOrganizationUseCase {
 
     const updated = await this.organizationRepository.findById(organizationId);
     if (!updated) {
-      throw new NotFoundException(`Organization with id ${organizationId} not found`);
+      throw new NotFoundException(
+        `Organization with id ${organizationId} not found`,
+      );
     }
     return updated;
   }

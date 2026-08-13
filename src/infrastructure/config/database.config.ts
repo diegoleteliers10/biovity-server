@@ -24,6 +24,7 @@ import {
   CandidateTagAssignmentEntity,
   MessageTemplateEntity,
   ActivityLogEntity,
+  SalarySubmissionEntity,
 } from '../database/orm';
 import { JobTemplateEntity } from '../database/orm/job-template.entity';
 import { PipelineStageEntity } from '../database/orm/pipeline-stage.entity';
@@ -73,6 +74,7 @@ export const DatabaseConfig = TypeOrmModule.forRootAsync({
         ActivityLogEntity,
         PipelineStageEntity,
         SavedSearchEntity,
+        SalarySubmissionEntity,
       ],
       synchronize: false,
       logging: true,

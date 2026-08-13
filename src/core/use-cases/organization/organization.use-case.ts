@@ -9,7 +9,10 @@ export interface IOrganizationUseCase {
     data: UpdateOrganizationInput,
   ): Promise<Organization | null>;
   deleteOrganization(id: string): Promise<boolean>;
-  transferOwnership(organizationId: string, newOwnerUserId: string): Promise<Organization>;
+  transferOwnership(
+    organizationId: string,
+    newOwnerUserId: string,
+  ): Promise<Organization>;
 }
 
 export interface CreateOrganizationInput {

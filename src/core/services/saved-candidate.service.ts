@@ -10,7 +10,9 @@ export class SavedCandidateService {
     private readonly repo: Repository<SavedCandidateEntity>,
   ) {}
 
-  async findByOrganization(organizationId: string): Promise<SavedCandidateEntity[]> {
+  async findByOrganization(
+    organizationId: string,
+  ): Promise<SavedCandidateEntity[]> {
     return this.repo.find({
       where: { organizationId },
       relations: ['candidate'],
@@ -18,7 +20,11 @@ export class SavedCandidateService {
     });
   }
 
-  async save(organizationId: string, candidateId: string, note?: string): Promise<SavedCandidateEntity> {
+  async save(
+    organizationId: string,
+    candidateId: string,
+    note?: string,
+  ): Promise<SavedCandidateEntity> {
     const existing = await this.repo.findOne({
       where: { organizationId, candidateId },
     });
@@ -40,7 +46,9 @@ export class SavedCandidateService {
     try {
       return await this.repo.save(entity);
     } catch (e) {
-      throw new ConflictException('Candidato ya guardado para esta organización.');
+      throw new ConflictException(
+        'Candidato ya guardado para esta organización.',
+      );
     }
   }
 

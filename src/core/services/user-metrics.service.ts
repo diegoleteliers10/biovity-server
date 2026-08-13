@@ -103,15 +103,21 @@ export class UserMetricsService {
       throw new NotFoundException(`User with id ${userId} not found`);
     }
 
-    const [quickMetrics, kpis, applicationsTrend, responseTimeDistribution, hiringFunnel, categoriesApplied] =
-      await Promise.all([
-        this.getQuickMetrics(userId),
-        this.getKPIs(userId),
-        this.getApplicationsTrend(userId, period),
-        this.getResponseTimeDistribution(userId),
-        this.getHiringFunnel(userId),
-        this.getCategoriesApplied(userId),
-      ]);
+    const [
+      quickMetrics,
+      kpis,
+      applicationsTrend,
+      responseTimeDistribution,
+      hiringFunnel,
+      categoriesApplied,
+    ] = await Promise.all([
+      this.getQuickMetrics(userId),
+      this.getKPIs(userId),
+      this.getApplicationsTrend(userId, period),
+      this.getResponseTimeDistribution(userId),
+      this.getHiringFunnel(userId),
+      this.getCategoriesApplied(userId),
+    ]);
 
     return {
       quickMetrics,
@@ -140,7 +146,10 @@ export class UserMetricsService {
       })
       .getCount();
 
-    const reachedCount = await this.countDistinctReached(userId, REACHED_STATUSES);
+    const reachedCount = await this.countDistinctReached(
+      userId,
+      REACHED_STATUSES,
+    );
     const responseRate =
       totalApplications > 0
         ? Math.round((reachedCount / totalApplications) * 100)
@@ -201,7 +210,9 @@ export class UserMetricsService {
     return Number(rows?.[0]?.n ?? 0);
   }
 
-  private async calculateAvgResponseTime(userId: string): Promise<number | null> {
+  private async calculateAvgResponseTime(
+    userId: string,
+  ): Promise<number | null> {
     const result = await this.applicationRepository
       .createQueryBuilder('application')
       .where('application.candidateId = :userId', { userId })
@@ -351,7 +362,10 @@ export class UserMetricsService {
         days.push(this.toDateStr(cursor));
         cursor.setUTCDate(cursor.getUTCDate() + 1);
       }
-      buckets.push({ labelDate: this.toDateStr(new Date(Date.UTC(year, 0, 1))), days });
+      buckets.push({
+        labelDate: this.toDateStr(new Date(Date.UTC(year, 0, 1))),
+        days,
+      });
     }
     return buckets;
   }
@@ -380,7 +394,9 @@ export class UserMetricsService {
     return `${y}-${m}-${day}`;
   }
 
-  async getResponseTimeDistribution(userId: string): Promise<ApplicationBucket> {
+  async getResponseTimeDistribution(
+    userId: string,
+  ): Promise<ApplicationBucket> {
     const result = await this.applicationRepository
       .createQueryBuilder('application')
       .where('application.candidateId = :userId', { userId })

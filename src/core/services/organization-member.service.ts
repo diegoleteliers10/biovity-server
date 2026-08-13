@@ -7,7 +7,10 @@ import {
 } from '@nestjs/common';
 import * as crypto from 'crypto';
 import { IOrganizationMemberRepository } from '../repositories/organization-member.repository';
-import { OrganizationMember, OrganizationMemberRole } from '../domain/entities/organization-member.entity';
+import {
+  OrganizationMember,
+  OrganizationMemberRole,
+} from '../domain/entities/organization-member.entity';
 
 export interface AddMemberInput {
   organizationId: string;
@@ -36,7 +39,9 @@ export class OrganizationMemberService {
       input.userId,
     );
     if (existing) {
-      throw new ConflictException('User is already a member of this organization');
+      throw new ConflictException(
+        'User is already a member of this organization',
+      );
     }
 
     const member = new OrganizationMember(
@@ -66,7 +71,9 @@ export class OrganizationMemberService {
     const member = await this.memberRepository.findById(id);
     if (!member) throw new NotFoundException('Member not found');
 
-    const updated = await this.memberRepository.update(id, { role: input.role });
+    const updated = await this.memberRepository.update(id, {
+      role: input.role,
+    });
     if (!updated) throw new NotFoundException('Failed to update member');
     return updated;
   }

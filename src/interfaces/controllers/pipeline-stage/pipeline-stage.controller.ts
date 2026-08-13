@@ -28,7 +28,9 @@ export class PipelineStageController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  async create(@Body() dto: CreatePipelineStageDto): Promise<PipelineStageResponseDto> {
+  async create(
+    @Body() dto: CreatePipelineStageDto,
+  ): Promise<PipelineStageResponseDto> {
     const input = PipelineStageDtoDomainMapper.toCreateInput(dto);
     const stage = await this.service.create(input);
     return PipelineStageDomainDtoMapper.toDto(stage);

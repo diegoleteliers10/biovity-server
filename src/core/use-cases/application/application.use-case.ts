@@ -4,7 +4,13 @@ import { ApplicationStatus } from '../../domain/enums';
 export interface ApplicationFilters {
   jobId?: string;
   candidateId?: string;
-  status?: 'pendiente' | 'oferta' | 'entrevista' | 'rechazado' | 'contratado' | 'desistido';
+  status?:
+    | 'pendiente'
+    | 'oferta'
+    | 'entrevista'
+    | 'rechazado'
+    | 'contratado'
+    | 'desistido';
 }
 
 export interface PaginationOptions {

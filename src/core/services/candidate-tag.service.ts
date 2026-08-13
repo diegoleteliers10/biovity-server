@@ -1,4 +1,8 @@
-import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  ConflictException,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CandidateTagEntity } from '../../infrastructure/database/orm/candidate-tag.entity';
@@ -13,14 +17,20 @@ export class CandidateTagService {
     private readonly assignmentRepo: Repository<CandidateTagAssignmentEntity>,
   ) {}
 
-  async findByOrganization(organizationId: string): Promise<CandidateTagEntity[]> {
+  async findByOrganization(
+    organizationId: string,
+  ): Promise<CandidateTagEntity[]> {
     return this.tagRepo.find({
       where: { organizationId },
       order: { createdAt: 'DESC' },
     });
   }
 
-  async create(organizationId: string, name: string, color?: string): Promise<CandidateTagEntity> {
+  async create(
+    organizationId: string,
+    name: string,
+    color?: string,
+  ): Promise<CandidateTagEntity> {
     const existing = await this.tagRepo.findOne({
       where: { organizationId, name },
     });
@@ -42,7 +52,9 @@ export class CandidateTagService {
     try {
       return await this.tagRepo.save(tag);
     } catch (e) {
-      throw new ConflictException('La etiqueta ya existe para esta organización.');
+      throw new ConflictException(
+        'La etiqueta ya existe para esta organización.',
+      );
     }
   }
 
@@ -51,7 +63,10 @@ export class CandidateTagService {
     return (result.affected ?? 0) > 0;
   }
 
-  async assign(tagId: string, candidateId: string): Promise<CandidateTagAssignmentEntity> {
+  async assign(
+    tagId: string,
+    candidateId: string,
+  ): Promise<CandidateTagAssignmentEntity> {
     const tag = await this.tagRepo.findOne({ where: { id: tagId } });
     if (!tag) {
       throw new NotFoundException('Etiqueta no encontrada');
@@ -71,7 +86,9 @@ export class CandidateTagService {
     try {
       return await this.assignmentRepo.save(assignment);
     } catch (e) {
-      throw new ConflictException('Esta etiqueta ya está asignada a este candidato.');
+      throw new ConflictException(
+        'Esta etiqueta ya está asignada a este candidato.',
+      );
     }
   }
 
@@ -80,7 +97,10 @@ export class CandidateTagService {
     return (result.affected ?? 0) > 0;
   }
 
-  async findByCandidate(candidateId: string, organizationId: string): Promise<CandidateTagEntity[]> {
+  async findByCandidate(
+    candidateId: string,
+    organizationId: string,
+  ): Promise<CandidateTagEntity[]> {
     const assignments = await this.assignmentRepo.find({
       where: {
         candidateId,

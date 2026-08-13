@@ -23,7 +23,10 @@ export class OrganizationMemberRepositoryImpl implements IOrganizationMemberRepo
   }
 
   async findById(id: string): Promise<OrganizationMember | null> {
-    const orm = await this.repo.findOne({ where: { id }, relations: ['user', 'organization'] });
+    const orm = await this.repo.findOne({
+      where: { id },
+      relations: ['user', 'organization'],
+    });
     return orm ? OrganizationMemberDomainOrmMapper.toDomain(orm) : null;
   }
 
@@ -60,10 +63,16 @@ export class OrganizationMemberRepositoryImpl implements IOrganizationMemberRepo
     return orm ? OrganizationMemberDomainOrmMapper.toDomain(orm) : null;
   }
 
-  async update(id: string, entity: Partial<OrganizationMember>): Promise<OrganizationMember | null> {
+  async update(
+    id: string,
+    entity: Partial<OrganizationMember>,
+  ): Promise<OrganizationMember | null> {
     const existing = await this.repo.findOne({ where: { id } });
     if (!existing) return null;
-    const updated = { ...existing, ...OrganizationMemberDomainOrmMapper.toOrm(entity as OrganizationMember) };
+    const updated = {
+      ...existing,
+      ...OrganizationMemberDomainOrmMapper.toOrm(entity as OrganizationMember),
+    };
     const saved = await this.repo.save(updated);
     return OrganizationMemberDomainOrmMapper.toDomain(saved);
   }

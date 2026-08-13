@@ -28,6 +28,7 @@ import { ActivityLogModule } from './interfaces/controllers/activity-log/activit
 import { ReportsModule } from './interfaces/controllers/reports/reports.module';
 import { PipelineStageModule } from './interfaces/controllers/pipeline-stage/pipeline-stage.module';
 import { SavedSearchModule } from './interfaces/controllers/saved-search/saved-search.module';
+import { SalaryModule } from './interfaces/controllers/salary/salary.module';
 import { EmailService } from './core/services/email.service';
 
 @Module({
@@ -61,6 +62,7 @@ import { EmailService } from './core/services/email.service';
     ReportsModule,
     PipelineStageModule,
     SavedSearchModule,
+    SalaryModule,
   ],
   controllers: [],
   providers: [EmailService],

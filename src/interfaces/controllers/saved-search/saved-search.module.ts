@@ -13,7 +13,11 @@ import { NotificationModule } from '../../../shared/notification';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([SavedSearchEntity, OrganizationEntity, UserEntity]),
+    TypeOrmModule.forFeature([
+      SavedSearchEntity,
+      OrganizationEntity,
+      UserEntity,
+    ]),
     NotificationModule,
   ],
   controllers: [SavedSearchController],

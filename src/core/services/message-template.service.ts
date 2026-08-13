@@ -21,18 +21,25 @@ export class MessageTemplateService {
     private readonly repo: Repository<MessageTemplateEntity>,
   ) {}
 
-  async findByOrganization(organizationId: string): Promise<MessageTemplateEntity[]> {
+  async findByOrganization(
+    organizationId: string,
+  ): Promise<MessageTemplateEntity[]> {
     return this.repo.find({
       where: { organizationId },
       order: { createdAt: 'DESC' },
     });
   }
 
-  async findById(id: string, organizationId: string): Promise<MessageTemplateEntity | null> {
+  async findById(
+    id: string,
+    organizationId: string,
+  ): Promise<MessageTemplateEntity | null> {
     return this.repo.findOne({ where: { id, organizationId } });
   }
 
-  async create(input: CreateMessageTemplateInput): Promise<MessageTemplateEntity> {
+  async create(
+    input: CreateMessageTemplateInput,
+  ): Promise<MessageTemplateEntity> {
     const entity = this.repo.create({
       organizationId: input.organizationId,
       title: input.title,
@@ -48,7 +55,7 @@ export class MessageTemplateService {
   ): Promise<MessageTemplateEntity | null> {
     const existing = await this.repo.findOne({ where: { id, organizationId } });
     if (!existing) return null;
-    
+
     if (input.title !== undefined) existing.title = input.title;
     if (input.content !== undefined) existing.content = input.content;
 

@@ -62,6 +62,8 @@ export class JobService implements IJobUseCase {
       data.expiresAt,
       this.mapLocation(data.location),
       data.category,
+      data.requiredSkills ?? [],
+      data.minExperience,
     );
 
     return this.jobRepository.create(job);
@@ -132,6 +134,9 @@ export class JobService implements IJobUseCase {
       status: data.status ? (data.status as JobStatus) : existingJob.status,
       expiresAt: data.expiresAt,
       category: data.category,
+      requiredSkills:
+        data.requiredSkills ?? existingJob.requiredSkills,
+      minExperience: data.minExperience ?? existingJob.minExperience,
     };
 
     return this.jobRepository.update(id, updatedJob);

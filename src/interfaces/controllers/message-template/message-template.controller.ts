@@ -32,7 +32,9 @@ export class MessageTemplateController {
   @Get()
   @ApiOperation({ summary: 'Listar plantillas de mensajes de la organización' })
   @ApiParam({ name: 'organizationId', type: String })
-  async findAll(@Param('organizationId', ParseUUIDPipe) organizationId: string) {
+  async findAll(
+    @Param('organizationId', ParseUUIDPipe) organizationId: string,
+  ) {
     return this.service.findByOrganization(organizationId);
   }
 

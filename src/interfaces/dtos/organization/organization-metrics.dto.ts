@@ -50,7 +50,10 @@ export class PipelineAvgTimeDto {
   @ApiProperty({ example: 10.2, description: 'Días promedio hasta oferta' })
   oferta: number;
 
-  @ApiProperty({ example: 14.1, description: 'Días promedio hasta contratación' })
+  @ApiProperty({
+    example: 14.1,
+    description: 'Días promedio hasta contratación',
+  })
   contratado: number;
 }
 
@@ -117,16 +120,28 @@ export class GeographicDistributionDto {
 }
 
 export class ResponseTimeDistributionDto {
-  @ApiProperty({ example: 4, description: 'Postulaciones respondidas en menos de 24h' })
+  @ApiProperty({
+    example: 4,
+    description: 'Postulaciones respondidas en menos de 24h',
+  })
   lessThan24h: number;
 
-  @ApiProperty({ example: 6, description: 'Postulaciones respondidas entre 1 y 3 días' })
+  @ApiProperty({
+    example: 6,
+    description: 'Postulaciones respondidas entre 1 y 3 días',
+  })
   oneToThreeDays: number;
 
-  @ApiProperty({ example: 3, description: 'Postulaciones respondidas entre 3 y 7 días' })
+  @ApiProperty({
+    example: 3,
+    description: 'Postulaciones respondidas entre 3 y 7 días',
+  })
   threeToSevenDays: number;
 
-  @ApiProperty({ example: 1, description: 'Postulaciones respondidas en 7 días o más' })
+  @ApiProperty({
+    example: 1,
+    description: 'Postulaciones respondidas en 7 días o más',
+  })
   moreThanSevenDays: number;
 }
 
@@ -155,6 +170,9 @@ export class OrganizationMetricsDto {
   @ApiProperty({ type: ResponseTimeDistributionDto })
   responseTimeDistribution: ResponseTimeDistributionDto;
 
-  @ApiProperty({ example: 7, description: 'Postulaciones del período aún sin responder' })
+  @ApiProperty({
+    example: 7,
+    description: 'Postulaciones del período aún sin responder',
+  })
   unansweredCount: number;
 }

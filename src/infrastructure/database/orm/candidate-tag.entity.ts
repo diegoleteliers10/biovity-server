@@ -35,9 +35,6 @@ export class CandidateTagEntity {
   @CreateDateColumn({ name: 'created_at' })
   public createdAt: Date;
 
-  @OneToMany(
-    () => CandidateTagAssignmentEntity,
-    assignment => assignment.tag,
-  )
+  @OneToMany(() => CandidateTagAssignmentEntity, assignment => assignment.tag)
   public assignments: CandidateTagAssignmentEntity[];
 }

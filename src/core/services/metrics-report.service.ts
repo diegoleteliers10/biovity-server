@@ -28,7 +28,9 @@ export class MetricsReportService {
 
   @Cron(CronExpression.EVERY_WEEK)
   async generateWeeklyReport(): Promise<void> {
-    this.logger.log('Generating weekly metrics report for all organizations...');
+    this.logger.log(
+      'Generating weekly metrics report for all organizations...',
+    );
 
     const organizations = await this.orgRepository.find();
     const now = new Date();
@@ -73,7 +75,9 @@ export class MetricsReportService {
       .createQueryBuilder('app')
       .leftJoin('app.job', 'job')
       .where('job.organizationId = :orgId', { orgId: org.id })
-      .andWhere('app.status = :status', { status: ApplicationStatus.CONTRATADO })
+      .andWhere('app.status = :status', {
+        status: ApplicationStatus.CONTRATADO,
+      })
       .andWhere('app.stageChangedAt >= :from', { from })
       .andWhere('app.stageChangedAt <= :to', { to })
       .getCount();

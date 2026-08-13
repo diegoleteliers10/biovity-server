@@ -257,7 +257,11 @@ export class ApplicationService implements IApplicationUseCase {
       return existingApplication;
     }
 
-    const updated = await this.applicationRepository.update(id, { status }, changedById);
+    const updated = await this.applicationRepository.update(
+      id,
+      { status },
+      changedById,
+    );
     if (!updated) {
       return null;
     }
@@ -310,10 +314,13 @@ export class ApplicationService implements IApplicationUseCase {
       );
 
       // Webhook delivery
-      const organization = await this.organizationRepository.findById(context.organizationId);
+      const organization = await this.organizationRepository.findById(
+        context.organizationId,
+      );
       if (organization?.integrations?.enabled) {
-        const { slackWebhookUrl, discordWebhookUrl } = organization.integrations;
-        
+        const { slackWebhookUrl, discordWebhookUrl } =
+          organization.integrations;
+
         const message = `📢 *Nueva Postulación en Biovity*\nEl candidato *${context.candidateName}* se ha postulado a la oferta *${context.jobTitle}*.\nVer más aquí: http://localhost:3000${APPLICATIONS_LINK}`;
 
         if (slackWebhookUrl) {
@@ -332,7 +339,10 @@ export class ApplicationService implements IApplicationUseCase {
     }
   }
 
-  private async sendWebhook(url: string, payload: Record<string, any>): Promise<void> {
+  private async sendWebhook(
+    url: string,
+    payload: Record<string, any>,
+  ): Promise<void> {
     try {
       await fetch(url, {
         method: 'POST',

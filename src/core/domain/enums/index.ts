@@ -118,3 +118,42 @@ export enum ParticipantStatus {
   ACCEPTED = 'accepted',
   DECLINED = 'declined',
 }
+
+export enum SalaryExperienceLevel {
+  JUNIOR = 'JUNIOR',
+  MID = 'MID',
+  SENIOR = 'SENIOR',
+  LEAD = 'LEAD',
+}
+
+export enum SalaryEducationLevel {
+  LICENCIATURA = 'LICENCIATURA',
+  MAGISTER = 'MAGISTER',
+  DOCTORADO = 'DOCTORADO',
+  POSTDOC = 'POSTDOC',
+}
+
+export enum SalaryWorkMode {
+  PRESENCIAL = 'PRESENCIAL',
+  HIBRIDO = 'HIBRIDO',
+  REMOTO = 'REMOTO',
+}
+
+export enum ChileanRegion {
+  ARICA_Y_PARINACOTA = 'ARICA_Y_PARINACOTA',
+  TARAPACA = 'TARAPACA',
+  ANTOFAGASTA = 'ANTOFAGASTA',
+  ATACAMA = 'ATACAMA',
+  COQUIMBO = 'COQUIMBO',
+  VALPARAISO = 'VALPARAISO',
+  METROPOLITANA = 'METROPOLITANA',
+  OHIGGINS = 'OHIGGINS',
+  MAULE = 'MAULE',
+  NUBLE = 'NUBLE',
+  BIOBIO = 'BIOBIO',
+  ARAUCANIA = 'ARAUCANIA',
+  LOS_RIOS = 'LOS_RIOS',
+  LOS_LAGOS = 'LOS_LAGOS',
+  AYSEN = 'AYSEN',
+  MAGALLANES = 'MAGALLANES',
+}

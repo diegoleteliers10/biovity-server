@@ -44,7 +44,8 @@ export class UserDomainDtoMapper {
       }
       if (domain.notificationPreferences.events) {
         const eventsDto = new UserNotificationEventsDto();
-        eventsDto.application = domain.notificationPreferences.events.application;
+        eventsDto.application =
+          domain.notificationPreferences.events.application;
         eventsDto.interview = domain.notificationPreferences.events.interview;
         eventsDto.message = domain.notificationPreferences.events.message;
         eventsDto.job_alert = domain.notificationPreferences.events.job_alert;
