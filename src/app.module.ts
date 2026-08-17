@@ -69,10 +69,7 @@ import { SessionAuthGuard } from './shared/guards/session-auth.guard';
     SalaryModule,
   ],
   controllers: [],
-  providers: [
-    EmailService,
-    { provide: APP_GUARD, useClass: SessionAuthGuard },
-  ],
+  providers: [EmailService, { provide: APP_GUARD, useClass: SessionAuthGuard }],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {

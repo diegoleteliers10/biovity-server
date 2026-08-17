@@ -4,8 +4,21 @@ import { DataSource } from 'typeorm';
 
 export interface AuthenticatedUser {
   id: string;
+  email: string;
   type: string;
   organizationId: string | null;
+}
+
+/**
+ * Mirrors the frontend rule: emails listed in ADMIN_EMAILS are admins
+ * regardless of their user type.
+ */
+export function isAdminUser(user: AuthenticatedUser): boolean {
+  const adminEmails = (process.env.ADMIN_EMAILS ?? '')
+    .split(',')
+    .map(e => e.trim().toLowerCase())
+    .filter(Boolean);
+  return adminEmails.includes(user.email.toLowerCase());
 }
 
 /**
@@ -51,11 +64,12 @@ export class BetterAuthSessionService {
   ): Promise<AuthenticatedUser | null> {
     const rows: Array<{
       userId: string;
+      email: string;
       type: string;
       isActive: boolean;
       organizationId: string | null;
     }> = await this.dataSource.query(
-      `SELECT u."id" AS "userId", u."type", u."isActive", u."organizationId"
+      `SELECT u."id" AS "userId", u."email", u."type", u."isActive", u."organizationId"
        FROM session s
        JOIN "user" u ON u."id" = s."user_id"
        WHERE s."token" = $1 AND s."expires_at" > NOW()
@@ -66,6 +80,7 @@ export class BetterAuthSessionService {
     if (!row || row.isActive !== true) return null;
     return {
       id: row.userId,
+      email: row.email,
       type: row.type,
       organizationId: row.organizationId ?? null,
     };
