@@ -134,8 +134,7 @@ export class JobService implements IJobUseCase {
       status: data.status ? (data.status as JobStatus) : existingJob.status,
       expiresAt: data.expiresAt,
       category: data.category,
-      requiredSkills:
-        data.requiredSkills ?? existingJob.requiredSkills,
+      requiredSkills: data.requiredSkills ?? existingJob.requiredSkills,
       minExperience: data.minExperience ?? existingJob.minExperience,
     };
 

@@ -28,6 +28,7 @@ import { JobResponseDto } from '../../dtos/job/job-response.dto';
 
 import { JobDomainDtoMapper } from '../../../shared/mappers/job/jobDomain-dto.mapper';
 import { JobQueryDto } from '../../dtos/job/job-query.dto';
+import { Public } from '../../../shared/decorators/public.decorator';
 
 interface PaginatedJobResponse {
   data: JobResponseDto[];
@@ -72,6 +73,7 @@ export class JobController {
   }
 
   @Get(':id')
+  @Public()
   @ApiOperation({ summary: 'Obtener una oferta de trabajo por ID' })
   @ApiParam({
     name: 'id',
@@ -98,6 +100,7 @@ export class JobController {
   }
 
   @Get()
+  @Public()
   @ApiOperation({ summary: 'Obtener todas las ofertas de trabajo' })
   @ApiQuery({ name: 'organizationId', required: false, type: String })
   @ApiQuery({ name: 'status', required: false, type: String })

@@ -1,5 +1,6 @@
 import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { APP_GUARD } from '@nestjs/core';
 import { DatabaseConfig } from './infrastructure/config/database.config';
 import { LoggerModule, LoggerMiddleware } from './shared/logger';
 import { InterceptorsModule } from './shared/interceptors/interceptors.module';
@@ -30,6 +31,8 @@ import { PipelineStageModule } from './interfaces/controllers/pipeline-stage/pip
 import { SavedSearchModule } from './interfaces/controllers/saved-search/saved-search.module';
 import { SalaryModule } from './interfaces/controllers/salary/salary.module';
 import { EmailService } from './core/services/email.service';
+import { AuthModule } from './shared/auth/auth.module';
+import { SessionAuthGuard } from './shared/guards/session-auth.guard';
 
 @Module({
   imports: [
@@ -39,6 +42,7 @@ import { EmailService } from './core/services/email.service';
     NotificationModule,
     DatabaseConfig,
     CryptoModule,
+    AuthModule,
     JobModule,
     UserModule,
     OrganizationModule,
@@ -65,7 +69,7 @@ import { EmailService } from './core/services/email.service';
     SalaryModule,
   ],
   controllers: [],
-  providers: [EmailService],
+  providers: [EmailService, { provide: APP_GUARD, useClass: SessionAuthGuard }],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
