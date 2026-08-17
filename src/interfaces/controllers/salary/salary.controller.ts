@@ -15,8 +15,10 @@ import { SalarySubmissionResponseDto } from '../../dtos/salary-submission/salary
 import { SalaryStatsResponseDto } from '../../dtos/salary-submission/salary-stats-response.dto';
 import { SalarySubmissionDtoDomainMapper } from '../../../shared/mappers/salary-submission/salarySubmissionDto-domain.mapper';
 import { SalarySubmissionDomainDtoMapper } from '../../../shared/mappers/salary-submission/salarySubmissionDomain-dto.mapper';
+import { Public } from '../../../shared/decorators/public.decorator';
 
 @ApiTags('salaries')
+@Public()
 @Controller('salaries')
 export class SalaryController {
   constructor(private readonly service: SalarySubmissionService) {}
