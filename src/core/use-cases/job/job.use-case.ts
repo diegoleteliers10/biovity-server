@@ -48,9 +48,9 @@ export interface IJobUseCase {
 export interface CreateJobInput {
   organizationId: string;
   title: string;
-  description: string;
-  employmentType: string;
-  experienceLevel: string;
+  description?: string;
+  employmentType?: string;
+  experienceLevel?: string;
   salary?: Record<string, unknown>;
   location?: Record<string, unknown>;
   benefits?: Record<string, unknown>[];

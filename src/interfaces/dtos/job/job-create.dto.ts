@@ -96,28 +96,31 @@ export class JobCreateDto {
   @IsString()
   title: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     example: 'Buscamos un desarrollador backend...',
     description: 'Descripción del trabajo',
   })
+  @IsOptional()
   @IsString()
-  description: string;
+  description?: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     enum: JobEmploymentType,
     example: JobEmploymentType.FULL_TIME,
     description: 'Tipo de empleo',
   })
+  @IsOptional()
   @IsEnum(JobEmploymentType)
-  employmentType: JobEmploymentType;
+  employmentType?: JobEmploymentType;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     enum: JobExperienceLevel,
     example: JobExperienceLevel.MID_SENIOR,
     description: 'Nivel de experiencia',
   })
+  @IsOptional()
   @IsEnum(JobExperienceLevel)
-  experienceLevel: JobExperienceLevel;
+  experienceLevel?: JobExperienceLevel;
 
   @ApiPropertyOptional({ type: JobSalaryDto, description: 'Salario' })
   @IsOptional()

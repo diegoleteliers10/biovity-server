@@ -39,7 +39,7 @@ export interface JobBenefits {
 }
 
 @Entity('job')
-@Index('idx_job_organizationId', ['organizationId'])
+@Index('idx_job_organization_id', ['organizationId'])
 export class JobEntity {
   @PrimaryGeneratedColumn('uuid')
   public id: string;
@@ -60,16 +60,16 @@ export class JobEntity {
   @Column({
     type: 'enum',
     enum: JobEmploymentType,
-    nullable: false,
+    nullable: true,
   })
-  public employmentType: JobEmploymentType;
+  public employmentType: JobEmploymentType | null;
 
   @Column({
     type: 'enum',
     enum: JobExperienceLevel,
-    nullable: false,
+    nullable: true,
   })
-  public experienceLevel: JobExperienceLevel;
+  public experienceLevel: JobExperienceLevel | null;
 
   @Column({ type: 'json', nullable: true })
   public benefits: JobBenefits[];
