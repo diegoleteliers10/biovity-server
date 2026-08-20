@@ -10,8 +10,8 @@ export class JobDomainDtoMapper {
     dto.description = domain.description;
     dto.salary = domain.salary;
     dto.location = domain.location;
-    dto.employmentType = domain.employmentType;
-    dto.experienceLevel = domain.experienceLevel;
+    dto.employmentType = domain.employmentType ?? undefined;
+    dto.experienceLevel = domain.experienceLevel ?? undefined;
     dto.benefits = domain.benefits;
     dto.status = domain.status;
     dto.views = domain.views;

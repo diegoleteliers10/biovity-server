@@ -76,11 +76,13 @@ export class JobWithApplicationsResponseDto {
   @IsString()
   description: string;
 
+  @IsOptional()
   @IsEnum(JobEmploymentType)
-  employmentType: JobEmploymentType;
+  employmentType?: JobEmploymentType;
 
+  @IsOptional()
   @IsEnum(JobExperienceLevel)
-  experienceLevel: JobExperienceLevel;
+  experienceLevel?: JobExperienceLevel;
 
   @IsOptional()
   @IsObject()
