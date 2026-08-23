@@ -46,16 +46,18 @@ export interface ApplicationBucket {
   moreThanSevenDays: number;
 }
 
-export interface FunnelStage {
+export interface StatusStep {
   count: number;
   percentage: number;
 }
 
-export interface HiringFunnel {
-  aplicado: FunnelStage;
-  entrevista: FunnelStage;
-  oferta: FunnelStage;
-  contratado: FunnelStage;
+export interface StatusBreakdown {
+  pendiente: StatusStep;
+  entrevista: StatusStep;
+  oferta: StatusStep;
+  contratado: StatusStep;
+  rechazado: StatusStep;
+  desistido: StatusStep;
 }
 
 export interface CategoryDistribution {
@@ -69,7 +71,7 @@ export interface UserMetrics {
   kpis: UserKPIs;
   applicationsTrend: TrendDataPoint[];
   responseTimeDistribution: ApplicationBucket;
-  hiringFunnel: HiringFunnel;
+  statusBreakdown: StatusBreakdown;
   categoriesApplied: CategoryDistribution[];
 }
 
@@ -108,14 +110,14 @@ export class UserMetricsService {
       kpis,
       applicationsTrend,
       responseTimeDistribution,
-      hiringFunnel,
+      statusBreakdown,
       categoriesApplied,
     ] = await Promise.all([
       this.getQuickMetrics(userId),
       this.getKPIs(userId),
       this.getApplicationsTrend(userId, period),
       this.getResponseTimeDistribution(userId),
-      this.getHiringFunnel(userId),
+      this.getStatusBreakdown(userId),
       this.getCategoriesApplied(userId),
     ]);
 
@@ -124,7 +126,7 @@ export class UserMetricsService {
       kpis,
       applicationsTrend,
       responseTimeDistribution,
-      hiringFunnel,
+      statusBreakdown,
       categoriesApplied,
     };
   }
@@ -435,7 +437,7 @@ export class UserMetricsService {
     };
   }
 
-  async getHiringFunnel(userId: string): Promise<HiringFunnel> {
+  async getStatusBreakdown(userId: string): Promise<StatusBreakdown> {
     const statusCounts = await this.applicationRepository
       .createQueryBuilder('application')
       .where('application.candidateId = :userId', { userId })
@@ -461,16 +463,18 @@ export class UserMetricsService {
 
     const total = Object.values(counts).reduce((sum, c) => sum + c, 0);
 
-    const toPercent = (count: number) => ({
+    const toPercent = (count: number): StatusStep => ({
       count,
       percentage: total > 0 ? Math.round((count / total) * 100) : 0,
     });
 
     return {
-      aplicado: toPercent(total),
+      pendiente: toPercent(counts[ApplicationStatus.PENDIENTE]),
       entrevista: toPercent(counts[ApplicationStatus.ENTREVISTA]),
       oferta: toPercent(counts[ApplicationStatus.OFERTA]),
       contratado: toPercent(counts[ApplicationStatus.CONTRATADO]),
+      rechazado: toPercent(counts[ApplicationStatus.RECHAZADO]),
+      desistido: toPercent(counts[ApplicationStatus.DESISTIDO]),
     };
   }
 
