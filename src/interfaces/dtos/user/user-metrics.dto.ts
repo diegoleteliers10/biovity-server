@@ -32,29 +32,35 @@ export class ApplicationBucketDto {
   moreThanSevenDays: number;
 }
 
-export class FunnelStageDto {
+export class StatusStepDto {
   @ApiProperty({ example: 50 })
   count: number;
 
   @ApiProperty({
     example: 100,
-    description: 'Porcentaje vs total aplicaciones',
+    description: 'Porcentaje vs total de postulaciones',
   })
   percentage: number;
 }
 
-export class FunnelDto {
-  @ApiProperty({ type: FunnelStageDto })
-  aplicado: FunnelStageDto;
+export class StatusBreakdownDto {
+  @ApiProperty({ type: StatusStepDto })
+  pendiente: StatusStepDto;
 
-  @ApiProperty({ type: FunnelStageDto })
-  entrevista: FunnelStageDto;
+  @ApiProperty({ type: StatusStepDto })
+  entrevista: StatusStepDto;
 
-  @ApiProperty({ type: FunnelStageDto })
-  oferta: FunnelStageDto;
+  @ApiProperty({ type: StatusStepDto })
+  oferta: StatusStepDto;
 
-  @ApiProperty({ type: FunnelStageDto })
-  contratado: FunnelStageDto;
+  @ApiProperty({ type: StatusStepDto })
+  contratado: StatusStepDto;
+
+  @ApiProperty({ type: StatusStepDto })
+  rechazado: StatusStepDto;
+
+  @ApiProperty({ type: StatusStepDto })
+  desistido: StatusStepDto;
 }
 
 export class CategoryDistributionDto {
@@ -127,8 +133,8 @@ export class UserMetricsDto {
   @ApiProperty({ type: ApplicationBucketDto })
   responseTimeDistribution: ApplicationBucketDto;
 
-  @ApiProperty({ type: FunnelDto })
-  hiringFunnel: FunnelDto;
+  @ApiProperty({ type: StatusBreakdownDto })
+  statusBreakdown: StatusBreakdownDto;
 
   @ApiProperty({ type: [CategoryDistributionDto] })
   categoriesApplied: CategoryDistributionDto[];
