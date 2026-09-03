@@ -73,7 +73,7 @@ export class MessageEntity {
   })
   public type: MessageType;
 
-  @Column({ type: 'jsonb', nullable: true })
+  @Column({ name: 'content_type', type: 'jsonb', nullable: true })
   public contentType: MessageContent | null;
 
   @Column({ default: false })
