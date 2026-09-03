@@ -29,6 +29,7 @@ import { ActivityLogModule } from './interfaces/controllers/activity-log/activit
 import { ReportsModule } from './interfaces/controllers/reports/reports.module';
 import { PipelineStageModule } from './interfaces/controllers/pipeline-stage/pipeline-stage.module';
 import { SavedSearchModule } from './interfaces/controllers/saved-search/saved-search.module';
+import { JobAlertModule } from './interfaces/controllers/job-alert/job-alert.module';
 import { SalaryModule } from './interfaces/controllers/salary/salary.module';
 import { EmailService } from './core/services/email.service';
 import { AuthModule } from './shared/auth/auth.module';
@@ -66,6 +67,7 @@ import { SessionAuthGuard } from './shared/guards/session-auth.guard';
     ReportsModule,
     PipelineStageModule,
     SavedSearchModule,
+    JobAlertModule,
     SalaryModule,
   ],
   controllers: [],

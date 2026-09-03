@@ -30,6 +30,7 @@ import { JobTemplateEntity } from './src/infrastructure/database/orm/job-templat
 import { OrganizationMemberEntity } from './src/infrastructure/database/orm/organization-member.entity';
 import { PipelineStageEntity } from './src/infrastructure/database/orm/pipeline-stage.entity';
 import { SavedSearchEntity } from './src/infrastructure/database/orm/saved-search.entity';
+import { JobAlertEntity } from './src/infrastructure/database/orm/job-alert.entity';
 
 config();
 
@@ -68,6 +69,7 @@ export const AppDataSource = new DataSource({
     OrganizationMemberEntity,
     PipelineStageEntity,
     SavedSearchEntity,
+    JobAlertEntity,
     SalarySubmissionEntity,
   ],
   migrations: ['src/infrastructure/database/migrations/*.ts'],

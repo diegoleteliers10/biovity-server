@@ -5,6 +5,7 @@ export { ChatEntity } from './chat.entity';
 export { EventEntity, EventNoteEntity } from './event.entity';
 export { EventParticipantEntity } from './event-participant.entity';
 export { JobEntity, JobSalary, JobLocation, JobBenefits } from './job.entity';
+export { JobAlertEntity } from './job-alert.entity';
 export { JobQuestionEntity } from './job-question.entity';
 export { MessageEntity } from './message.entity';
 export { OrganizationEntity } from './organization.entity';
@@ -38,6 +39,7 @@ export {
   JobStatus,
   JobEmploymentType,
   JobExperienceLevel,
+  JobAlertFrequency,
   ApplicationStatus,
   UserType,
   SubscriptionPlan,

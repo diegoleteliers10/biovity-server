@@ -23,6 +23,12 @@ export enum JobExperienceLevel {
   EJECUTIVO = 'Ejecutivo',
 }
 
+export enum JobAlertFrequency {
+  INSTANTANEA = 'instantanea',
+  DIARIA = 'diaria',
+  SEMANAL = 'semanal',
+}
+
 export enum ApplicationStatus {
   PENDIENTE = 'pendiente',
   OFERTA = 'oferta',
