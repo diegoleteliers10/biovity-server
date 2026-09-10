@@ -12,7 +12,7 @@ import {
   HttpStatus,
   NotFoundException,
 } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery } from '@nestjs/swagger';
 import { EventService } from '../../../core/services/event.service';
 import { EventDtoDomainMapper } from '../../../shared/mappers/event/eventDto-domain.mapper';
 import { EventDomainDtoMapper } from '../../../shared/mappers/event/eventDomain-dto.mapper';
@@ -33,6 +33,9 @@ export class EventController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Crear evento' })
+  @ApiResponse({ status: 201, description: 'Evento creado' })
+  @ApiResponse({ status: 400, description: 'Datos inválidos' })
   async createEvent(@Body() dto: EventCreateDto): Promise<EventResponseDto> {
     const input = EventDtoDomainMapper.toCreateEventInput(dto);
     const event = await this.eventService.createEvent(input);
@@ -40,6 +43,10 @@ export class EventController {
   }
 
   @Get(':id')
+  @ApiOperation({ summary: 'Obtener evento por ID' })
+  @ApiParam({ name: 'id', type: 'string', format: 'uuid' })
+  @ApiResponse({ status: 200, description: 'Evento encontrado' })
+  @ApiResponse({ status: 404, description: 'Evento no encontrado' })
   async getEventById(
     @Param('id', ParseUUIDPipe) id: string,
   ): Promise<EventResponseDto> {
@@ -50,6 +57,12 @@ export class EventController {
   }
 
   @Get()
+  @ApiOperation({ summary: 'Listar eventos con filtros y paginación' })
+  @ApiQuery({ name: 'userId', required: false, type: String })
+  @ApiQuery({ name: 'organizerId', required: false, type: String })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiResponse({ status: 200, description: 'Lista de eventos' })
   async getEvents(@Query() query: EventQueryDto): Promise<{
     data: EventResponseDto[];
     total: number;
@@ -83,6 +96,10 @@ export class EventController {
   }
 
   @Patch(':id')
+  @ApiOperation({ summary: 'Actualizar evento' })
+  @ApiParam({ name: 'id', type: 'string', format: 'uuid' })
+  @ApiResponse({ status: 200, description: 'Evento actualizado' })
+  @ApiResponse({ status: 404, description: 'Evento no encontrado' })
   async updateEvent(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: EventUpdateDto,
@@ -95,11 +112,20 @@ export class EventController {
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Eliminar evento' })
+  @ApiParam({ name: 'id', type: 'string', format: 'uuid' })
+  @ApiResponse({ status: 204, description: 'Evento eliminado' })
+  @ApiResponse({ status: 404, description: 'Evento no encontrado' })
   async deleteEvent(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
     await this.eventService.deleteEvent(id);
   }
 
   @Patch(':id/participants/:userId')
+  @ApiOperation({ summary: 'Actualizar RSVP de un participante' })
+  @ApiParam({ name: 'id', type: 'string', format: 'uuid' })
+  @ApiParam({ name: 'userId', type: 'string', format: 'uuid' })
+  @ApiResponse({ status: 200, description: 'RSVP actualizado' })
+  @ApiResponse({ status: 404, description: 'Evento no encontrado' })
   async updateParticipantStatus(
     @Param('id', ParseUUIDPipe) id: string,
     @Param('userId', ParseUUIDPipe) userId: string,
@@ -117,6 +143,10 @@ export class EventController {
   // Notes
   @Post(':id/notes')
   @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Agregar nota a un evento' })
+  @ApiParam({ name: 'id', type: 'string', format: 'uuid' })
+  @ApiResponse({ status: 201, description: 'Nota creada' })
+  @ApiResponse({ status: 404, description: 'Evento no encontrado' })
   async createNote(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: EventNoteCreateDto,
@@ -126,6 +156,9 @@ export class EventController {
   }
 
   @Get(':id/notes')
+  @ApiOperation({ summary: 'Listar notas de un evento' })
+  @ApiParam({ name: 'id', type: 'string', format: 'uuid' })
+  @ApiResponse({ status: 200, description: 'Lista de notas' })
   async getNotes(
     @Param('id', ParseUUIDPipe) id: string,
   ): Promise<EventNoteResponseDto[]> {

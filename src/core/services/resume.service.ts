@@ -7,6 +7,12 @@ import {
   CreateResumeInput,
 } from '../use-cases/resume/resume.use-case';
 import { Resume } from '../domain/entities/resume.entity';
+import {
+  parsePagination,
+  paginated,
+  type PaginatedResponse,
+  type PaginationQuery,
+} from '../../shared/pagination/pagination';
 
 @Injectable()
 export class ResumeService implements IResumeUseCase {
@@ -63,8 +69,15 @@ export class ResumeService implements IResumeUseCase {
     return this.resumeRepository.findByUserId(userId);
   }
 
-  async getAllResumes(): Promise<Resume[]> {
-    return this.resumeRepository.findAll();
+  async getAllResumes(
+    pagination?: PaginationQuery,
+  ): Promise<PaginatedResponse<Resume>> {
+    const { page, limit, skip } = parsePagination(pagination ?? {});
+    const [resumes, total] = await Promise.all([
+      this.resumeRepository.findAll({ take: limit, skip }),
+      this.resumeRepository.count(),
+    ]);
+    return paginated(resumes, total, page, limit);
   }
 
   async updateResume(

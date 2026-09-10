@@ -6,12 +6,15 @@ import {
   ResumeLanguage,
   ResumeCertification,
 } from '../../domain/entities/resume.entity';
+import type { PaginatedResponse, PaginationQuery } from '../../../shared/pagination/pagination';
 
 export interface IResumeUseCase {
   createResume(data: CreateResumeInput): Promise<Resume>;
   getResumeById(id: string): Promise<Resume | null>;
   getResumeByUserId(userId: string): Promise<Resume | null>;
-  getAllResumes(): Promise<Resume[]>;
+  getAllResumes(
+    pagination?: PaginationQuery,
+  ): Promise<PaginatedResponse<Resume>>;
   updateResume(id: string, data: UpdateResumeInput): Promise<Resume | null>;
   deleteResume(id: string): Promise<boolean>;
 }

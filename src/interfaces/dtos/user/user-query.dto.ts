@@ -7,6 +7,7 @@ import {
   Min,
   Max,
   IsArray,
+  Matches,
 } from 'class-validator';
 import { Type, Transform } from 'class-transformer';
 import { UserType } from '../../../core/domain/enums';
@@ -77,4 +78,11 @@ export class UserQueryDto {
   @Type(() => Number)
   @Min(0)
   maxExperience?: number;
+
+  /** Sort as field:direction, e.g. sort=name:asc */
+  @IsOptional()
+  @Matches(/^(createdAt|name):(asc|desc)$/i, {
+    message: 'sort must be createdAt|name with :asc or :desc',
+  })
+  sort?: string;
 }

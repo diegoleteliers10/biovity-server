@@ -9,6 +9,12 @@ import {
 } from '../use-cases/organization/organization.use-case';
 import { Organization } from '../domain/entities/organization.entity';
 import { OrganizationMemberRole } from '../domain/entities/organization-member.entity';
+import {
+  parsePagination,
+  paginated,
+  type PaginatedResponse,
+  type PaginationQuery,
+} from '../../shared/pagination/pagination';
 
 @Injectable()
 export class OrganizationService implements IOrganizationUseCase {
@@ -43,8 +49,15 @@ export class OrganizationService implements IOrganizationUseCase {
     return this.organizationRepository.findById(id);
   }
 
-  async getAllOrganizations(): Promise<Organization[]> {
-    return this.organizationRepository.findAll();
+  async getAllOrganizations(
+    pagination?: PaginationQuery,
+  ): Promise<PaginatedResponse<Organization>> {
+    const { page, limit, skip } = parsePagination(pagination ?? {});
+    const [organizations, total] = await Promise.all([
+      this.organizationRepository.findAll({ take: limit, skip }),
+      this.organizationRepository.count(),
+    ]);
+    return paginated(organizations, total, page, limit);
   }
 
   async updateOrganization(

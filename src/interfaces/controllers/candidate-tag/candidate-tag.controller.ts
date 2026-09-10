@@ -13,6 +13,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiQuery, ApiParam } from '@nestjs/swagger';
 import { CandidateTagService } from '../../../core/services/candidate-tag.service';
+import { Roles } from '../../../shared/decorators/roles.decorator';
 
 class CreateTagDto {
   organizationId: string;
@@ -25,6 +26,7 @@ class AssignTagDto {
 }
 
 @ApiTags('candidate-tags')
+@Roles('organization')
 @Controller('candidate-tags')
 export class CandidateTagController {
   constructor(private readonly service: CandidateTagService) {}

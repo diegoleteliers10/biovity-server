@@ -11,6 +11,11 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiQuery } from '@nestjs/swagger';
 import { SavedCandidateService } from '../../../core/services/saved-candidate.service';
+import { Roles } from '../../../shared/decorators/roles.decorator';
+import {
+  PaginatedResponse,
+  parsePagination,
+} from '../../../shared/pagination/pagination';
 
 class SaveCandidateDto {
   organizationId: string;
@@ -19,6 +24,7 @@ class SaveCandidateDto {
 }
 
 @ApiTags('saved-candidates')
+@Roles('organization')
 @Controller('saved-candidates')
 export class SavedCandidateController {
   constructor(private readonly service: SavedCandidateService) {}
@@ -26,11 +32,19 @@ export class SavedCandidateController {
   @Get()
   @ApiOperation({ summary: 'Listar candidatos guardados por organización' })
   @ApiQuery({ name: 'organizationId', type: String })
-  async findAll(@Query('organizationId') organizationId: string) {
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  async findAll(
+    @Query('organizationId') organizationId: string,
+    @Query() query: Record<string, string>,
+  ): Promise<PaginatedResponse<unknown>> {
     if (!organizationId) {
       throw new BadRequestException('organizationId es requerido');
     }
-    return this.service.findByOrganization(organizationId);
+    return this.service.findByOrganization(
+      organizationId,
+      parsePagination(query),
+    );
   }
 
   @Post()

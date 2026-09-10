@@ -1,5 +1,5 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe, Logger } from '@nestjs/common';
+import { Logger } from '@nestjs/common';
 import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 import { corsOptions } from './infrastructure/config/cors.config';
@@ -16,17 +16,14 @@ async function bootstrap() {
   // Configure cookie parser
   app.use(cookieParser());
 
+  // Trust the reverse proxy hop (Vercel) so req.ip resolves to the client IP
+  const expressInstance = app.getHttpAdapter().getInstance() as {
+    set(key: string, value: number): void;
+  };
+  expressInstance.set('trust proxy', 1);
+
   // Set global prefix for all routes
   app.setGlobalPrefix('api/v1');
-
-  // Configure global ValidationPipe
-  app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true,
-      transform: true,
-      forbidNonWhitelisted: true,
-    }),
-  );
 
   // Configure Swagger (disabled in production)
   if (process.env.NODE_ENV !== 'production') {

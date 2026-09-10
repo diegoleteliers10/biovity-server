@@ -112,7 +112,12 @@ export class UserRepositoryImpl implements IUserRepository {
     const total = await queryBuilder.getCount();
 
     // Apply pagination
-    queryBuilder.skip(skip).take(limit).orderBy('user.createdAt', 'DESC');
+    const sortField = filters?.sort?.field ?? 'createdAt';
+    const sortDirection = filters?.sort?.direction ?? 'DESC';
+    queryBuilder
+      .skip(skip)
+      .take(limit)
+      .orderBy(`user.${sortField}`, sortDirection);
 
     const usersOrm = await queryBuilder.getMany();
     const data = usersOrm.map(userOrm => UserDomainOrmMapper.toDomain(userOrm));
