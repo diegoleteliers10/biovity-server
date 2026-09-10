@@ -17,6 +17,7 @@ import {
   type CreateJobTemplateInput,
   type UpdateJobTemplateInput,
 } from '../../../core/services/job-template.service';
+import { Roles } from '../../../shared/decorators/roles.decorator';
 
 class CreateJobTemplateDto {
   organizationId: string;
@@ -48,6 +49,7 @@ class UpdateJobTemplateDto {
 }
 
 @ApiTags('job-templates')
+@Roles('organization')
 @Controller('organizations/:organizationId/job-templates')
 export class JobTemplateController {
   constructor(private readonly service: JobTemplateService) {}

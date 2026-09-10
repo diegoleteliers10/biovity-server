@@ -9,6 +9,7 @@ export interface IOrganizationRepository {
   create(entity: Organization): Promise<Organization>;
   findById(id: string): Promise<Organization | null>;
   findAll(pagination?: OrganizationPagination): Promise<Organization[]>;
+  count(): Promise<number>;
   update(
     id: string,
     entity: Partial<Organization>,

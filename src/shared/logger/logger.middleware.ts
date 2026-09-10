@@ -14,10 +14,14 @@ export class LoggerMiddleware implements NestMiddleware {
     const correlationId =
       (req.headers['x-correlation-id'] as string) || requestId;
 
+    // Exposed for the global exception filters so every error response
+    // carries the same id as the wide log event.
+    (req as Request & { requestId?: string }).requestId = requestId;
+    res.setHeader('X-Request-ID', requestId);
     this.logger.setRequestId(requestId);
     this.logger.setCorrelationId(correlationId);
 
-    const wideEvent = this.createWideEvent(req);
+    const wideEvent = this.createWideEvent(req, requestId);
     const startTime = Date.now();
 
     // Clear business context from previous request
@@ -52,8 +56,7 @@ export class LoggerMiddleware implements NestMiddleware {
     next();
   }
 
-  private createWideEvent(req: Request): WideEvent {
-    const requestId = randomUUID();
+  private createWideEvent(req: Request, requestId: string): WideEvent {
     const correlationId =
       (req.headers['x-correlation-id'] as string) || requestId;
 

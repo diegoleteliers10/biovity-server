@@ -16,8 +16,10 @@ import { JobAlertDtoDomainMapper } from '../../../shared/mappers/job-alert/jobAl
 import { CreateJobAlertDto } from '../../dtos/job-alert/create-job-alert.dto';
 import { JobAlertResponseDto } from '../../dtos/job-alert/job-alert-response.dto';
 import { JobAlertDomainDtoMapper } from '../../../shared/mappers/job-alert/jobAlertDomain-dto.mapper';
+import { Roles } from '../../../shared/decorators/roles.decorator';
 
 @ApiTags('job-alerts')
+@Roles('professional')
 @Controller('job-alerts')
 export class JobAlertController {
   constructor(private readonly service: JobAlertService) {}

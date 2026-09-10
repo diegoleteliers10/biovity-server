@@ -10,14 +10,20 @@ import {
   HttpStatus,
   ParseUUIDPipe,
   NotFoundException,
+  Query,
 } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
+import { Roles } from '../../../shared/decorators/roles.decorator';
 import { ResumeService } from '../../../core/services/resume.service';
 import { ResumeDtoDomainMapper } from '../../../shared/mappers/resume/resumeDto-domain.mapper';
 import { ResumeCreateDto } from '../../dtos/resume/resume-create.dto';
 import { ResumeUpdateDto } from '../../dtos/resume/resume-update.dto';
 import { ResumeResponseDto } from '../../dtos/resume/resume-response.dto';
 import { ResumeDomainDtoMapper } from '../../../shared/mappers/resume/resumeDomain-dto.mapper';
+import {
+  PaginatedResponse,
+  parsePagination,
+} from '../../../shared/pagination/pagination';
 
 @ApiTags('resume')
 @Controller('resumes')
@@ -25,7 +31,11 @@ export class ResumeController {
   constructor(private readonly resumeService: ResumeService) {}
 
   @Post()
+  @Roles('professional')
   @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Crear currículum' })
+  @ApiResponse({ status: 201, description: 'Currículum creado' })
+  @ApiResponse({ status: 400, description: 'Datos inválidos' })
   async createResume(@Body() dto: ResumeCreateDto): Promise<ResumeResponseDto> {
     const input = ResumeDtoDomainMapper.toCreateResumeInput(dto);
     const resume = await this.resumeService.createResume(input);
@@ -33,6 +43,10 @@ export class ResumeController {
   }
 
   @Get(':id')
+  @ApiOperation({ summary: 'Obtener currículum por ID' })
+  @ApiParam({ name: 'id', type: 'string', format: 'uuid' })
+  @ApiResponse({ status: 200, description: 'Currículum encontrado' })
+  @ApiResponse({ status: 404, description: 'Currículum no encontrado' })
   async getResumeById(
     @Param('id', ParseUUIDPipe) id: string,
   ): Promise<ResumeResponseDto> {
@@ -42,6 +56,10 @@ export class ResumeController {
   }
 
   @Get('user/:userId')
+  @ApiOperation({ summary: 'Obtener currículum de un usuario' })
+  @ApiParam({ name: 'userId', type: 'string', format: 'uuid' })
+  @ApiResponse({ status: 200, description: 'Currículum encontrado' })
+  @ApiResponse({ status: 404, description: 'Currículum no encontrado' })
   async getResumeByUserId(
     @Param('userId', ParseUUIDPipe) userId: string,
   ): Promise<ResumeResponseDto> {
@@ -51,12 +69,26 @@ export class ResumeController {
   }
 
   @Get()
-  async getAllResumes(): Promise<ResumeResponseDto[]> {
-    const resumes = await this.resumeService.getAllResumes();
-    return resumes.map(resume => ResumeDomainDtoMapper.toDto(resume));
+  @ApiOperation({ summary: 'Listar currículums con paginación' })
+  @ApiResponse({ status: 200, description: 'Lista de currículums' })
+  async getAllResumes(
+    @Query() query: Record<string, string>,
+  ): Promise<PaginatedResponse<ResumeResponseDto>> {
+    const result = await this.resumeService.getAllResumes(
+      parsePagination(query),
+    );
+    return {
+      ...result,
+      data: result.data.map(resume => ResumeDomainDtoMapper.toDto(resume)),
+    };
   }
 
   @Put(':id')
+  @Roles('professional')
+  @ApiOperation({ summary: 'Actualizar currículum' })
+  @ApiParam({ name: 'id', type: 'string', format: 'uuid' })
+  @ApiResponse({ status: 200, description: 'Currículum actualizado' })
+  @ApiResponse({ status: 404, description: 'Currículum no encontrado' })
   async updateResume(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: ResumeUpdateDto,
@@ -70,7 +102,12 @@ export class ResumeController {
   }
 
   @Delete(':id')
+  @Roles('professional')
   @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Eliminar currículum' })
+  @ApiParam({ name: 'id', type: 'string', format: 'uuid' })
+  @ApiResponse({ status: 204, description: 'Currículum eliminado' })
+  @ApiResponse({ status: 404, description: 'Currículum no encontrado' })
   async deleteResume(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
     await this.resumeService.deleteResume(id);
   }

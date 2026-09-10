@@ -1,10 +1,20 @@
 import { Chat } from '../../domain/entities/chat.entity';
+import type {
+  PaginatedResponse,
+  PaginationQuery,
+} from '../../../shared/pagination/pagination';
 
 export interface IChatUseCase {
   createChat(data: CreateChatInput): Promise<Chat>;
   getChatById(id: string): Promise<Chat | null>;
-  getChatsByRecruiter(recruiterId: string): Promise<Chat[]>;
-  getChatsByProfessional(professionalId: string): Promise<Chat[]>;
+  getChatsByRecruiter(
+    recruiterId: string,
+    pagination?: PaginationQuery,
+  ): Promise<PaginatedResponse<Chat>>;
+  getChatsByProfessional(
+    professionalId: string,
+    pagination?: PaginationQuery,
+  ): Promise<PaginatedResponse<Chat>>;
   getChatByParticipants(
     recruiterId: string,
     professionalId: string,

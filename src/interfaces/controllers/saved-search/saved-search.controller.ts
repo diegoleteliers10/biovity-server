@@ -13,6 +13,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { SavedSearchService } from '../../../core/services/saved-search.service';
+import { Roles } from '../../../shared/decorators/roles.decorator';
 import { SavedSearchDtoDomainMapper } from '../../../shared/mappers/saved-search/savedSearchDto-domain.mapper';
 import { CreateSavedSearchDto } from '../../dtos/saved-search/create-saved-search.dto';
 import { UpdateSavedSearchDto } from '../../dtos/saved-search/update-saved-search.dto';
@@ -20,6 +21,7 @@ import { SavedSearchResponseDto } from '../../dtos/saved-search/saved-search-res
 import { SavedSearchDomainDtoMapper } from '../../../shared/mappers/saved-search/savedSearchDomain-dto.mapper';
 
 @ApiTags('saved-searches')
+@Roles('organization')
 @Controller('saved-searches')
 export class SavedSearchController {
   constructor(private readonly service: SavedSearchService) {}

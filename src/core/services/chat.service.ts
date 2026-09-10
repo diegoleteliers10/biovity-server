@@ -7,6 +7,12 @@ import {
   UpdateChatInput,
 } from '../use-cases/chat/chat.use-case';
 import { Chat } from '../domain/entities/chat.entity';
+import {
+  parsePagination,
+  paginated,
+  type PaginatedResponse,
+  type PaginationQuery,
+} from '../../shared/pagination/pagination';
 
 @Injectable()
 export class ChatService implements IChatUseCase {
@@ -48,12 +54,31 @@ export class ChatService implements IChatUseCase {
     return this.chatRepository.findById(id);
   }
 
-  async getChatsByRecruiter(recruiterId: string): Promise<Chat[]> {
-    return this.chatRepository.findByRecruiterId(recruiterId);
+  async getChatsByRecruiter(
+    recruiterId: string,
+    pagination?: PaginationQuery,
+  ): Promise<PaginatedResponse<Chat>> {
+    const { page, limit, skip } = parsePagination(pagination ?? {});
+    const [chats, total] = await Promise.all([
+      this.chatRepository.findByRecruiterId(recruiterId, { take: limit, skip }),
+      this.chatRepository.countByRecruiterId(recruiterId),
+    ]);
+    return paginated(chats, total, page, limit);
   }
 
-  async getChatsByProfessional(professionalId: string): Promise<Chat[]> {
-    return this.chatRepository.findByProfessionalId(professionalId);
+  async getChatsByProfessional(
+    professionalId: string,
+    pagination?: PaginationQuery,
+  ): Promise<PaginatedResponse<Chat>> {
+    const { page, limit, skip } = parsePagination(pagination ?? {});
+    const [chats, total] = await Promise.all([
+      this.chatRepository.findByProfessionalId(professionalId, {
+        take: limit,
+        skip,
+      }),
+      this.chatRepository.countByProfessionalId(professionalId),
+    ]);
+    return paginated(chats, total, page, limit);
   }
 
   async getChatByParticipants(

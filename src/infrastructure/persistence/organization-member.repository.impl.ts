@@ -44,6 +44,10 @@ export class OrganizationMemberRepositoryImpl implements IOrganizationMemberRepo
     return orms.map(orm => OrganizationMemberDomainOrmMapper.toDomain(orm));
   }
 
+  async countByOrganization(organizationId: string): Promise<number> {
+    return this.repo.count({ where: { organizationId } });
+  }
+
   async findByUser(userId: string): Promise<OrganizationMember[]> {
     const orms = await this.repo.find({
       where: { userId },

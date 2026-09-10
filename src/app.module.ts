@@ -1,10 +1,24 @@
 import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { ValidationPipe } from '@nestjs/common';
+import { validateEnv } from './infrastructure/config/env.validation';
+import {
+  DEFAULT_THROTTLE_LIMIT,
+  THROTTLE_TTL_MS,
+} from './shared/constants/throttling';
 import { DatabaseConfig } from './infrastructure/config/database.config';
 import { LoggerModule, LoggerMiddleware } from './shared/logger';
 import { InterceptorsModule } from './shared/interceptors/interceptors.module';
 import { NotificationModule } from './shared/notification';
+import {
+  AllExceptionsFilter,
+  HttpExceptionFilter,
+} from './shared/filters/http-exception.filter';
+import { SessionAuthGuard } from './shared/guards/session-auth.guard';
+import { RolesGuard } from './shared/guards/roles.guard';
+import { LocationInterceptor } from './shared/interceptors/location.interceptor';
 import { JobModule } from './interfaces/controllers/job/job.module';
 import { UserModule } from './interfaces/controllers/user/user.module';
 import { OrganizationModule } from './interfaces/controllers/organization/organization.module';
@@ -33,11 +47,22 @@ import { JobAlertModule } from './interfaces/controllers/job-alert/job-alert.mod
 import { SalaryModule } from './interfaces/controllers/salary/salary.module';
 import { EmailService } from './core/services/email.service';
 import { AuthModule } from './shared/auth/auth.module';
-import { SessionAuthGuard } from './shared/guards/session-auth.guard';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule.forRoot({ isGlobal: true, validate: validateEnv }),
+    ThrottlerModule.forRoot({
+      throttlers: [
+        {
+          name: 'default',
+          ttl: THROTTLE_TTL_MS,
+          limit: DEFAULT_THROTTLE_LIMIT,
+        },
+      ],
+      // Per-instance in-memory tracker: an abuse shield, not a quota (AGENTS-78).
+      // Distributed limiting with Upstash lands in AGENTS-21.
+      skipIf: () => process.env.NODE_ENV !== 'production',
+    }),
     LoggerModule,
     InterceptorsModule,
     NotificationModule,
@@ -71,7 +96,25 @@ import { SessionAuthGuard } from './shared/guards/session-auth.guard';
     SalaryModule,
   ],
   controllers: [],
-  providers: [EmailService, { provide: APP_GUARD, useClass: SessionAuthGuard }],
+  providers: [
+    EmailService,
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
+    { provide: APP_GUARD, useClass: SessionAuthGuard },
+    { provide: APP_GUARD, useClass: RolesGuard },
+    {
+      provide: APP_PIPE,
+      useValue: new ValidationPipe({
+        whitelist: true,
+        transform: true,
+        forbidNonWhitelisted: true,
+      }),
+    },
+    { provide: APP_FILTER, useClass: AllExceptionsFilter },
+    // APP_FILTERs run in reverse registration order: HttpExceptionFilter must
+    // be declared last so it claims HttpExceptions before the catch-all.
+    { provide: APP_FILTER, useClass: HttpExceptionFilter },
+    { provide: APP_INTERCEPTOR, useClass: LocationInterceptor },
+  ],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {

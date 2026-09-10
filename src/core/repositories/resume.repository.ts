@@ -10,6 +10,7 @@ export interface IResumeRepository {
   findById(id: string): Promise<Resume | null>;
   findByUserId(userId: string): Promise<Resume | null>;
   findAll(pagination?: ResumePagination): Promise<Resume[]>;
+  count(): Promise<number>;
   update(id: string, entity: Partial<Resume>): Promise<Resume | null>;
   delete(id: string): Promise<boolean>;
 }

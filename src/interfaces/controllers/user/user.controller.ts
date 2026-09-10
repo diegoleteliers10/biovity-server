@@ -32,6 +32,26 @@ import {
 } from '../../../shared/auth/user-access.policy';
 import { UserAccessMapper } from '../../../shared/mappers/user/userAccess-dto.mapper';
 import type { UserAccessLevel } from '../../../shared/auth/user-access.policy';
+import type { UserSort } from '../../../core/repositories/user.repository';
+
+const USER_SORT_FIELDS = ['createdat', 'name'] as const;
+
+function parseUserSort(raw: string | undefined): UserSort | undefined {
+  if (!raw) return undefined;
+  const [field, direction = 'desc'] = raw.split(':');
+  const normalizedField = field.trim().toLowerCase();
+  const normalizedDirection = direction.trim().toLowerCase();
+  if (
+    !USER_SORT_FIELDS.some(f => f === normalizedField) ||
+    (normalizedDirection !== 'asc' && normalizedDirection !== 'desc')
+  ) {
+    return undefined;
+  }
+  return {
+    field: normalizedField === 'name' ? 'name' : 'createdAt',
+    direction: normalizedDirection === 'asc' ? 'ASC' : 'DESC',
+  };
+}
 
 @ApiTags('users')
 @Controller('users')
@@ -84,6 +104,7 @@ export class UserController {
         : undefined,
       minExperience: query.minExperience,
       maxExperience: query.maxExperience,
+      sort: parseUserSort(query.sort),
     };
 
     const pagination = {

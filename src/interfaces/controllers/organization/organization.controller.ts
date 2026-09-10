@@ -13,6 +13,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
+import { Roles } from '../../../shared/decorators/roles.decorator';
 import { OrganizationService } from '../../../core/services/organization.service';
 import { OrganizationCreateDto } from '../../dtos/organization/organization-create.dto';
 import { OrganizationUpdateDto } from '../../dtos/organization/organization-update.dto';
@@ -23,12 +24,19 @@ import {
   CreateOrganizationInput,
   UpdateOrganizationInput,
 } from '../../../core/use-cases/organization/organization.use-case';
+import {
+  PaginatedResponse,
+  parsePagination,
+} from '../../../shared/pagination/pagination';
+import { Query } from '@nestjs/common';
 
 @ApiTags('organizations')
 @Controller('organizations')
 export class OrganizationController {
   constructor(private readonly organizationService: OrganizationService) {}
 
+  // No @Roles: the caller is the org-typed user that still has no
+  // organization (resolveUserRole → 'none') and needs this to onboard.
   @Post()
   @HttpCode(HttpStatus.CREATED)
   async createOrganization(
@@ -55,12 +63,20 @@ export class OrganizationController {
   }
 
   @Get()
-  async getAllOrganizations(): Promise<OrganizationResponseDto[]> {
-    const organizations = await this.organizationService.getAllOrganizations();
-    return organizations.map(org => OrganizationDomainDtoMapper.toDto(org));
+  async getAllOrganizations(
+    @Query() query: Record<string, string>,
+  ): Promise<PaginatedResponse<OrganizationResponseDto>> {
+    const result = await this.organizationService.getAllOrganizations(
+      parsePagination(query),
+    );
+    return {
+      ...result,
+      data: result.data.map(org => OrganizationDomainDtoMapper.toDto(org)),
+    };
   }
 
   @Put(':id')
+  @Roles('organization')
   async updateOrganization(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: OrganizationUpdateDto,
@@ -85,6 +101,7 @@ export class OrganizationController {
   }
 
   @Delete(':id')
+  @Roles('organization')
   @HttpCode(HttpStatus.NO_CONTENT)
   async deleteOrganization(
     @Param('id', ParseUUIDPipe) id: string,
@@ -93,6 +110,7 @@ export class OrganizationController {
   }
 
   @Post(':id/transfer')
+  @Roles('organization')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Transferir ownership de la organización a otro miembro',

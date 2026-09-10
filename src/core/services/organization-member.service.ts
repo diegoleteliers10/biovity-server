@@ -11,6 +11,12 @@ import {
   OrganizationMember,
   OrganizationMemberRole,
 } from '../domain/entities/organization-member.entity';
+import {
+  parsePagination,
+  paginated,
+  type PaginatedResponse,
+  type PaginationQuery,
+} from '../../shared/pagination/pagination';
 
 export interface AddMemberInput {
   organizationId: string;
@@ -54,8 +60,19 @@ export class OrganizationMemberService {
     return this.memberRepository.create(member);
   }
 
-  async getMembers(organizationId: string): Promise<OrganizationMember[]> {
-    return this.memberRepository.findByOrganization(organizationId);
+  async getMembers(
+    organizationId: string,
+    pagination?: PaginationQuery,
+  ): Promise<PaginatedResponse<OrganizationMember>> {
+    const { page, limit, skip } = parsePagination(pagination ?? {});
+    const [members, total] = await Promise.all([
+      this.memberRepository.findByOrganization(organizationId, {
+        take: limit,
+        skip,
+      }),
+      this.memberRepository.countByOrganization(organizationId),
+    ]);
+    return paginated(members, total, page, limit);
   }
 
   async getMemberById(id: string): Promise<OrganizationMember> {

@@ -42,6 +42,10 @@ export class OrganizationRepositoryImpl implements IOrganizationRepository {
     );
   }
 
+  async count(): Promise<number> {
+    return this.organizationRepository.count();
+  }
+
   async update(
     id: string,
     entity: Partial<Organization>,

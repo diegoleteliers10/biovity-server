@@ -14,6 +14,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { PipelineStageService } from '../../../core/services/pipeline-stage.service';
+import { Roles } from '../../../shared/decorators/roles.decorator';
 import { PipelineStageDtoDomainMapper } from '../../../shared/mappers/pipeline-stage/pipelineStageDto-domain.mapper';
 import { CreatePipelineStageDto } from '../../dtos/pipeline-stage/create-pipeline-stage.dto';
 import { UpdatePipelineStageDto } from '../../dtos/pipeline-stage/update-pipeline-stage.dto';
@@ -22,6 +23,7 @@ import { PipelineStageResponseDto } from '../../dtos/pipeline-stage/pipeline-sta
 import { PipelineStageDomainDtoMapper } from '../../../shared/mappers/pipeline-stage/pipelineStageDomain-dto.mapper';
 
 @ApiTags('pipeline-stages')
+@Roles('organization')
 @Controller('pipeline-stages')
 export class PipelineStageController {
   constructor(private readonly service: PipelineStageService) {}

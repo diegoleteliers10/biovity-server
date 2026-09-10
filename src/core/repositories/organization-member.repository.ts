@@ -12,6 +12,7 @@ export interface IOrganizationMemberRepository {
     organizationId: string,
     pagination?: OrganizationMemberPagination,
   ): Promise<OrganizationMember[]>;
+  countByOrganization(organizationId: string): Promise<number>;
   findByUser(userId: string): Promise<OrganizationMember[]>;
   findByOrganizationAndUser(
     organizationId: string,

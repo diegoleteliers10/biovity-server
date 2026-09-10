@@ -16,6 +16,12 @@ import {
   ApiBody,
 } from '@nestjs/swagger';
 import { SubscriptionService } from '../../../core/services/subscription.service';
+import { Roles } from '../../../shared/decorators/roles.decorator';
+import { Throttle, SkipThrottle } from '@nestjs/throttler';
+import {
+  THROTTLE_SUBSCRIPTION_LIMIT,
+  THROTTLE_TTL_MS,
+} from '../../../shared/constants/throttling';
 import { SubscriptionDomainDtoMapper } from '../../../shared/mappers/subscription/subscriptionDomain-dto.mapper';
 import {
   SubscriptionResponseDto,
@@ -24,11 +30,15 @@ import {
 } from '../../dtos/subscription/subscription-response.dto';
 
 @ApiTags('subscriptions')
+@Throttle({
+  default: { limit: THROTTLE_SUBSCRIPTION_LIMIT, ttl: THROTTLE_TTL_MS },
+})
 @Controller('subscription')
 export class SubscriptionController {
   constructor(private readonly subscriptionService: SubscriptionService) {}
 
   @Get()
+  @Roles('organization')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Obtener suscripción por organizationId' })
   @ApiQuery({
@@ -58,6 +68,7 @@ export class SubscriptionController {
   }
 
   @Post('preference')
+  @Roles('organization')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Crear preferencia de pago MercadoPago' })
   @ApiBody({ type: CreatePreferenceDto })
@@ -82,6 +93,8 @@ export class SubscriptionController {
     };
   }
 
+  // Mercado Pago owns this caller: no session, no rate limit (user decision).
+  @SkipThrottle()
   @Post('webhook')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
