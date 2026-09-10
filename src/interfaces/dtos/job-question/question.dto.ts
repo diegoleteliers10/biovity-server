@@ -81,6 +81,14 @@ export class CreateQuestionDto {
   @IsOptional()
   @IsEnum(QuestionStatus)
   status?: QuestionStatus;
+
+  @ApiPropertyOptional({
+    example: '3fa85f64-5717-4562-b3fc-2c963f66afa6',
+    description: 'Organización dueña (ruta canónica sin orgId en el path)',
+  })
+  @IsOptional()
+  @IsUUID()
+  organizationId?: string;
 }
 
 export class UpdateQuestionDto {

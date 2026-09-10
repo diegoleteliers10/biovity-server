@@ -6,6 +6,7 @@ import {
   Min,
   Max,
   IsUUID,
+  Matches,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { JobStatus } from '../../../core/domain/enums';
@@ -41,4 +42,10 @@ export class JobQueryDto {
   @IsOptional()
   @IsString()
   category?: string;
+
+  @IsOptional()
+  @Matches(/^(createdAt|title):(asc|desc)$/i, {
+    message: 'sort must be createdAt|title with :asc or :desc',
+  })
+  sort?: string;
 }

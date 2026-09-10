@@ -72,7 +72,12 @@ export class JobRepositoryImpl implements IJobRepository {
 
     const total = await queryBuilder.getCount();
 
-    queryBuilder.skip(skip).take(limit).orderBy('job.createdAt', 'DESC');
+    const sortField = filters?.sort?.field ?? 'createdAt';
+    const sortDirection = filters?.sort?.direction ?? 'DESC';
+    queryBuilder
+      .skip(skip)
+      .take(limit)
+      .orderBy(`job.${sortField}`, sortDirection);
 
     const jobsOrm = await queryBuilder.getMany();
     const data = jobsOrm.map(jobOrm => JobDomainOrmMapper.toDomain(jobOrm));

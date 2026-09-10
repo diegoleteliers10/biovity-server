@@ -33,10 +33,10 @@ export class JobTemplateEntity {
   @Column({ type: 'text', nullable: false })
   public description: string;
 
-  @Column({ nullable: true })
+  @Column({ name: 'employment_type', nullable: true })
   public employmentType?: string;
 
-  @Column({ nullable: true })
+  @Column({ name: 'experience_level', nullable: true })
   public experienceLevel?: string;
 
   @Column({ type: 'json', nullable: true })
@@ -48,10 +48,15 @@ export class JobTemplateEntity {
   @Column({ type: 'json', nullable: true })
   public benefits?: JobBenefits[];
 
-  @Column({ type: 'jsonb', nullable: true, default: '[]' })
+  @Column({
+    name: 'required_skills',
+    type: 'jsonb',
+    nullable: true,
+    default: '[]',
+  })
   public requiredSkills?: string[];
 
-  @Column({ type: 'int', nullable: true, default: 0 })
+  @Column({ name: 'min_experience', type: 'int', nullable: true, default: 0 })
   public minExperience?: number;
 
   @Column({ nullable: true })

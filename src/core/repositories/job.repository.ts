@@ -5,6 +5,15 @@ export interface JobFilters {
   status?: 'draft' | 'active' | 'paused' | 'closed' | 'expired';
   search?: string;
   category?: string;
+  sort?: JobSort;
+}
+
+export type JobSortField = 'createdAt' | 'title';
+export type JobSortDirection = 'ASC' | 'DESC';
+
+export interface JobSort {
+  field: JobSortField;
+  direction: JobSortDirection;
 }
 
 export interface PaginationOptions {

@@ -2,6 +2,12 @@ import { Injectable, ConflictException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { SavedCandidateEntity } from '../../infrastructure/database/orm/saved-candidate.entity';
+import {
+  parsePagination,
+  paginated,
+  type PaginatedResponse,
+  type PaginationQuery,
+} from '../../shared/pagination/pagination';
 
 @Injectable()
 export class SavedCandidateService {
@@ -12,12 +18,20 @@ export class SavedCandidateService {
 
   async findByOrganization(
     organizationId: string,
-  ): Promise<SavedCandidateEntity[]> {
-    return this.repo.find({
-      where: { organizationId },
-      relations: ['candidate'],
-      order: { createdAt: 'DESC' },
-    });
+    pagination?: PaginationQuery,
+  ): Promise<PaginatedResponse<SavedCandidateEntity>> {
+    const { page, limit, skip } = parsePagination(pagination ?? {});
+    const [items, total] = await Promise.all([
+      this.repo.find({
+        where: { organizationId },
+        relations: ['candidate'],
+        order: { createdAt: 'DESC' },
+        take: limit,
+        skip,
+      }),
+      this.repo.count({ where: { organizationId } }),
+    ]);
+    return paginated(items, total, page, limit);
   }
 
   async save(

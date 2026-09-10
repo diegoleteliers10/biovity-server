@@ -17,8 +17,18 @@ import {
   AiCredentialListItemDto,
 } from '../../dtos/ai-credentials/ai-credential-response.dto';
 import { InternalSecretGuard } from '../../../shared/guards/internal-secret.guard';
+import { Roles } from '../../../shared/decorators/roles.decorator';
+import { Throttle } from '@nestjs/throttler';
+import {
+  THROTTLE_SENSITIVE_LIMIT,
+  THROTTLE_TTL_MS,
+} from '../../../shared/constants/throttling';
 
 @ApiTags('ai-credentials')
+@Throttle({
+  default: { limit: THROTTLE_SENSITIVE_LIMIT, ttl: THROTTLE_TTL_MS },
+})
+@Roles('organization')
 @Controller('organizations/:orgId/ai-credentials')
 export class AiCredentialsController {
   constructor(private readonly service: AiCredentialsService) {}

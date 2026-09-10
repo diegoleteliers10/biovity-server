@@ -14,6 +14,15 @@ export interface UserFilters {
   skills?: string[]; // skills array — match any
   minExperience?: number;
   maxExperience?: number;
+  sort?: UserSort;
+}
+
+export type UserSortField = 'createdAt' | 'name';
+export type UserSortDirection = 'ASC' | 'DESC';
+
+export interface UserSort {
+  field: UserSortField;
+  direction: UserSortDirection;
 }
 
 export interface PaginationOptions {

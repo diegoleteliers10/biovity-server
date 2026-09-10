@@ -15,9 +15,11 @@ import {
   ApiQuery,
 } from '@nestjs/swagger';
 import { OrganizationMetricsService } from '../../../core/services/organization-metrics.service';
+import { Roles } from '../../../shared/decorators/roles.decorator';
 import { OrganizationMetricsDto } from '../../dtos/organization/organization-metrics.dto';
 
 @ApiTags('organizations')
+@Roles('organization')
 @Controller('organizations')
 export class OrganizationMetricsController {
   constructor(private readonly metricsService: OrganizationMetricsService) {}

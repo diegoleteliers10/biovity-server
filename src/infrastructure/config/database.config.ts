@@ -29,6 +29,7 @@ import {
 import { JobTemplateEntity } from '../database/orm/job-template.entity';
 import { PipelineStageEntity } from '../database/orm/pipeline-stage.entity';
 import { SavedSearchEntity } from '../database/orm/saved-search.entity';
+import { JobAlertEntity } from '../database/orm/job-alert.entity';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 
 export const DatabaseConfig = TypeOrmModule.forRootAsync({
@@ -74,6 +75,7 @@ export const DatabaseConfig = TypeOrmModule.forRootAsync({
         ActivityLogEntity,
         PipelineStageEntity,
         SavedSearchEntity,
+        JobAlertEntity,
         SalarySubmissionEntity,
       ],
       synchronize: false,

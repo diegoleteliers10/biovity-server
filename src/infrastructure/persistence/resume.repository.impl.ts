@@ -46,6 +46,10 @@ export class ResumeRepositoryImpl implements IResumeRepository {
     );
   }
 
+  async count(): Promise<number> {
+    return this.resumeRepository.count();
+  }
+
   async update(id: string, entity: Partial<Resume>): Promise<Resume | null> {
     const existingResume = await this.resumeRepository.findOne({
       where: { id },

@@ -29,6 +29,25 @@ import { JobResponseDto } from '../../dtos/job/job-response.dto';
 import { JobDomainDtoMapper } from '../../../shared/mappers/job/jobDomain-dto.mapper';
 import { JobQueryDto } from '../../dtos/job/job-query.dto';
 import { Public } from '../../../shared/decorators/public.decorator';
+import { Roles } from '../../../shared/decorators/roles.decorator';
+import type { JobSort } from '../../../core/repositories/job.repository';
+
+const SORT_FIELDS = ['createdat', 'title'] as const;
+const SORT_DIRECTIONS = ['asc', 'desc'] as const;
+
+function parseJobSort(raw: string | undefined): JobSort | undefined {
+  if (!raw) return undefined;
+  const [field, direction = 'desc'] = raw.split(':');
+  const normalizedField = field.trim().toLowerCase();
+  const normalizedDirection = direction.trim().toLowerCase();
+  const isField = SORT_FIELDS.some(f => f === normalizedField);
+  const isDirection = SORT_DIRECTIONS.some(d => d === normalizedDirection);
+  if (!isField || !isDirection) return undefined;
+  return {
+    field: normalizedField === 'title' ? 'title' : 'createdAt',
+    direction: normalizedDirection === 'asc' ? 'ASC' : 'DESC',
+  };
+}
 
 interface PaginatedJobResponse {
   data: JobResponseDto[];
@@ -52,6 +71,7 @@ interface PaginatedResult<T> {
 }
 
 @ApiTags('jobs')
+@Roles('organization')
 @Controller('jobs')
 export class JobController {
   constructor(private readonly jobService: JobService) {}
@@ -107,6 +127,12 @@ export class JobController {
   @ApiQuery({ name: 'search', required: false, type: String })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiQuery({
+    name: 'sort',
+    required: false,
+    type: String,
+    description: 'createdAt|title con :asc o :desc. Ej: sort=title:asc',
+  })
   @ApiResponse({
     status: 200,
     description: 'Lista de ofertas de trabajo',
@@ -117,6 +143,7 @@ export class JobController {
       status: query.status,
       search: query.search,
       category: query.category,
+      sort: parseJobSort(query.sort),
     };
 
     const pagination = {
@@ -253,7 +280,10 @@ export class JobController {
     await this.jobService.deleteJob(id);
   }
 
-  @Put(':id/views')
+  // View counting is a state change, so the canonical verb is POST.
+  // PUT stays as a deprecated alias until the frontend stops calling it.
+  @Post(':id/views')
+  @Public()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Incrementar vistas de una oferta de trabajo' })
   @ApiParam({
@@ -270,6 +300,23 @@ export class JobController {
   async incrementViews(
     @Param('id', ParseUUIDPipe) id: string,
   ): Promise<JobResponseDto> {
+    return this.doIncrementViews(id);
+  }
+
+  @Put(':id/views')
+  @Public()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    deprecated: true,
+    summary: 'Deprecado: usa POST /jobs/:id/views',
+  })
+  async incrementViewsDeprecated(
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<JobResponseDto> {
+    return this.doIncrementViews(id);
+  }
+
+  private async doIncrementViews(id: string): Promise<JobResponseDto> {
     const job = await this.jobService.incrementJobViews(id);
     if (!job) throw new NotFoundException('Job not found');
     return JobDomainDtoMapper.toDto(job);

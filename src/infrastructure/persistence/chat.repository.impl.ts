@@ -66,6 +66,14 @@ export class ChatRepositoryImpl implements IChatRepository {
     return chatsOrm.map(chatOrm => ChatDomainOrmMapper.toDomain(chatOrm));
   }
 
+  async countByRecruiterId(recruiterId: string): Promise<number> {
+    return this.chatRepository.count({ where: { recruiterId } });
+  }
+
+  async countByProfessionalId(professionalId: string): Promise<number> {
+    return this.chatRepository.count({ where: { professionalId } });
+  }
+
   async update(id: string, entity: Partial<Chat>): Promise<Chat | null> {
     const existingChat = await this.chatRepository.findOne({ where: { id } });
     if (!existingChat) return null;

@@ -11,6 +11,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
 import { AdminService } from '../../../core/services/admin.service';
+import { Roles } from '../../../shared/decorators/roles.decorator';
 import {
   AdminStatsResponseDto,
   RegistrationsTrendResponseDto,
@@ -24,6 +25,7 @@ import {
 } from '../../dtos/admin/admin.dto';
 
 @ApiTags('admin')
+@Roles('admin')
 @Controller('admin')
 export class AdminController {
   constructor(private readonly adminService: AdminService) {}

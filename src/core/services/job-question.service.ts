@@ -70,6 +70,10 @@ export class JobQuestionService implements IJobQuestionUseCase {
     );
   }
 
+  async getAllQuestionsByJobId(jobId: string): Promise<JobQuestion[]> {
+    return this.jobQuestionRepository.findByJobId(jobId);
+  }
+
   async getQuestionsByOrganizationId(
     organizationId: string,
   ): Promise<JobQuestion[]> {

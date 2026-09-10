@@ -20,6 +20,8 @@ export interface IChatRepository {
     professionalId: string,
     pagination?: ChatPagination,
   ): Promise<Chat[]>;
+  countByRecruiterId(recruiterId: string): Promise<number>;
+  countByProfessionalId(professionalId: string): Promise<number>;
   update(id: string, entity: Partial<Chat>): Promise<Chat | null>;
   delete(id: string): Promise<boolean>;
 }

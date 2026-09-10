@@ -13,6 +13,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiParam, ApiResponse } from '@nestjs/swagger';
 import { MessageTemplateService } from '../../../core/services/message-template.service';
+import { Roles } from '../../../shared/decorators/roles.decorator';
 
 class CreateMessageTemplateDto {
   title: string;
@@ -25,6 +26,7 @@ class UpdateMessageTemplateDto {
 }
 
 @ApiTags('message-templates')
+@Roles('organization')
 @Controller('organizations/:organizationId/message-templates')
 export class MessageTemplateController {
   constructor(private readonly service: MessageTemplateService) {}

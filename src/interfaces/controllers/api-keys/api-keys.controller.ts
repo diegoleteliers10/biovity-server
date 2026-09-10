@@ -10,6 +10,12 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { ApiKeysService } from '../../../core/services/api-keys.service';
+import { Roles } from '../../../shared/decorators/roles.decorator';
+import { Throttle } from '@nestjs/throttler';
+import {
+  THROTTLE_SENSITIVE_LIMIT,
+  THROTTLE_TTL_MS,
+} from '../../../shared/constants/throttling';
 import { CreateApiKeyDto } from '../../dtos/api-keys/create-api-key.dto';
 import {
   ApiKeyResponseDto,
@@ -17,6 +23,10 @@ import {
 } from '../../dtos/api-keys/api-key-response.dto';
 
 @ApiTags('api-keys')
+@Throttle({
+  default: { limit: THROTTLE_SENSITIVE_LIMIT, ttl: THROTTLE_TTL_MS },
+})
+@Roles('organization')
 @Controller('organizations/:orgId/api-keys')
 export class ApiKeysController {
   constructor(private readonly apiKeysService: ApiKeysService) {}

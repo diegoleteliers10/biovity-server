@@ -11,8 +11,10 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiParam } from '@nestjs/swagger';
 import { ActivityLogService } from '../../../core/services/activity-log.service';
+import { Roles } from '../../../shared/decorators/roles.decorator';
 
 @ApiTags('activity-logs')
+@Roles('organization')
 @Controller('organizations/:organizationId/activity-logs')
 export class ActivityLogController {
   constructor(private readonly service: ActivityLogService) {}
