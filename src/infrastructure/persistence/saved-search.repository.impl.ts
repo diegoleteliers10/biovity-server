@@ -22,7 +22,7 @@ export class SavedSearchRepositoryImpl implements ISavedSearchRepository {
   async findById(id: string): Promise<SavedSearch | null> {
     const orm = await this.repository.findOne({
       where: { id },
-      relations: ['organization'],
+      relations: { organization: true },
     });
     return orm ? SavedSearchDomainOrmMapper.toDomain(orm) : null;
   }

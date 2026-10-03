@@ -28,7 +28,7 @@ export class UserRepositoryImpl implements IUserRepository {
   async findById(id: string): Promise<User | null> {
     const userOrm = await this.userRepository.findOne({
       where: { id },
-      relations: ['organization'],
+      relations: { organization: true },
     });
     return userOrm ? UserDomainOrmMapper.toDomain(userOrm) : null;
   }
@@ -36,7 +36,7 @@ export class UserRepositoryImpl implements IUserRepository {
   async findByEmail(email: string): Promise<User | null> {
     const userOrm = await this.userRepository.findOne({
       where: { email },
-      relations: ['organization'],
+      relations: { organization: true },
     });
     return userOrm ? UserDomainOrmMapper.toDomain(userOrm) : null;
   }

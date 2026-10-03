@@ -41,7 +41,7 @@ export class JobTemplateService {
       where: { organizationId },
       order: { createdAt: 'DESC' },
     });
-    return entities.map(this.toData);
+    return entities.map(entity => this.toData(entity));
   }
 
   async findById(

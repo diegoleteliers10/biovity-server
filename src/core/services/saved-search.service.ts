@@ -3,6 +3,7 @@ import * as crypto from 'crypto';
 import { ISavedSearchRepository } from '../repositories/saved-search.repository';
 import { IUserRepository } from '../repositories/user.repository';
 import { SavedSearch } from '../domain/entities/saved-search.entity';
+import { NotificationType } from '../domain/enums';
 import { NotificationService } from '../../shared/notification/notification.service';
 import {
   CreateSavedSearchInput,
@@ -78,7 +79,7 @@ export class SavedSearchService {
       const notificationInputs: CreateNotificationInput[] = userIds.map(
         userId => ({
           userId,
-          type: 'job_alert' as any,
+          type: NotificationType.JOB_ALERT,
           title: `Nuevos resultados para: ${savedSearch.name}`,
           body: `Tu busqueda guardada "${savedSearch.name}" tiene nuevos matches.`,
           link: '/dashboard/organization/talent',

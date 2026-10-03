@@ -3,10 +3,8 @@ import {
   IsUUID,
   IsOptional,
   IsObject,
-  ValidateNested,
   IsEnum,
 } from 'class-validator';
-import { Type } from 'class-transformer';
 import { MessageType } from '../../../core/domain/enums';
 
 export class FileContentDto {

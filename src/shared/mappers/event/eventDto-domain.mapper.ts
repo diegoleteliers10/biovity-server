@@ -6,7 +6,6 @@ import {
   CreateEventInput,
   UpdateEventInput,
 } from '../../../core/use-cases/event/event.use-case';
-import { EventType, EventStatus } from '../../../core/domain/enums';
 
 export class EventDtoDomainMapper {
   static toCreateEventInput(dto: EventCreateDto): CreateEventInput {

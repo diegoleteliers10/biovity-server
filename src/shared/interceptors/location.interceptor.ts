@@ -25,15 +25,16 @@ export class LocationInterceptor implements NestInterceptor {
       tap(body => {
         if (response.statusCode !== 201) return;
         const payload =
-          body && typeof body === 'object' && 'data' in body
-            ? (body as { data: unknown }).data
-            : body;
+          body && typeof body === 'object' && 'data' in body ? body.data : body;
         const id =
           payload && typeof payload === 'object' && 'id' in payload
-            ? (payload as { id: unknown }).id
+            ? payload.id
             : undefined;
         if (typeof id !== 'string' || id.length === 0) return;
-        response.setHeader('Location', `${request.baseUrl}${request.path}/${id}`);
+        response.setHeader(
+          'Location',
+          `${request.baseUrl}${request.path}/${id}`,
+        );
       }),
     );
   }

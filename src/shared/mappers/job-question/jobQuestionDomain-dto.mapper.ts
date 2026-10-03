@@ -1,6 +1,5 @@
 import { JobQuestion } from '../../../core/domain/entities/job-question.entity';
 import { QuestionResponseDto } from '../../../interfaces/dtos/job-question/question-response.dto';
-import { QuestionType, QuestionStatus } from '../../../core/domain/enums';
 
 export class JobQuestionDomainDtoMapper {
   static toDto(domain: JobQuestion): QuestionResponseDto {

@@ -1,5 +1,8 @@
 import { Organization } from '../../domain/entities/organization.entity';
-import type { PaginatedResponse, PaginationQuery } from '../../../shared/pagination/pagination';
+import type {
+  PaginatedResponse,
+  PaginationQuery,
+} from '../../../shared/pagination/pagination';
 
 export interface IOrganizationUseCase {
   createOrganization(data: CreateOrganizationInput): Promise<Organization>;

@@ -76,4 +76,6 @@ export const AppDataSource = new DataSource({
   migrationsTableName: 'migrations',
   synchronize: false,
   logging: process.env.NODE_ENV === 'development',
+  // See database.config.ts. Keeps migration runs on TypeORM 0.3 semantics.
+  invalidWhereValuesBehavior: { null: 'ignore', undefined: 'ignore' },
 });

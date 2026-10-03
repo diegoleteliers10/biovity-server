@@ -24,7 +24,7 @@ export class SavedCandidateService {
     const [items, total] = await Promise.all([
       this.repo.find({
         where: { organizationId },
-        relations: ['candidate'],
+        relations: { candidate: true },
         order: { createdAt: 'DESC' },
         take: limit,
         skip,
@@ -59,7 +59,7 @@ export class SavedCandidateService {
 
     try {
       return await this.repo.save(entity);
-    } catch (e) {
+    } catch {
       throw new ConflictException(
         'Candidato ya guardado para esta organización.',
       );

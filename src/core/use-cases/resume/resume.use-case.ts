@@ -6,7 +6,10 @@ import {
   ResumeLanguage,
   ResumeCertification,
 } from '../../domain/entities/resume.entity';
-import type { PaginatedResponse, PaginationQuery } from '../../../shared/pagination/pagination';
+import type {
+  PaginatedResponse,
+  PaginationQuery,
+} from '../../../shared/pagination/pagination';
 
 export interface IResumeUseCase {
   createResume(data: CreateResumeInput): Promise<Resume>;

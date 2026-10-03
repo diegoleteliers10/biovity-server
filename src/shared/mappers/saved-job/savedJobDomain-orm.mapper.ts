@@ -21,7 +21,7 @@ export class SavedJobDomainOrmMapper {
 
     // Map job relation if exists
     if (entity.job) {
-      (savedJob as any).job = {
+      savedJob.job = {
         id: entity.job.id,
         title: entity.job.title,
         organizationId: entity.job.organizationId,

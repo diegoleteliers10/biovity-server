@@ -22,7 +22,7 @@ export class ChatRepositoryImpl implements IChatRepository {
   async findById(id: string): Promise<Chat | null> {
     const chatOrm = await this.chatRepository.findOne({
       where: { id },
-      relations: ['recruiter', 'professional'],
+      relations: { recruiter: true, professional: true },
     });
     return chatOrm ? ChatDomainOrmMapper.toDomain(chatOrm) : null;
   }
@@ -33,7 +33,7 @@ export class ChatRepositoryImpl implements IChatRepository {
   ): Promise<Chat | null> {
     const chatOrm = await this.chatRepository.findOne({
       where: { recruiterId, professionalId },
-      relations: ['recruiter', 'professional'],
+      relations: { recruiter: true, professional: true },
     });
     return chatOrm ? ChatDomainOrmMapper.toDomain(chatOrm) : null;
   }
@@ -44,7 +44,7 @@ export class ChatRepositoryImpl implements IChatRepository {
   ): Promise<Chat[]> {
     const chatsOrm = await this.chatRepository.find({
       where: { recruiterId },
-      relations: ['recruiter', 'professional'],
+      relations: { recruiter: true, professional: true },
       order: { updatedAt: 'DESC' },
       take: pagination?.take ?? 50,
       skip: pagination?.skip ?? 0,
@@ -58,7 +58,7 @@ export class ChatRepositoryImpl implements IChatRepository {
   ): Promise<Chat[]> {
     const chatsOrm = await this.chatRepository.find({
       where: { professionalId },
-      relations: ['recruiter', 'professional'],
+      relations: { recruiter: true, professional: true },
       order: { updatedAt: 'DESC' },
       take: pagination?.take ?? 50,
       skip: pagination?.skip ?? 0,

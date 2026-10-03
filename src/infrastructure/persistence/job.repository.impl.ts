@@ -30,7 +30,7 @@ export class JobRepositoryImpl implements IJobRepository {
   async findById(id: string): Promise<Job | null> {
     const jobOrm = await this.jobRepository.findOne({
       where: { id },
-      relations: ['organization'],
+      relations: { organization: true },
     });
     return jobOrm ? JobDomainOrmMapper.toDomain(jobOrm) : null;
   }

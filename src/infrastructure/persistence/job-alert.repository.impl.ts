@@ -22,7 +22,7 @@ export class JobAlertRepositoryImpl implements IJobAlertRepository {
   async findById(id: string): Promise<JobAlert | null> {
     const orm = await this.repository.findOne({
       where: { id },
-      relations: ['user'],
+      relations: { user: true },
     });
     return orm ? JobAlertDomainOrmMapper.toDomain(orm) : null;
   }

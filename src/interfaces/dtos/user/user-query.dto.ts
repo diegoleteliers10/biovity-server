@@ -6,10 +6,9 @@ import {
   IsInt,
   Min,
   Max,
-  IsArray,
   Matches,
 } from 'class-validator';
-import { Type, Transform } from 'class-transformer';
+import { Type } from 'class-transformer';
 import { UserType } from '../../../core/domain/enums';
 
 export class UserQueryDto {

@@ -80,6 +80,10 @@ export const DatabaseConfig = TypeOrmModule.forRootAsync({
       ],
       synchronize: false,
       logging: true,
+      // TypeORM 1.x throws on null/undefined in a `where` object. It ignored
+      // them before. Pin the old semantics so this upgrade stays
+      // behavior-preserving. Remove once every optional filter is explicit.
+      invalidWhereValuesBehavior: { null: 'ignore', undefined: 'ignore' },
     };
   },
 });

@@ -5,12 +5,13 @@ import {
   Delete,
   Body,
   Param,
-  Req,
   ParseUUIDPipe,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { ApiKeysService } from '../../../core/services/api-keys.service';
 import { Roles } from '../../../shared/decorators/roles.decorator';
+import { CurrentUser } from '../../../shared/decorators/current-user.decorator';
+import type { AuthenticatedUser } from '../../../shared/auth/better-auth-session.service';
 import { Throttle } from '@nestjs/throttler';
 import {
   THROTTLE_SENSITIVE_LIMIT,
@@ -38,9 +39,9 @@ export class ApiKeysController {
   async create(
     @Param('orgId', ParseUUIDPipe) orgId: string,
     @Body() dto: CreateApiKeyDto,
-    @Req() req: any,
+    @CurrentUser() requester: AuthenticatedUser | undefined,
   ) {
-    const userId = req.user?.id || null;
+    const userId = requester?.id || null;
     const { rawKey, record } = await this.apiKeysService.create(
       orgId,
       userId,
@@ -63,7 +64,7 @@ export class ApiKeysController {
   @ApiParam({ name: 'orgId', type: 'string', format: 'uuid' })
   async list(@Param('orgId', ParseUUIDPipe) orgId: string) {
     const keys = await this.apiKeysService.listByOrg(orgId);
-    return keys.map(({ keyHash: _k, keyPrefix: _p, ...safe }: any) => safe);
+    return keys.map(({ keyHash: _k, keyPrefix: _p, ...safe }) => safe);
   }
 
   @Delete(':keyId')

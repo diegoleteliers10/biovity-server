@@ -75,8 +75,9 @@ export class ResumeEntity {
   @Column({ type: 'json', nullable: true })
   public education: ResumeEducationEntity[];
 
+  // Legacy rows store bare skill names, newer rows store objects.
   @Column({ type: 'json', nullable: true })
-  public skills: ResumeSkillEntity[];
+  public skills: (ResumeSkillEntity | string)[];
 
   @Column({ type: 'json', nullable: true })
   public certifications: ResumeCertificationEntity[];

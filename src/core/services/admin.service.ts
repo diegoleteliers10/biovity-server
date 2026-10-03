@@ -11,6 +11,7 @@ import {
   JobStatus,
 } from '../../infrastructure/database/orm';
 import { OrganizationMemberEntity } from '../../infrastructure/database/orm/organization-member.entity';
+import { NotificationType } from '../domain/enums';
 import { NotificationService } from '../../shared/notification/notification.service';
 import { CreateNotificationInput } from '../../shared/notification/notification.types';
 
@@ -312,8 +313,8 @@ export class AdminService {
   async getAdminHealthDetailed(): Promise<AdminHealthDetailed> {
     const start = Date.now();
 
-    let dbStatus: 'up' | 'down' = 'down';
-    let dbMessage = 'Unknown';
+    let dbStatus: 'up' | 'down';
+    let dbMessage: string;
     let dbError: string | undefined;
 
     try {
@@ -321,6 +322,7 @@ export class AdminService {
       dbStatus = 'up';
       dbMessage = 'Database connection is healthy';
     } catch {
+      dbStatus = 'down';
       dbMessage = 'Database connection failed';
       dbError = 'Database connection failed';
     }
@@ -433,7 +435,7 @@ export class AdminService {
 
     const inputs: CreateNotificationInput[] = members.map(member => ({
       userId: member.userId,
-      type: 'system' as any,
+      type: NotificationType.SYSTEM,
       title,
       body,
     }));

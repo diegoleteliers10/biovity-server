@@ -11,7 +11,7 @@ import {
   HttpStatus,
   Query,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiParam } from '@nestjs/swagger';
+import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { OrganizationMemberService } from '../../../core/services/organization-member.service';
 import { Roles } from '../../../shared/decorators/roles.decorator';
 import {

@@ -26,7 +26,7 @@ function baseOf(exception: HttpException): {
   const response = exception.getResponse();
   if (typeof response === 'string') return { message: response };
   if (response && typeof response === 'object') {
-    return response as Record<string, never>;
+    return response;
   }
   return {};
 }

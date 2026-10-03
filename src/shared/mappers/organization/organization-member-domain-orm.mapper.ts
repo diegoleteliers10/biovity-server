@@ -1,5 +1,4 @@
 import { OrganizationMember } from '../../../core/domain/entities/organization-member.entity';
-import { OrganizationEntity } from '../../../infrastructure/database/orm/organization.entity';
 import { OrganizationMemberEntity } from '../../../infrastructure/database/orm/organization-member.entity';
 import { OrganizationDomainOrmMapper } from './organizationDomain-orm.mapper';
 import { UserDomainOrmMapper } from '../user/userDomain-orm.mapper';

@@ -7,7 +7,7 @@ import {
   IsDateString,
   IsEnum,
 } from 'class-validator';
-import { Type } from 'class-transformer';
+
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { SubscriptionPlan, PaymentStatus } from '../../../core/domain/enums';
 

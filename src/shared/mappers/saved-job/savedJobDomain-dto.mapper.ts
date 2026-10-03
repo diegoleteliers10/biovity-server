@@ -10,8 +10,8 @@ export class SavedJobDomainDtoMapper {
     dto.createdAt = domain.createdAt;
 
     // Map job relation if exists
-    if ((domain as any).job) {
-      dto.job = (domain as any).job;
+    if (domain.job) {
+      dto.job = domain.job;
     }
 
     return dto;

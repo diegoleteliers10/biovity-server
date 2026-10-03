@@ -202,7 +202,7 @@ export class UserMetricsService {
     userId: string,
     statuses: ApplicationStatus[],
   ): Promise<number> {
-    const rows = await this.applicationRepository.query(
+    const rows: { n: number }[] = await this.applicationRepository.query(
       `SELECT COUNT(DISTINCT h.application_id)::int AS n
          FROM application_status_history h
          JOIN application a ON a.id = h.application_id
@@ -237,7 +237,7 @@ export class UserMetricsService {
   async getProfileViews(userId: string): Promise<number> {
     const user = await this.userRepository.findOne({
       where: { id: userId },
-      select: ['profileViews'],
+      select: { profileViews: true },
     });
     return user?.profileViews ?? 0;
   }
