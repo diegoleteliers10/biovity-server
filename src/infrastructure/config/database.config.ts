@@ -31,6 +31,10 @@ import { PipelineStageEntity } from '../database/orm/pipeline-stage.entity';
 import { SavedSearchEntity } from '../database/orm/saved-search.entity';
 import { JobAlertEntity } from '../database/orm/job-alert.entity';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+// A static import keeps the bundler able to trace pg into the serverless
+// bundle. TypeORM 1.x loads the driver with a dynamic require that the Vercel
+// tracer cannot follow, which fails at runtime with DriverPackageNotInstalled.
+import * as pg from 'pg';
 
 export const DatabaseConfig = TypeOrmModule.forRootAsync({
   imports: [ConfigModule],
@@ -47,6 +51,7 @@ export const DatabaseConfig = TypeOrmModule.forRootAsync({
     return {
       type: 'postgres',
       ...dbConfig,
+      driver: pg,
       entities: [
         UserEntity,
         OrganizationEntity,

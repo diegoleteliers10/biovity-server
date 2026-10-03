@@ -1,5 +1,7 @@
 import { DataSource } from 'typeorm';
 import { config } from 'dotenv';
+// Static import so the bundler traces pg. See database.config.ts.
+import * as pg from 'pg';
 import {
   UserEntity,
   ApplicationEntity,
@@ -36,6 +38,7 @@ config();
 
 export const AppDataSource = new DataSource({
   type: 'postgres',
+  driver: pg,
   host: process.env.DB_HOST || 'localhost',
   port: parseInt(process.env.DB_PORT || '5432'),
   username: process.env.DB_USERNAME,
