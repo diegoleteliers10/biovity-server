@@ -23,7 +23,7 @@ export class ActivityLogService {
   ): Promise<ActivityLogEntity[]> {
     return this.repo.find({
       where: { organizationId },
-      relations: ['user'],
+      relations: { user: true },
       order: { createdAt: 'DESC' },
       take: 100, // Limit to 100 logs for performance
     });

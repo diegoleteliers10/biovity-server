@@ -7,7 +7,6 @@ import {
   UserNotificationEventsDto,
 } from '../../../interfaces/dtos/user/user-response.dto';
 import { OrganizationDomainOrmMapper } from '../organization/organizationDomain-orm.mapper';
-import { UserType } from '../../../core/domain/enums';
 
 export class UserDomainDtoMapper {
   static toDto(domain: User): UserResponseDto {

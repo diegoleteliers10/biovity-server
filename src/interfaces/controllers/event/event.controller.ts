@@ -12,7 +12,13 @@ import {
   HttpStatus,
   NotFoundException,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiParam,
+  ApiQuery,
+} from '@nestjs/swagger';
 import { EventService } from '../../../core/services/event.service';
 import { EventDtoDomainMapper } from '../../../shared/mappers/event/eventDto-domain.mapper';
 import { EventDomainDtoMapper } from '../../../shared/mappers/event/eventDomain-dto.mapper';

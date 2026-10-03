@@ -20,10 +20,10 @@ export interface ApiError {
 @Injectable()
 export class ErrorFormatInterceptor implements NestInterceptor {
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
-    const request = context.switchToHttp().getRequest();
+    const request = context.switchToHttp().getRequest<{ url: string }>();
 
     return next.handle().pipe(
-      catchError((error: Error) => {
+      catchError((error: unknown) => {
         const timestamp = new Date().toISOString();
         const path = request.url;
 
@@ -31,12 +31,16 @@ export class ErrorFormatInterceptor implements NestInterceptor {
           const response = error.getResponse();
           const status = error.getStatus();
 
+          const message =
+            typeof response === 'object' && response !== null
+              ? (response as Record<string, unknown>).message
+              : error.message;
+
           const errorResponse: ApiError = {
             statusCode: status,
-            message:
-              typeof response === 'object' && response !== null
-                ? ((response as Record<string, unknown>).message as string)
-                : error.message,
+            message: Array.isArray(message)
+              ? message.join(', ')
+              : String(message),
             error: HttpStatus[status] || 'Error',
             timestamp,
             path,

@@ -6,7 +6,6 @@ import { SavedJob } from '../../core/domain/entities/saved-job.entity';
 import { SavedJobDomainOrmMapper } from '../../shared/mappers/saved-job/savedJobDomain-orm.mapper';
 import {
   ISavedJobRepository,
-  SavedJobFilters,
   PaginationOptions,
   PaginatedResult,
 } from '../../core/repositories/saved-job.repository';
@@ -27,7 +26,7 @@ export class SavedJobRepositoryImpl implements ISavedJobRepository {
   async findById(id: string): Promise<SavedJob | null> {
     const savedJobOrm = await this.savedJobRepository.findOne({
       where: { id },
-      relations: ['job', 'user'],
+      relations: { job: true, user: true },
     });
     return savedJobOrm ? SavedJobDomainOrmMapper.toDomain(savedJobOrm) : null;
   }
@@ -38,7 +37,7 @@ export class SavedJobRepositoryImpl implements ISavedJobRepository {
   ): Promise<SavedJob | null> {
     const savedJobOrm = await this.savedJobRepository.findOne({
       where: { userId, jobId },
-      relations: ['job', 'user'],
+      relations: { job: true, user: true },
     });
     return savedJobOrm ? SavedJobDomainOrmMapper.toDomain(savedJobOrm) : null;
   }

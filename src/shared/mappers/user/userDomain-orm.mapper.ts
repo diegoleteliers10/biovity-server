@@ -40,9 +40,7 @@ export class UserDomainOrmMapper {
     if (entity.resumes && entity.resumes.length > 0) {
       const resume = entity.resumes[0];
       if (resume.skills) {
-        skills = resume.skills.map(s =>
-          typeof s === 'string' ? s : (s as any).name,
-        );
+        skills = resume.skills.map(s => (typeof s === 'string' ? s : s.name));
       }
       if (resume.updatedAt && resume.createdAt) {
         const isUpdated =

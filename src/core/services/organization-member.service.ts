@@ -2,7 +2,6 @@ import {
   Injectable,
   NotFoundException,
   ConflictException,
-  ForbiddenException,
   Inject,
 } from '@nestjs/common';
 import * as crypto from 'crypto';

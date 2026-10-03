@@ -1,4 +1,4 @@
-import { IsString, IsUUID, IsEnum } from 'class-validator';
+import { IsUUID, IsEnum } from 'class-validator';
 import { OrganizationMemberRole } from '../../../core/domain/entities/organization-member.entity';
 
 export class AddMemberDto {

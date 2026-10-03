@@ -1,6 +1,5 @@
 import { Subscription } from '../../../core/domain/entities/subscription.entity';
 import { SubscriptionResponseDto } from '../../../interfaces/dtos/subscription/subscription-response.dto';
-import { SubscriptionPlan, PaymentStatus } from '../../../core/domain/enums';
 
 export class SubscriptionDomainDtoMapper {
   static toDto(domain: Subscription): SubscriptionResponseDto {

@@ -22,7 +22,7 @@ export class MessageRepositoryImpl implements IMessageRepository {
   async findById(id: string): Promise<Message | null> {
     const messageOrm = await this.messageRepository.findOne({
       where: { id },
-      relations: ['sender'],
+      relations: { sender: true },
     });
     return messageOrm ? MessageDomainOrmMapper.toDomain(messageOrm) : null;
   }

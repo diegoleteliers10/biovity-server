@@ -11,7 +11,13 @@ import {
   ParseUUIDPipe,
   NotFoundException,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiParam,
+  ApiQuery,
+} from '@nestjs/swagger';
 import { SavedJobService } from '../../../core/services/saved-job.service';
 import { SavedJobDtoDomainMapper } from '../../../shared/mappers/saved-job/savedJobDto-domain.mapper';
 import { SavedJobCreateDto } from '../../dtos/saved-job/saved-job-create.dto';

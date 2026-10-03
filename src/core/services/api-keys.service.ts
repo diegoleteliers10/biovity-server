@@ -14,7 +14,7 @@ export class ApiKeysService {
 
   async create(
     organizationId: string,
-    userId: string,
+    userId: string | null,
     dto: CreateApiKeyDto,
   ): Promise<{ rawKey: string; record: ApiKeyEntity }> {
     const rawKey = `bvty_live_${randomBytes(32).toString('base64url')}`;
@@ -40,13 +40,13 @@ export class ApiKeysService {
 
     const apiKey = await this.repo.findOne({
       where: { keyHash, revokedAt: IsNull() },
-      relations: ['organization'],
+      relations: { organization: true },
     });
 
     if (!apiKey) return null;
     if (apiKey.expiresAt && apiKey.expiresAt < new Date()) return null;
 
-    this.repo.update(apiKey.id, { lastUsedAt: new Date() });
+    await this.repo.update(apiKey.id, { lastUsedAt: new Date() });
 
     return apiKey;
   }

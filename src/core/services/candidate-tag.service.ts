@@ -51,7 +51,7 @@ export class CandidateTagService {
 
     try {
       return await this.tagRepo.save(tag);
-    } catch (e) {
+    } catch {
       throw new ConflictException(
         'La etiqueta ya existe para esta organización.',
       );
@@ -85,7 +85,7 @@ export class CandidateTagService {
 
     try {
       return await this.assignmentRepo.save(assignment);
-    } catch (e) {
+    } catch {
       throw new ConflictException(
         'Esta etiqueta ya está asignada a este candidato.',
       );
@@ -106,7 +106,7 @@ export class CandidateTagService {
         candidateId,
         tag: { organizationId },
       },
-      relations: ['tag'],
+      relations: { tag: true },
     });
 
     return assignments.map(a => a.tag);

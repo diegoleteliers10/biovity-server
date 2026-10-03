@@ -1,4 +1,4 @@
-import { Resume } from '../../../core/domain/entities/index';
+import { Resume, ResumeSkill } from '../../../core/domain/entities/index';
 import { ResumeEntity } from '../../../infrastructure/database/orm/index';
 
 export class ResumeDomainOrmMapper {
@@ -27,7 +27,12 @@ export class ResumeDomainOrmMapper {
       entity.summary,
       entity.experiences || [],
       entity.education || [],
-      entity.skills || [],
+      // Legacy rows store bare skill names instead of objects.
+      (entity.skills || []).map(skill =>
+        typeof skill === 'string'
+          ? new ResumeSkill(skill)
+          : new ResumeSkill(skill.name, skill.level),
+      ),
       entity.certifications || [],
       entity.languages || [],
       entity.links || [],

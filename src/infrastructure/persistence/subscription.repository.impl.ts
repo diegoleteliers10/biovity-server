@@ -27,7 +27,7 @@ export class SubscriptionRepositoryImpl implements ISubscriptionRepository {
   async findById(id: string): Promise<Subscription | null> {
     const subscriptionOrm = await this.subscriptionRepository.findOne({
       where: { id },
-      relations: ['organization'],
+      relations: { organization: true },
     });
     return subscriptionOrm
       ? SubscriptionDomainOrmMapper.toDomain(subscriptionOrm)
@@ -39,7 +39,7 @@ export class SubscriptionRepositoryImpl implements ISubscriptionRepository {
   ): Promise<Subscription | null> {
     const subscriptionOrm = await this.subscriptionRepository.findOne({
       where: { organizationId },
-      relations: ['organization'],
+      relations: { organization: true },
     });
     return subscriptionOrm
       ? SubscriptionDomainOrmMapper.toDomain(subscriptionOrm)

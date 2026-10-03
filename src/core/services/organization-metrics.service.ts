@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, Inject } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import {
@@ -533,24 +533,25 @@ export class OrganizationMetricsService {
   async getGeographicDistribution(
     organizationId: string,
   ): Promise<GeographicDistribution[]> {
-    const results = await this.applicationRepository
-      .createQueryBuilder('application')
-      .leftJoin('application.candidate', 'candidate')
-      .leftJoin('application.job', 'job')
-      .where('job.organizationId = :organizationId', { organizationId })
-      .select("COALESCE(candidate.location->>'city', 'Unknown')", 'city')
-      .addSelect('COUNT(*)', 'count')
-      .groupBy("COALESCE(candidate.location->>'city', 'Unknown')")
-      .orderBy('count', 'DESC')
-      .limit(10)
-      .getRawMany();
+    const results: { city: string; count: string }[] =
+      await this.applicationRepository
+        .createQueryBuilder('application')
+        .leftJoin('application.candidate', 'candidate')
+        .leftJoin('application.job', 'job')
+        .where('job.organizationId = :organizationId', { organizationId })
+        .select("COALESCE(candidate.location->>'city', 'Unknown')", 'city')
+        .addSelect('COUNT(*)', 'count')
+        .groupBy("COALESCE(candidate.location->>'city', 'Unknown')")
+        .orderBy('count', 'DESC')
+        .limit(10)
+        .getRawMany();
 
     const total = results.reduce(
-      (sum: number, row: { count: string }) => sum + parseInt(row.count, 10),
+      (sum, row) => sum + parseInt(row.count, 10),
       0,
     );
 
-    return results.map((row: { city: string; count: string }) => ({
+    return results.map(row => ({
       city: row.city || 'Unknown',
       count: parseInt(row.count, 10),
       percentage:
@@ -582,7 +583,7 @@ export class OrganizationMetricsService {
   ): Promise<RecruiterProductivity[]> {
     const members = await this.memberRepository.find({
       where: { organizationId },
-      relations: ['user'],
+      relations: { user: true },
     });
 
     if (members.length === 0) return [];

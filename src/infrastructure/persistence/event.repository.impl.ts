@@ -29,7 +29,12 @@ export class EventRepositoryImpl implements IEventRepository {
   async findById(id: string): Promise<Event | null> {
     const eventOrm = await this.eventRepository.findOne({
       where: { id },
-      relations: ['organizer', 'candidate', 'notes', 'participants'],
+      relations: {
+        organizer: true,
+        candidate: true,
+        notes: true,
+        participants: true,
+      },
     });
     return eventOrm ? EventDomainOrmMapper.toDomain(eventOrm) : null;
   }
@@ -147,7 +152,7 @@ export class EventRepositoryImpl implements IEventRepository {
   async findNotesByEventId(eventId: string): Promise<EventNote[]> {
     const notesOrm = await this.noteRepository.find({
       where: { eventId },
-      relations: ['author'],
+      relations: { author: true },
       order: { createdAt: 'DESC' },
     });
     return notesOrm.map(n => EventDomainOrmMapper.noteToDomain(n));

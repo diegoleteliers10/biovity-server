@@ -10,7 +10,6 @@ import {
   HttpCode,
   HttpStatus,
   ParseUUIDPipe,
-  Req,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { ApplicationService } from '../../../core/services/application.service';
@@ -21,8 +20,10 @@ import { ApplicationDomainDtoMapper } from '../../../shared/mappers/application/
 import { ApplicationQueryDto } from '../../dtos/application/application-query.dto';
 import { ApplicationPaginatedResponseDto } from '../../dtos/application/application-paginated.dto';
 import { ApplicationStatusUpdateDto } from '../../dtos/application/application-status.dto';
-import { ApplicationStatus } from '../../../core/domain/enums';
+
 import { Roles } from '../../../shared/decorators/roles.decorator';
+import { CurrentUser } from '../../../shared/decorators/current-user.decorator';
+import type { AuthenticatedUser } from '../../../shared/auth/better-auth-session.service';
 
 @ApiTags('applications')
 @Controller('applications')
@@ -176,12 +177,12 @@ export class ApplicationController {
   async updateApplicationStatus(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: ApplicationStatusUpdateDto,
-    @Req() req: any,
+    @CurrentUser() requester: AuthenticatedUser | undefined,
   ): Promise<ApplicationResponseDto | null> {
     const application = await this.applicationService.updateApplicationStatus(
       id,
       dto.status,
-      req.user?.id || null,
+      requester?.id || null,
     );
     return application ? ApplicationDomainDtoMapper.toDto(application) : null;
   }

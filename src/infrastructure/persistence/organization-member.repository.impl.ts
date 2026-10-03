@@ -25,7 +25,7 @@ export class OrganizationMemberRepositoryImpl implements IOrganizationMemberRepo
   async findById(id: string): Promise<OrganizationMember | null> {
     const orm = await this.repo.findOne({
       where: { id },
-      relations: ['user', 'organization'],
+      relations: { user: true, organization: true },
     });
     return orm ? OrganizationMemberDomainOrmMapper.toDomain(orm) : null;
   }
@@ -36,7 +36,7 @@ export class OrganizationMemberRepositoryImpl implements IOrganizationMemberRepo
   ): Promise<OrganizationMember[]> {
     const orms = await this.repo.find({
       where: { organizationId },
-      relations: ['user'],
+      relations: { user: true },
       order: { createdAt: 'ASC' },
       take: pagination?.take ?? 50,
       skip: pagination?.skip ?? 0,
@@ -51,7 +51,7 @@ export class OrganizationMemberRepositoryImpl implements IOrganizationMemberRepo
   async findByUser(userId: string): Promise<OrganizationMember[]> {
     const orms = await this.repo.find({
       where: { userId },
-      relations: ['organization'],
+      relations: { organization: true },
     });
     return orms.map(orm => OrganizationMemberDomainOrmMapper.toDomain(orm));
   }
@@ -62,7 +62,7 @@ export class OrganizationMemberRepositoryImpl implements IOrganizationMemberRepo
   ): Promise<OrganizationMember | null> {
     const orm = await this.repo.findOne({
       where: { organizationId, userId },
-      relations: ['user', 'organization'],
+      relations: { user: true, organization: true },
     });
     return orm ? OrganizationMemberDomainOrmMapper.toDomain(orm) : null;
   }

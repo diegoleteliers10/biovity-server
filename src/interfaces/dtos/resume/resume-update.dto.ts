@@ -4,12 +4,10 @@ import {
   IsArray,
   IsUUID,
   ValidateNested,
-  IsEnum,
   IsObject,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { SkillLevel, LanguageLevel } from '../../../core/domain/enums';
 import {
   ResumeExperienceDto,
   ResumeEducationDto,
