@@ -16,7 +16,10 @@ interface CandidateRelation {
 }
 
 export class ApplicationDomainDtoMapper {
-  static toDto(domain: Application): ApplicationResponseDto {
+  static toDto(
+    domain: Application,
+    visibility: 'full' | 'directory' = 'full',
+  ): ApplicationResponseDto {
     const dto = new ApplicationResponseDto();
     dto.id = domain.id;
     dto.jobId = domain.jobId;
@@ -60,6 +63,16 @@ export class ApplicationDomainDtoMapper {
       dto.answers = answers as ApplicationResponseDto['answers'];
     }
 
+    if (visibility === 'directory') {
+      dto.resumeUrl = undefined;
+      dto.coverLetter = undefined;
+      dto.salaryMin = undefined;
+      dto.salaryMax = undefined;
+      dto.salaryCurrency = undefined;
+      dto.availabilityDate = undefined;
+      dto.answers = undefined;
+      if (dto.candidate) dto.candidate.email = undefined;
+    }
     return dto;
   }
 }

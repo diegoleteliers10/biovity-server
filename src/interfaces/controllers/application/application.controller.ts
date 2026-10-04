@@ -13,6 +13,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
+import { Application } from '../../../core/domain/entities/application.entity';
 import { ApplicationService } from '../../../core/services/application.service';
 import { ApplicationDtoDomainMapper } from '../../../shared/mappers/application/applicationDto-domain.mapper';
 import { ApplicationCreateDto } from '../../dtos/application/application-create.dto';
@@ -37,6 +38,48 @@ export class ApplicationController {
     private readonly applicationService: ApplicationService,
     private readonly organizationAccess: OrganizationAccessService,
   ) {}
+
+  private async visibleApplications(
+    applications: Application[],
+    requester: AuthenticatedUser | undefined,
+  ): Promise<ApplicationResponseDto[]> {
+    const summaries = applications.map(application =>
+      ApplicationDomainDtoMapper.toDto(application),
+    );
+    const organizationIds = [
+      ...new Set(
+        summaries.flatMap(dto => (dto.job ? [dto.job.organizationId] : [])),
+      ),
+    ];
+    const permissions = new Map(
+      await Promise.all(
+        organizationIds.map(
+          async organizationId =>
+            [
+              organizationId,
+              await this.organizationAccess.hasAccess(
+                organizationId,
+                requester,
+                'recruit',
+              ),
+            ] as const,
+        ),
+      ),
+    );
+    return applications.map((application, index) => {
+      const dto = summaries[index];
+      const full =
+        requester &&
+        (requester.id === application.candidateId ||
+          requester.type === 'admin' ||
+          isAdminUser(requester) ||
+          (dto.job && permissions.get(dto.job.organizationId)));
+      return ApplicationDomainDtoMapper.toDto(
+        application,
+        full ? 'full' : 'directory',
+      );
+    });
+  }
 
   @Post()
   @Roles('professional')
@@ -88,7 +131,9 @@ export class ApplicationController {
         'read',
       );
     }
-    return application ? ApplicationDomainDtoMapper.toDto(application) : null;
+    return application
+      ? (await this.visibleApplications([application], requester))[0]
+      : null;
   }
 
   @Get()
@@ -120,7 +165,7 @@ export class ApplicationController {
     );
 
     return {
-      data: result.data.map(app => ApplicationDomainDtoMapper.toDto(app)),
+      data: await this.visibleApplications(result.data, requester),
       total: result.total,
       page: result.page,
       limit: result.limit,
@@ -150,7 +195,7 @@ export class ApplicationController {
     );
 
     return {
-      data: result.data.map(app => ApplicationDomainDtoMapper.toDto(app)),
+      data: await this.visibleApplications(result.data, requester),
       total: result.total,
       page: result.page,
       limit: result.limit,
@@ -187,7 +232,7 @@ export class ApplicationController {
     );
 
     return {
-      data: result.data.map(app => ApplicationDomainDtoMapper.toDto(app)),
+      data: await this.visibleApplications(result.data, requester),
       total: result.total,
       page: result.page,
       limit: result.limit,
@@ -223,7 +268,7 @@ export class ApplicationController {
       );
 
     return {
-      data: result.data.map(app => ApplicationDomainDtoMapper.toDto(app)),
+      data: await this.visibleApplications(result.data, requester),
       total: result.total,
       page: result.page,
       limit: result.limit,

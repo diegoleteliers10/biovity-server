@@ -76,5 +76,5 @@ export class ResumeUpdateDto {
   @IsObject()
   @ValidateNested()
   @Type(() => CvFileDto)
-  cvFile?: CvFileDto;
+  cvFile?: CvFileDto | null;
 }

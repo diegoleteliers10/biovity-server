@@ -34,6 +34,44 @@ describe('OrganizationAccessService', () => {
     ).rejects.toBeInstanceOf(ForbiddenException);
   });
 
+  it('allows recruiter access to recruitment actions', async () => {
+    const access = new OrganizationAccessService({
+      query: jest.fn().mockResolvedValue([{ role: 'recruiter' }]),
+    } as unknown as DataSource);
+    await expect(
+      access.assertAccess(organizationId, user, 'recruit'),
+    ).resolves.toBeUndefined();
+    await expect(
+      access.assertAccess(organizationId, user, 'manage'),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('denies CV reads to viewers', async () => {
+    const viewer = { ...user, organizationId };
+    const access = new OrganizationAccessService({
+      query: jest
+        .fn()
+        .mockResolvedValueOnce([{ userId: 'candidate', type: 'professional' }])
+        .mockResolvedValueOnce([{ role: 'viewer' }]),
+    } as unknown as DataSource);
+    await expect(
+      access.assertResumeAccess('resume', viewer, 'read'),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('allows CV reads to recruiters', async () => {
+    const recruiter = { ...user, organizationId };
+    const access = new OrganizationAccessService({
+      query: jest
+        .fn()
+        .mockResolvedValueOnce([{ userId: 'candidate', type: 'professional' }])
+        .mockResolvedValueOnce([{ role: 'recruiter' }]),
+    } as unknown as DataSource);
+    await expect(
+      access.assertResumeAccess('resume', recruiter, 'read'),
+    ).resolves.toBeUndefined();
+  });
+
   it('denies requests without a user identity', async () => {
     const access = new OrganizationAccessService({} as DataSource);
 

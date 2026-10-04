@@ -88,6 +88,10 @@ export class ResumeCertificationDto {
 }
 
 export class CvFileDto {
+  @IsOptional()
+  @IsString()
+  path?: string;
+
   @IsString()
   url: string;
 
@@ -160,5 +164,5 @@ export class ResumeCreateDto {
   @IsObject()
   @ValidateNested()
   @Type(() => CvFileDto)
-  cvFile?: CvFileDto;
+  cvFile?: CvFileDto | null;
 }

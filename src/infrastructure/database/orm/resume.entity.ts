@@ -46,6 +46,7 @@ export class ResumeCertificationEntity {
 }
 
 export class CvFileEntity {
+  path?: string;
   url: string;
   originalName?: string;
   mimeType?: string;
@@ -89,7 +90,7 @@ export class ResumeEntity {
   public links: { url: string }[];
 
   @Column({ type: 'json', nullable: true })
-  public cvFile?: CvFileEntity;
+  public cvFile?: CvFileEntity | null;
 
   @CreateDateColumn()
   public createdAt: Date = new Date();

@@ -1,6 +1,8 @@
 import {
   Controller,
   Get,
+  Headers,
+  BadRequestException,
   Post,
   Body,
   Query,
@@ -16,6 +18,7 @@ import {
   ApiBody,
 } from '@nestjs/swagger';
 import { SubscriptionService } from '../../../core/services/subscription.service';
+import { Public } from '../../../shared/decorators/public.decorator';
 import { Roles } from '../../../shared/decorators/roles.decorator';
 import { Throttle, SkipThrottle } from '@nestjs/throttler';
 import {
@@ -113,6 +116,7 @@ export class SubscriptionController {
 
   // Mercado Pago owns this caller: no session, no rate limit (user decision).
   @SkipThrottle()
+  @Public()
   @Post('webhook')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
@@ -129,16 +133,22 @@ export class SubscriptionController {
     description: 'Webhook procesado exitosamente',
   })
   async handleWebhook(
+    @Query('type') type: string,
     @Query('topic') topic: string,
+    @Query('data.id') paymentId: string,
+    @Headers('x-signature') signature: string,
+    @Headers('x-request-id') requestId: string,
     @Body() body: Record<string, unknown>,
   ): Promise<{ received: boolean }> {
-    if (topic === 'payment') {
+    if (type === 'payment' || topic === 'payment' || body.type === 'payment') {
+      if (!paymentId)
+        return Promise.reject(
+          new BadRequestException('Signed payment ID is required'),
+        );
       await this.subscriptionService.handleWebhook({
-        id: body.id as string,
-        status: body.status as string,
-        external_reference: body.external_reference as string,
-        preference_id: body.preference_id as string,
-        merchant_order_id: body.merchant_order_id as string | undefined,
+        id: paymentId,
+        signature: signature ?? '',
+        requestId: requestId ?? '',
       });
     }
     return { received: true };

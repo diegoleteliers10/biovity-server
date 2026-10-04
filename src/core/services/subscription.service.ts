@@ -3,11 +3,17 @@ import {
   NotFoundException,
   Inject,
   BadRequestException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import * as crypto from 'crypto';
 import { DataSource } from 'typeorm';
 import { InjectDataSource } from '@nestjs/typeorm';
-import { MercadoPagoConfig, Preference } from 'mercadopago';
+import {
+  MercadoPagoConfig,
+  Preference,
+  Payment,
+  MerchantOrder,
+} from 'mercadopago';
 import { ISubscriptionRepository } from '../repositories/subscription.repository';
 import { IOrganizationRepository } from '../repositories/organization.repository';
 import { Subscription } from '../domain/entities/subscription.entity';
@@ -16,366 +22,309 @@ import { SubscriptionEntity } from '../../infrastructure/database/orm/subscripti
 import { OrganizationEntity } from '../../infrastructure/database/orm/organization.entity';
 import { SubscriptionDomainOrmMapper } from '../../shared/mappers/subscription/subscriptionDomain-orm.mapper';
 
-export interface CreatePreferenceInput {
-  plan: string;
-  organizationId: string;
-}
-
-export interface PreferenceResult {
+export type CreatePreferenceInput = { plan: string; organizationId: string };
+export type PreferenceResult = {
   preferenceId: string;
   initPoint: string;
   plan: string;
   price: number;
-}
-
-export interface WebhookInput {
-  id: string;
-  status: string;
-  external_reference: string;
-  preference_id: string;
-  merchant_order_id?: string;
-}
-
-const PLAN_PRICES: Record<string, number> = {
+};
+export type WebhookInput = { id: string; signature: string; requestId: string };
+const PLAN_PRICES = {
   free: 0,
   basic: 19900,
   premium: 39900,
-  pro: 39900, // alias for premium
   enterprise: 89900,
 };
-
-const PLAN_DESCRIPTIONS: Record<string, string> = {
-  free: 'Plan Free - 5 trabajos, 20 postulaciones',
-  basic: 'Plan Basic - 20 trabajos, 100 postulaciones',
-  premium: 'Plan Premium - 50 trabajos, 500 postulaciones',
-  pro: 'Plan Pro - 50 trabajos, 500 postulaciones',
-  enterprise: 'Plan Enterprise - Trabajos y postulaciones ilimitadas',
-};
+function parsePlan(input: string): SubscriptionPlan | null {
+  const plan = input.toLowerCase();
+  if (plan === 'pro') return SubscriptionPlan.PREMIUM;
+  return (
+    Object.values(SubscriptionPlan).find(value => String(value) === plan) ??
+    null
+  );
+}
 
 @Injectable()
 export class SubscriptionService {
   private readonly mercadopagoClient: MercadoPagoConfig;
-
   constructor(
     @Inject('ISubscriptionRepository')
     private readonly subscriptionRepository: ISubscriptionRepository,
     @Inject('IOrganizationRepository')
     private readonly organizationRepository: IOrganizationRepository,
-    @InjectDataSource()
-    private readonly dataSource: DataSource,
+    @InjectDataSource() private readonly dataSource: DataSource,
   ) {
-    const accessToken = process.env.MERCADO_PAGO_ACCESS_TOKEN || '';
     this.mercadopagoClient = new MercadoPagoConfig({
-      accessToken,
+      accessToken: process.env.MERCADO_PAGO_ACCESS_TOKEN || '',
       options: { timeout: 10000 },
     });
   }
-
   async getSubscriptionByOrganizationId(
     organizationId: string,
   ): Promise<Subscription | null> {
     return this.subscriptionRepository.findByOrganizationId(organizationId);
   }
-
   async createMercadoPagoPreference(
     data: CreatePreferenceInput,
   ): Promise<PreferenceResult> {
     const organization = await this.organizationRepository.findById(
       data.organizationId,
     );
-    if (!organization) {
-      throw new NotFoundException(
-        `Organization with id ${data.organizationId} not found`,
+    if (!organization)
+      return Promise.reject(new NotFoundException('Organization not found'));
+    const plan = parsePlan(data.plan);
+    if (!plan)
+      return Promise.reject(
+        new BadRequestException('Unknown subscription plan'),
       );
-    }
-
-    const normalizedPlan = data.plan.toLowerCase();
-    const price = Number(PLAN_PRICES[normalizedPlan]) || 0;
-    console.log(
-      'Creating preference for plan:',
-      data.plan,
-      '-> normalized:',
-      normalizedPlan,
-      'price:',
-      price,
-    );
-
-    // Free plan - create subscription immediately without MP
-    if (normalizedPlan === 'free') {
-      const subscription = new Subscription(
-        this.generateId(),
-        data.organizationId,
-        SubscriptionPlan.FREE,
-        new Date(),
-        null,
-        true,
-        this.getFeaturesForPlan(SubscriptionPlan.FREE),
-        null,
-        null,
-        null,
-        `${data.organizationId}:free`,
-        PaymentStatus.APPROVED,
-        null,
-      );
-
-      const queryRunner = this.dataSource.createQueryRunner();
-      await queryRunner.connect();
-      await queryRunner.startTransaction();
-      try {
-        const subscriptionOrm = SubscriptionDomainOrmMapper.toOrm(subscription);
-        const savedSubscription = await queryRunner.manager.save(
-          SubscriptionEntity,
-          subscriptionOrm,
-        );
-
-        await queryRunner.manager.update(
-          OrganizationEntity,
-          data.organizationId,
-          { subscriptionId: savedSubscription.id },
-        );
-
-        await queryRunner.commitTransaction();
-
-        return {
-          preferenceId: 'free-plan',
-          initPoint: '',
-          plan: 'free',
-          price: 0,
-        };
-      } catch (error) {
-        await queryRunner.rollbackTransaction();
-        throw error;
-      } finally {
-        await queryRunner.release();
-      }
-    }
-
-    // For paid plans, create MP preference
-    const externalReference = `${data.organizationId}:${data.plan}`;
-    const preferenceClient = new Preference(this.mercadopagoClient);
-
-    const preferenceData = {
-      external_reference: externalReference,
-      metadata: {
-        organizationId: data.organizationId,
-        plan: data.plan,
-      },
-      items: [
-        {
-          id: `subscription-${data.plan}`,
-          title:
-            PLAN_DESCRIPTIONS[normalizedPlan] || `Suscripción ${data.plan}`,
-          description: PLAN_DESCRIPTIONS[normalizedPlan],
-          quantity: 1,
-          unit_price: Number(price),
-          currency_id: 'CLP',
-        },
-      ],
-      payment_methods: {
-        installments: 1,
-      },
-      back_urls: {
-        success:
-          process.env.MP_SUCCESS_URL ||
-          'https://biovity.com/subscription/success',
-        failure:
-          process.env.MP_FAILURE_URL ||
-          'https://biovity.com/subscription/failure',
-        pending:
-          process.env.MP_PENDING_URL ||
-          'https://biovity.com/subscription/pending',
-      },
-      auto_return: 'approved' as const,
-      notification_url: process.env.MP_WEBHOOK_URL || '',
-    };
-
-    try {
-      const result = await preferenceClient.create({ body: preferenceData });
-      console.log('MP create result - init_point:', result.init_point);
-
-      // Extract init URL
-      const initUrl = result.sandbox_init_point || result.init_point || '';
-
-      return {
-        preferenceId: result.id || '',
-        initPoint: initUrl,
-        plan: normalizedPlan,
-        price,
-      };
-    } catch (error) {
-      console.error('MercadoPago error:', error);
-      throw new BadRequestException(
-        'Error processing payment. Please try again.',
-      );
-    }
-  }
-
-  async handleWebhook(data: WebhookInput): Promise<Subscription | null> {
-    const { status, external_reference, preference_id, merchant_order_id, id } =
-      data;
-
-    console.log('Webhook received:', { status, external_reference, id });
-
-    // Parse external_reference to get organizationId and plan
-    const parts = external_reference.split(':');
-    if (parts.length !== 2) {
-      console.error(`Invalid external_reference format: ${external_reference}`);
-      return null;
-    }
-
-    const [organizationId, plan] = parts;
-    const externalReference = external_reference;
-
-    // Verify organization exists
-    const organization =
-      await this.organizationRepository.findById(organizationId);
-    if (!organization) {
-      console.error(`Organization not found: ${organizationId}`);
-      return null;
-    }
-
-    // Check if subscription already exists
-    const existingSubscription =
-      await this.subscriptionRepository.findByOrganizationId(organizationId);
-    if (existingSubscription) {
-      console.log(
-        `Subscription already exists for organization: ${organizationId}`,
-      );
-      return existingSubscription;
-    }
-
-    // Handle approved payment - create subscription
-    if (status === 'approved') {
-      const expiresAt = new Date();
-      expiresAt.setMonth(expiresAt.getMonth() + 1);
-
-      const planForDb =
-        plan === 'pro'
-          ? SubscriptionPlan.PREMIUM
-          : SubscriptionPlan[plan as keyof typeof SubscriptionPlan] ||
-            SubscriptionPlan.PREMIUM;
-
-      const subscription = new Subscription(
-        this.generateId(),
-        organizationId,
-        planForDb,
-        new Date(),
-        expiresAt,
-        true, // isActive = true
-        this.getFeaturesForPlan(planForDb),
-        id.toString(),
-        preference_id,
-        merchant_order_id || null,
-        externalReference,
-        PaymentStatus.APPROVED,
-        new Date(),
-      );
-
-      const queryRunner = this.dataSource.createQueryRunner();
-      await queryRunner.connect();
-      await queryRunner.startTransaction();
-      try {
-        const subscriptionOrm = SubscriptionDomainOrmMapper.toOrm(subscription);
-        const savedSubscription = await queryRunner.manager.save(
-          SubscriptionEntity,
-          subscriptionOrm,
-        );
-
-        await queryRunner.manager.update(OrganizationEntity, organizationId, {
-          subscriptionId: savedSubscription.id,
+    const price = PLAN_PRICES[plan];
+    if (plan === SubscriptionPlan.FREE) {
+      await this.dataSource.transaction(async manager => {
+        await manager.findOne(OrganizationEntity, {
+          where: { id: data.organizationId },
+          lock: { mode: 'pessimistic_write' },
         });
-
-        await queryRunner.commitTransaction();
-
-        const createdSubscription =
-          SubscriptionDomainOrmMapper.toDomain(savedSubscription);
-        console.log(
-          'Subscription created via webhook:',
-          createdSubscription.id,
+        const existing = await manager.findOne(SubscriptionEntity, {
+          where: { organizationId: data.organizationId, isActive: true },
+        });
+        if (existing) return;
+        const subscription = new Subscription(
+          crypto.randomUUID(),
+          data.organizationId,
+          plan,
+          new Date(),
+          null,
+          true,
+          this.getFeaturesForPlan(plan),
+          null,
+          null,
+          null,
+          `${data.organizationId}:free`,
+          PaymentStatus.APPROVED,
+          null,
         );
-        return createdSubscription;
-      } catch (error) {
-        await queryRunner.rollbackTransaction();
-        throw error;
-      } finally {
-        await queryRunner.release();
-      }
+        const saved = await manager.save(
+          SubscriptionEntity,
+          SubscriptionDomainOrmMapper.toOrm(subscription),
+        );
+        await manager.update(OrganizationEntity, data.organizationId, {
+          subscriptionId: saved.id,
+        });
+      });
+      return { preferenceId: 'free-plan', initPoint: '', plan, price };
     }
-
-    // Handle rejected/cancelled - create failed subscription record
-    if (status === 'rejected' || status === 'cancelled') {
-      const planForDb =
-        plan === 'pro'
-          ? SubscriptionPlan.PREMIUM
-          : SubscriptionPlan[plan as keyof typeof SubscriptionPlan] ||
-            SubscriptionPlan.PREMIUM;
-
-      const subscription = new Subscription(
-        this.generateId(),
-        organizationId,
-        planForDb,
-        new Date(),
-        null,
-        false,
-        this.getFeaturesForPlan(planForDb),
-        id.toString(),
-        preference_id,
-        merchant_order_id || null,
-        externalReference,
-        status as PaymentStatus,
-        new Date(),
+    const reference = `${data.organizationId}:${plan}`;
+    const preference = await new Preference(this.mercadopagoClient).create({
+      body: {
+        external_reference: reference,
+        metadata: { organizationId: data.organizationId, plan },
+        items: [
+          {
+            id: `subscription-${plan}`,
+            title: `Subscription ${plan}`,
+            quantity: 1,
+            unit_price: price,
+            currency_id: 'CLP',
+          },
+        ],
+        payment_methods: { installments: 1 },
+        back_urls: {
+          success:
+            process.env.MP_SUCCESS_URL ||
+            'https://biovity.com/subscription/success',
+          failure:
+            process.env.MP_FAILURE_URL ||
+            'https://biovity.com/subscription/failure',
+          pending:
+            process.env.MP_PENDING_URL ||
+            'https://biovity.com/subscription/pending',
+        },
+        auto_return: 'approved',
+        notification_url: process.env.MP_WEBHOOK_URL || '',
+      },
+    });
+    if (!preference.id || !preference.init_point)
+      return Promise.reject(
+        new BadRequestException('Payment preference has no checkout URL'),
       );
-
-      return this.subscriptionRepository.create(subscription);
-    }
-
-    // For pending - create pending subscription
-    const pendingPlan =
-      plan === 'pro'
-        ? SubscriptionPlan.PREMIUM
-        : SubscriptionPlan[plan as keyof typeof SubscriptionPlan] ||
-          SubscriptionPlan.PREMIUM;
-
-    const pendingSubscription = new Subscription(
-      this.generateId(),
-      organizationId,
-      pendingPlan,
+    const pending = new Subscription(
+      crypto.randomUUID(),
+      data.organizationId,
+      plan,
       new Date(),
       null,
       false,
-      this.getFeaturesForPlan(pendingPlan),
+      this.getFeaturesForPlan(plan),
       null,
-      preference_id,
+      preference.id,
       null,
-      externalReference,
+      reference,
       PaymentStatus.PENDING,
-      new Date(),
+      null,
     );
-
-    const queryRunner = this.dataSource.createQueryRunner();
-    await queryRunner.connect();
-    await queryRunner.startTransaction();
-    try {
-      const subscriptionOrm =
-        SubscriptionDomainOrmMapper.toOrm(pendingSubscription);
-      const savedSubscription = await queryRunner.manager.save(
-        SubscriptionEntity,
-        subscriptionOrm,
+    await this.subscriptionRepository.create(pending);
+    return {
+      preferenceId: preference.id,
+      initPoint: preference.init_point,
+      plan,
+      price,
+    };
+  }
+  async handleWebhook(data: WebhookInput): Promise<Subscription | null> {
+    const secret = process.env.MERCADO_PAGO_WEBHOOK_SECRET;
+    const parts = data.signature
+      .split(',')
+      .reduce<Record<string, string | undefined>>((result, part) => {
+        const [key, value] = part.trim().split('=');
+        if (key) result[key] = value;
+        return result;
+      }, {});
+    if (
+      !secret ||
+      !data.requestId ||
+      !data.id ||
+      !parts.ts ||
+      !parts.v1 ||
+      !/^[a-f0-9]{64}$/i.test(parts.v1)
+    ) {
+      return Promise.reject(
+        new UnauthorizedException('Invalid payment signature'),
       );
-      await queryRunner.commitTransaction();
-      return SubscriptionDomainOrmMapper.toDomain(savedSubscription);
-    } catch (error) {
-      await queryRunner.rollbackTransaction();
-      throw error;
-    } finally {
-      await queryRunner.release();
     }
+    const manifest = `id:${data.id.toLowerCase()};request-id:${data.requestId};ts:${parts.ts};`;
+    const expected = crypto
+      .createHmac('sha256', secret)
+      .update(manifest)
+      .digest();
+    if (!crypto.timingSafeEqual(expected, Buffer.from(parts.v1, 'hex')))
+      return Promise.reject(
+        new UnauthorizedException('Invalid payment signature'),
+      );
+    const payment = await new Payment(this.mercadopagoClient).get({
+      id: data.id,
+    });
+    const terminalStatus =
+      payment.status === 'refunded'
+        ? PaymentStatus.REFUNDED
+        : payment.status === 'charged_back'
+          ? PaymentStatus.CHARGED_BACK
+          : payment.status === 'cancelled'
+            ? PaymentStatus.CANCELLED
+            : null;
+    if (payment.status !== 'approved' && !terminalStatus) return null;
+    if (
+      String(payment.id) !== data.id ||
+      !payment.external_reference ||
+      !payment.order?.id
+    )
+      return Promise.reject(
+        new BadRequestException('Payment has no valid order'),
+      );
+    const [organizationId, planInput, extra] =
+      payment.external_reference.split(':');
+    const plan = parsePlan(planInput ?? '');
+    if (
+      !organizationId ||
+      extra !== undefined ||
+      !plan ||
+      plan === SubscriptionPlan.FREE ||
+      payment.currency_id !== 'CLP' ||
+      payment.transaction_amount !== PLAN_PRICES[plan]
+    ) {
+      return Promise.reject(
+        new BadRequestException(
+          'Payment does not match the subscription price',
+        ),
+      );
+    }
+    const merchantOrderId = String(payment.order.id);
+    const order = await new MerchantOrder(this.mercadopagoClient).get({
+      merchantOrderId,
+    });
+    if (
+      !order.preference_id ||
+      !payment.collector_id ||
+      order.collector?.id !== payment.collector_id
+    )
+      return Promise.reject(
+        new BadRequestException('Payment merchant does not match'),
+      );
+    const preference = await new Preference(this.mercadopagoClient).get({
+      preferenceId: order.preference_id,
+    });
+    if (
+      preference.collector_id !== payment.collector_id ||
+      preference.external_reference !== payment.external_reference
+    )
+      return Promise.reject(
+        new BadRequestException('Payment preference does not match'),
+      );
+    return this.dataSource.transaction(async manager => {
+      const organization = await manager.findOne(OrganizationEntity, {
+        where: { id: organizationId },
+        lock: { mode: 'pessimistic_write' },
+      });
+      if (!organization)
+        return Promise.reject(new NotFoundException('Organization not found'));
+      const duplicate = await manager.findOne(SubscriptionEntity, {
+        where: { mercadopagoPaymentId: data.id },
+      });
+      if (duplicate && duplicate.organizationId !== organizationId)
+        return Promise.reject(
+          new BadRequestException('Payment organization does not match'),
+        );
+      if (terminalStatus) {
+        if (!duplicate) return null;
+        const inactive = await manager.save(SubscriptionEntity, {
+          ...duplicate,
+          isActive: false,
+          paymentStatus: terminalStatus,
+        });
+        await manager.query(
+          'UPDATE public.organization SET "subscriptionId" = NULL WHERE id = $1 AND "subscriptionId" = $2',
+          [organizationId, duplicate.id],
+        );
+        return SubscriptionDomainOrmMapper.toDomain(inactive);
+      }
+      if (duplicate) return SubscriptionDomainOrmMapper.toDomain(duplicate);
+      const pending = await manager.findOne(SubscriptionEntity, {
+        where: {
+          organizationId,
+          mercadopagoPreferenceId: order.preference_id,
+          externalReference: payment.external_reference,
+          planName: plan,
+        },
+      });
+      if (!pending || pending.mercadopagoPaymentId)
+        return Promise.reject(
+          new BadRequestException(
+            'Payment has no matching subscription checkout',
+          ),
+        );
+      await manager.update(
+        SubscriptionEntity,
+        { organizationId, isActive: true },
+        { isActive: false },
+      );
+      const expiresAt = new Date();
+      expiresAt.setMonth(expiresAt.getMonth() + 1);
+      const saved = await manager.save(SubscriptionEntity, {
+        ...pending,
+        isActive: true,
+        expiresAt,
+        startedAt: new Date(),
+        mercadopagoPaymentId: data.id,
+        mercadopagoMerchantOrderId: merchantOrderId,
+        paymentStatus: PaymentStatus.APPROVED,
+        lastPaymentAt: new Date(),
+      });
+      await manager.update(OrganizationEntity, organizationId, {
+        subscriptionId: saved.id,
+      });
+      return SubscriptionDomainOrmMapper.toDomain(saved);
+    });
   }
-
-  private generateId(): string {
-    return crypto.randomUUID();
-  }
-
   private getFeaturesForPlan(plan: SubscriptionPlan): Subscription['features'] {
     switch (plan) {
       case SubscriptionPlan.FREE:

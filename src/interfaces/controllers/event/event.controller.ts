@@ -97,7 +97,11 @@ export class EventController {
       throw new ForbiddenException('Se requiere una sesión de usuario.');
     const isAdmin = requester.type === 'admin' || isAdminUser(requester);
     const filters = {
-      userId: isAdmin ? query.userId : requester.id,
+      userId: isAdmin
+        ? query.userId
+        : query.organizationId
+          ? undefined
+          : requester.id,
       organizerId: isAdmin
         ? query.organizerId
         : query.organizerId === requester.id

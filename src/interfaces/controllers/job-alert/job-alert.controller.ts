@@ -9,6 +9,7 @@ import {
   ParseUUIDPipe,
   HttpCode,
   HttpStatus,
+  ForbiddenException,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { JobAlertService } from '../../../core/services/job-alert.service';
@@ -18,6 +19,9 @@ import { JobAlertResponseDto } from '../../dtos/job-alert/job-alert-response.dto
 import { JobAlertDomainDtoMapper } from '../../../shared/mappers/job-alert/jobAlertDomain-dto.mapper';
 import { Roles } from '../../../shared/decorators/roles.decorator';
 
+import { CurrentUser } from '../../../shared/decorators/current-user.decorator';
+import type { AuthenticatedUser } from '../../../shared/auth/better-auth-session.service';
+
 @ApiTags('job-alerts')
 @Roles('professional')
 @Controller('job-alerts')
@@ -26,7 +30,11 @@ export class JobAlertController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  async create(@Body() dto: CreateJobAlertDto): Promise<JobAlertResponseDto> {
+  async create(
+    @Body() dto: CreateJobAlertDto,
+    @CurrentUser() requester: AuthenticatedUser | undefined,
+  ): Promise<JobAlertResponseDto> {
+    await this.assertOwner(dto.userId, requester);
     const input = JobAlertDtoDomainMapper.toCreateInput(dto);
     const jobAlert = await this.service.create(input);
     return JobAlertDomainDtoMapper.toDto(jobAlert);
@@ -35,7 +43,9 @@ export class JobAlertController {
   @Get()
   async getByUserId(
     @Query('userId', ParseUUIDPipe) userId: string,
+    @CurrentUser() requester: AuthenticatedUser | undefined,
   ): Promise<JobAlertResponseDto[]> {
+    await this.assertOwner(userId, requester);
     const alerts = await this.service.getByUserId(userId);
     return alerts.map(alert => JobAlertDomainDtoMapper.toDto(alert));
   }
@@ -45,7 +55,20 @@ export class JobAlertController {
   async delete(
     @Param('id', ParseUUIDPipe) id: string,
     @Query('userId', ParseUUIDPipe) userId: string,
+    @CurrentUser() requester: AuthenticatedUser | undefined,
   ): Promise<void> {
+    await this.assertOwner(userId, requester);
     await this.service.delete(id, userId);
+  }
+  private assertOwner(
+    userId: string,
+    requester: AuthenticatedUser | undefined,
+  ): Promise<void> {
+    if (!requester || requester.id !== userId) {
+      return Promise.reject(
+        new ForbiddenException('Solo puedes acceder a tus alertas.'),
+      );
+    }
+    return Promise.resolve();
   }
 }

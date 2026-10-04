@@ -31,7 +31,7 @@ export interface CreateResumeInput {
   certifications?: ResumeCertification[];
   languages?: ResumeLanguage[];
   links?: { url: string }[];
-  cvFile?: CvFileInput;
+  cvFile?: CvFileInput | null;
 }
 
 export interface UpdateResumeInput {
@@ -42,10 +42,11 @@ export interface UpdateResumeInput {
   certifications?: ResumeCertification[];
   languages?: ResumeLanguage[];
   links?: { url: string }[];
-  cvFile?: CvFileInput;
+  cvFile?: CvFileInput | null;
 }
 
 export interface CvFileInput {
+  path?: string;
   url: string;
   originalName?: string;
   mimeType?: string;

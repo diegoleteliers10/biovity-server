@@ -10,6 +10,7 @@ import {
   HttpStatus,
   ParseUUIDPipe,
   NotFoundException,
+  ForbiddenException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -26,6 +27,9 @@ import { SavedJobDomainDtoMapper } from '../../../shared/mappers/saved-job/saved
 import { SavedJobPaginatedResponseDto } from '../../dtos/saved-job/saved-job-paginated.dto';
 import { Roles } from '../../../shared/decorators/roles.decorator';
 
+import { CurrentUser } from '../../../shared/decorators/current-user.decorator';
+import type { AuthenticatedUser } from '../../../shared/auth/better-auth-session.service';
+
 @ApiTags('saved-jobs')
 @Roles('professional')
 @Controller('saved-jobs')
@@ -37,7 +41,11 @@ export class SavedJobController {
   @ApiOperation({ summary: 'Guardar una oferta' })
   @ApiResponse({ status: 201, description: 'Oferta guardada' })
   @ApiResponse({ status: 400, description: 'Datos inválidos' })
-  async saveJob(@Body() dto: SavedJobCreateDto): Promise<SavedJobResponseDto> {
+  async saveJob(
+    @Body() dto: SavedJobCreateDto,
+    @CurrentUser() requester: AuthenticatedUser | undefined,
+  ): Promise<SavedJobResponseDto> {
+    await this.assertOwner(dto.userId, requester);
     const input = SavedJobDtoDomainMapper.toCreateSavedJobInput(dto);
     const savedJob = await this.savedJobService.saveJob(input);
     return SavedJobDomainDtoMapper.toDto(savedJob);
@@ -52,7 +60,9 @@ export class SavedJobController {
   async getSavedJobsByUser(
     @Param('userId', ParseUUIDPipe) userId: string,
     @Query() query: { page?: number; limit?: number },
+    @CurrentUser() requester: AuthenticatedUser | undefined,
   ): Promise<SavedJobPaginatedResponseDto> {
+    await this.assertOwner(userId, requester);
     const pagination = {
       page: query.page,
       limit: query.limit,
@@ -75,6 +85,7 @@ export class SavedJobController {
   }
 
   @Get('job/:jobId')
+  @Roles('admin')
   @ApiOperation({ summary: 'Listar guardados de una oferta' })
   @ApiParam({ name: 'jobId', type: 'string', format: 'uuid' })
   @ApiQuery({ name: 'page', required: false, type: Number })
@@ -113,7 +124,9 @@ export class SavedJobController {
   async checkIfJobIsSaved(
     @Param('userId', ParseUUIDPipe) userId: string,
     @Param('jobId', ParseUUIDPipe) jobId: string,
+    @CurrentUser() requester: AuthenticatedUser | undefined,
   ): Promise<{ isSaved: boolean }> {
+    await this.assertOwner(userId, requester);
     const isSaved = await this.savedJobService.checkIfJobIsSaved(userId, jobId);
     return { isSaved };
   }
@@ -125,9 +138,12 @@ export class SavedJobController {
   @ApiResponse({ status: 404, description: 'Guardado no encontrado' })
   async getSavedJobById(
     @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() requester: AuthenticatedUser | undefined,
   ): Promise<SavedJobResponseDto> {
     const savedJob = await this.savedJobService.getSavedJobById(id);
-    if (!savedJob) throw new NotFoundException('Saved job not found');
+    if (!savedJob)
+      return Promise.reject(new NotFoundException('Saved job not found'));
+    await this.assertOwner(savedJob.userId, requester);
     return SavedJobDomainDtoMapper.toDto(savedJob);
   }
 
@@ -137,7 +153,14 @@ export class SavedJobController {
   @ApiParam({ name: 'id', type: 'string', format: 'uuid' })
   @ApiResponse({ status: 204, description: 'Guardado eliminado' })
   @ApiResponse({ status: 404, description: 'Guardado no encontrado' })
-  async deleteSavedJob(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
+  async deleteSavedJob(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() requester: AuthenticatedUser | undefined,
+  ): Promise<void> {
+    const savedJob = await this.savedJobService.getSavedJobById(id);
+    if (!savedJob)
+      return Promise.reject(new NotFoundException('Saved job not found'));
+    await this.assertOwner(savedJob.userId, requester);
     await this.savedJobService.deleteSavedJob(id);
   }
 
@@ -150,7 +173,20 @@ export class SavedJobController {
   async unsaveJob(
     @Param('userId', ParseUUIDPipe) userId: string,
     @Param('jobId', ParseUUIDPipe) jobId: string,
+    @CurrentUser() requester: AuthenticatedUser | undefined,
   ): Promise<void> {
+    await this.assertOwner(userId, requester);
     await this.savedJobService.unsaveJob(userId, jobId);
+  }
+  private assertOwner(
+    userId: string,
+    requester: AuthenticatedUser | undefined,
+  ): Promise<void> {
+    if (!requester || requester.id !== userId) {
+      return Promise.reject(
+        new ForbiddenException('Solo puedes acceder a tus ofertas guardadas.'),
+      );
+    }
+    return Promise.resolve();
   }
 }

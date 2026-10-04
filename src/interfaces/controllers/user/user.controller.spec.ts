@@ -26,6 +26,7 @@ describe('UserController organization directory access', () => {
   };
   const organizationAccess = {
     assertAccess: jest.fn(),
+    hasAccess: jest.fn().mockResolvedValue(true),
     hasCandidateRelationship: jest.fn(),
   };
   const controller = new UserController(
@@ -125,6 +126,29 @@ describe('UserController organization directory access', () => {
         },
       ],
     });
+  });
+
+  it('hides candidate contact details from a viewer', async () => {
+    const viewer: AuthenticatedUser = {
+      ...orphanOrganization,
+      organizationId: '55555555-5555-4555-8555-555555555555',
+    };
+    organizationAccess.assertAccess.mockResolvedValue(undefined);
+    organizationAccess.hasAccess.mockResolvedValueOnce(false);
+    userService.getUserById.mockResolvedValue({
+      id: '22222222-2222-4222-8222-222222222222',
+      type: 'professional',
+      name: 'Candidate',
+      email: 'private@example.com',
+      phone: '+56912345678',
+    });
+    const result = await controller.getUserById(
+      '22222222-2222-4222-8222-222222222222',
+      viewer,
+    );
+    expect(result.name).toBe('Candidate');
+    expect(result.email).toBeUndefined();
+    expect(result.phone).toBeUndefined();
   });
 
   it('denies candidate reads for an organization without membership', async () => {

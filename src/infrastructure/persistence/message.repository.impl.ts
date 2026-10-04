@@ -2,7 +2,7 @@ import { IMessageRepository } from '../../core/repositories/message.repository';
 import { Injectable } from '@nestjs/common';
 import { MessageEntity } from '../database/orm';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Not, Repository } from 'typeorm';
 import { Message } from '../../core/domain/entities/message.entity';
 import { MessageDomainOrmMapper } from '../../shared/mappers/message/messageDomain-orm.mapper';
 
@@ -58,7 +58,7 @@ export class MessageRepositoryImpl implements IMessageRepository {
 
   async markAllAsReadByChatId(chatId: string, userId: string): Promise<void> {
     await this.messageRepository.update(
-      { chatId, senderId: userId, isRead: false },
+      { chatId, senderId: Not(userId), isRead: false },
       { isRead: true },
     );
   }

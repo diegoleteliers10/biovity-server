@@ -65,7 +65,7 @@ export class CandidateTagController {
     await this.organizationAccess.assertAccess(
       dto.organizationId,
       requester,
-      'manage',
+      'recruit',
     );
     return this.service.create(dto.organizationId, dto.name, dto.color);
   }
@@ -81,7 +81,7 @@ export class CandidateTagController {
     await this.organizationAccess.assertCandidateTagAccess(
       tagId,
       requester,
-      'manage',
+      'recruit',
     );
     await this.service.delete(tagId);
   }
@@ -101,7 +101,7 @@ export class CandidateTagController {
     await this.organizationAccess.assertCandidateTagAccess(
       tagId,
       requester,
-      'manage',
+      'recruit',
     );
     return this.service.assign(tagId, dto.candidateId);
   }
@@ -119,7 +119,7 @@ export class CandidateTagController {
     await this.organizationAccess.assertCandidateTagAccess(
       tagId,
       requester,
-      'manage',
+      'recruit',
     );
     await this.service.unassign(tagId, candidateId);
   }

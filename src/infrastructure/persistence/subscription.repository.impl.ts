@@ -39,6 +39,7 @@ export class SubscriptionRepositoryImpl implements ISubscriptionRepository {
   ): Promise<Subscription | null> {
     const subscriptionOrm = await this.subscriptionRepository.findOne({
       where: { organizationId },
+      order: { isActive: 'DESC', createdAt: 'DESC' },
       relations: { organization: true },
     });
     return subscriptionOrm

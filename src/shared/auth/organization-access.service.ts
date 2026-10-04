@@ -145,7 +145,7 @@ export class OrganizationAccessService {
            SELECT 1 FROM chat
            WHERE chat."professionalId" = $2::uuid
              AND chat."recruiterId" IN (
-               SELECT "userId" FROM organization_member WHERE organization_id = $1::uuid
+               SELECT user_id FROM organization_member WHERE organization_id = $1::uuid
                UNION
                SELECT id FROM "user" WHERE "organizationId" = $1::uuid
              )
@@ -349,7 +349,7 @@ export class OrganizationAccessService {
       permission === 'read' &&
       requester.organizationId
     ) {
-      await this.assertAccess(requester.organizationId, requester, 'read');
+      await this.assertAccess(requester.organizationId, requester, 'recruit');
       return;
     }
     throw new ForbiddenException('No tienes acceso a este currículum.');

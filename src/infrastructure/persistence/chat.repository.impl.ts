@@ -1,6 +1,6 @@
 import { IChatRepository } from '../../core/repositories/chat.repository';
 import { Injectable } from '@nestjs/common';
-import { ChatEntity } from '../database/orm';
+import { ChatEntity, MessageEntity } from '../database/orm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Chat } from '../../core/domain/entities/chat.entity';
@@ -11,6 +11,8 @@ export class ChatRepositoryImpl implements IChatRepository {
   constructor(
     @InjectRepository(ChatEntity)
     private readonly chatRepository: Repository<ChatEntity>,
+    @InjectRepository(MessageEntity)
+    private readonly messageRepository: Repository<MessageEntity>,
   ) {}
 
   async create(entity: Chat): Promise<Chat> {
@@ -24,7 +26,9 @@ export class ChatRepositoryImpl implements IChatRepository {
       where: { id },
       relations: { recruiter: true, professional: true },
     });
-    return chatOrm ? ChatDomainOrmMapper.toDomain(chatOrm) : null;
+    if (!chatOrm) return null;
+    const chats = await this.withUnreadCounts([chatOrm]);
+    return chats[0] ?? null;
   }
 
   async findByRecruiterAndProfessional(
@@ -49,7 +53,7 @@ export class ChatRepositoryImpl implements IChatRepository {
       take: pagination?.take ?? 50,
       skip: pagination?.skip ?? 0,
     });
-    return chatsOrm.map(chatOrm => ChatDomainOrmMapper.toDomain(chatOrm));
+    return this.withUnreadCounts(chatsOrm);
   }
 
   async findByProfessionalId(
@@ -63,11 +67,43 @@ export class ChatRepositoryImpl implements IChatRepository {
       take: pagination?.take ?? 50,
       skip: pagination?.skip ?? 0,
     });
-    return chatsOrm.map(chatOrm => ChatDomainOrmMapper.toDomain(chatOrm));
+    return this.withUnreadCounts(chatsOrm);
   }
 
   async countByRecruiterId(recruiterId: string): Promise<number> {
     return this.chatRepository.count({ where: { recruiterId } });
+  }
+
+  private async withUnreadCounts(chats: ChatEntity[]): Promise<Chat[]> {
+    if (chats.length === 0) return [];
+    const unread = await this.messageRepository
+      .createQueryBuilder('message')
+      .select('message.chatId', 'chatId')
+      .addSelect('message.senderId', 'senderId')
+      .addSelect('COUNT(*)::integer', 'count')
+      .where('message.chatId IN (:...chatIds)', {
+        chatIds: chats.map(chat => chat.id),
+      })
+      .andWhere('message.isRead = false')
+      .groupBy('message.chatId')
+      .addGroupBy('message.senderId')
+      .getRawMany<{ chatId: string; senderId: string; count: number }>();
+    return chats.map(chat =>
+      ChatDomainOrmMapper.toDomain({
+        ...chat,
+        unreadCountRecruiter: unread
+          .filter(
+            row =>
+              row.chatId === chat.id && row.senderId === chat.professionalId,
+          )
+          .reduce((count, row) => count + row.count, 0),
+        unreadCountProfessional: unread
+          .filter(
+            row => row.chatId === chat.id && row.senderId === chat.recruiterId,
+          )
+          .reduce((count, row) => count + row.count, 0),
+      }),
+    );
   }
 
   async countByProfessionalId(professionalId: string): Promise<number> {
