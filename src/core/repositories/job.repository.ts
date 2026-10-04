@@ -47,6 +47,7 @@ export interface IJobRepository {
   ): Promise<PaginatedResult<JobWithApplications>>;
   update(id: string, entity: Partial<Job>): Promise<Job | null>;
   incrementViews(id: string): Promise<Job | null>;
+  countApplications(id: string): Promise<number>;
   delete(id: string): Promise<boolean>;
 }
 

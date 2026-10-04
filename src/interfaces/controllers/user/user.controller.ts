@@ -223,7 +223,7 @@ export class UserController {
     }
     if (requester.type === 'organization') {
       await this.assertOrganizationReadAccess(requester);
-      return AccessLevel.DIRECTORY;
+      return AccessLevel.RECRUITER_CONTACT;
     }
     throw new ForbiddenException('No tienes permisos para listar usuarios');
   }
@@ -248,15 +248,8 @@ export class UserController {
     if (level !== AccessLevel.DIRECTORY || requester?.type !== 'organization') {
       return level;
     }
-    const organizationId = await this.assertOrganizationReadAccess(requester);
-    const hasRelationship =
-      await this.organizationAccess.hasCandidateRelationship(
-        organizationId,
-        targetId,
-      );
-    return hasRelationship
-      ? AccessLevel.RECRUITER_CONTACT
-      : AccessLevel.DIRECTORY;
+    await this.assertOrganizationReadAccess(requester);
+    return AccessLevel.RECRUITER_CONTACT;
   }
 
   private async assertOrganizationReadAccess(
