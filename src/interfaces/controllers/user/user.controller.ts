@@ -13,6 +13,7 @@ import {
   NotFoundException,
   ForbiddenException,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { ApiTags } from '@nestjs/swagger';
 import { UserService } from '../../../core/services/user.service';
 import { UserDtoDomainMapper } from '../../../shared/mappers/user/userDto-domain.mapper';
@@ -34,6 +35,10 @@ import { UserAccessMapper } from '../../../shared/mappers/user/userAccess-dto.ma
 import type { UserAccessLevel } from '../../../shared/auth/user-access.policy';
 import type { UserSort } from '../../../core/repositories/user.repository';
 import { OrganizationAccessService } from '../../../shared/auth/organization-access.service';
+import {
+  THROTTLE_SENSITIVE_LIMIT,
+  THROTTLE_TTL_MS,
+} from '../../../shared/constants/throttling';
 
 const USER_SORT_FIELDS = ['createdat', 'name'] as const;
 
@@ -181,6 +186,9 @@ export class UserController {
   }
 
   @Post(':id/views')
+  @Throttle({
+    default: { limit: THROTTLE_SENSITIVE_LIMIT, ttl: THROTTLE_TTL_MS },
+  })
   @HttpCode(HttpStatus.OK)
   async incrementViews(
     @Param('id', ParseUUIDPipe) id: string,
