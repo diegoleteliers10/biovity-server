@@ -14,6 +14,9 @@ import {
 import { ApiTags, ApiOperation, ApiQuery, ApiParam } from '@nestjs/swagger';
 import { CandidateTagService } from '../../../core/services/candidate-tag.service';
 import { Roles } from '../../../shared/decorators/roles.decorator';
+import { CurrentUser } from '../../../shared/decorators/current-user.decorator';
+import type { AuthenticatedUser } from '../../../shared/auth/better-auth-session.service';
+import { OrganizationAccessService } from '../../../shared/auth/organization-access.service';
 
 class CreateTagDto {
   organizationId: string;
@@ -29,24 +32,41 @@ class AssignTagDto {
 @Roles('organization')
 @Controller('candidate-tags')
 export class CandidateTagController {
-  constructor(private readonly service: CandidateTagService) {}
+  constructor(
+    private readonly service: CandidateTagService,
+    private readonly organizationAccess: OrganizationAccessService,
+  ) {}
 
   @Get()
   @ApiOperation({ summary: 'Obtener etiquetas de la organización' })
   @ApiQuery({ name: 'organizationId', type: String })
   async findAll(
     @Query('organizationId', ParseUUIDPipe) organizationId: string,
+    @CurrentUser() requester: AuthenticatedUser | undefined,
   ) {
+    await this.organizationAccess.assertAccess(
+      organizationId,
+      requester,
+      'read',
+    );
     return this.service.findByOrganization(organizationId);
   }
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Crear etiqueta para la organización' })
-  async create(@Body() dto: CreateTagDto) {
+  async create(
+    @Body() dto: CreateTagDto,
+    @CurrentUser() requester: AuthenticatedUser | undefined,
+  ) {
     if (!dto.organizationId || !dto.name) {
       throw new BadRequestException('organizationId y name son requeridos');
     }
+    await this.organizationAccess.assertAccess(
+      dto.organizationId,
+      requester,
+      'manage',
+    );
     return this.service.create(dto.organizationId, dto.name, dto.color);
   }
 
@@ -54,7 +74,15 @@ export class CandidateTagController {
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Eliminar etiqueta' })
   @ApiParam({ name: 'id', type: String })
-  async remove(@Param('id', ParseUUIDPipe) tagId: string) {
+  async remove(
+    @Param('id', ParseUUIDPipe) tagId: string,
+    @CurrentUser() requester: AuthenticatedUser | undefined,
+  ) {
+    await this.organizationAccess.assertCandidateTagAccess(
+      tagId,
+      requester,
+      'manage',
+    );
     await this.service.delete(tagId);
   }
 
@@ -65,10 +93,16 @@ export class CandidateTagController {
   async assign(
     @Param('id', ParseUUIDPipe) tagId: string,
     @Body() dto: AssignTagDto,
+    @CurrentUser() requester: AuthenticatedUser | undefined,
   ) {
     if (!dto.candidateId) {
       throw new BadRequestException('candidateId es requerido');
     }
+    await this.organizationAccess.assertCandidateTagAccess(
+      tagId,
+      requester,
+      'manage',
+    );
     return this.service.assign(tagId, dto.candidateId);
   }
 
@@ -80,7 +114,13 @@ export class CandidateTagController {
   async unassign(
     @Param('id', ParseUUIDPipe) tagId: string,
     @Query('candidateId', ParseUUIDPipe) candidateId: string,
+    @CurrentUser() requester: AuthenticatedUser | undefined,
   ) {
+    await this.organizationAccess.assertCandidateTagAccess(
+      tagId,
+      requester,
+      'manage',
+    );
     await this.service.unassign(tagId, candidateId);
   }
 
@@ -91,7 +131,13 @@ export class CandidateTagController {
   async findByCandidate(
     @Param('candidateId', ParseUUIDPipe) candidateId: string,
     @Query('organizationId', ParseUUIDPipe) organizationId: string,
+    @CurrentUser() requester: AuthenticatedUser | undefined,
   ) {
+    await this.organizationAccess.assertAccess(
+      organizationId,
+      requester,
+      'read',
+    );
     return this.service.findByCandidate(candidateId, organizationId);
   }
 }

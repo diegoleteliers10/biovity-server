@@ -10,6 +10,7 @@ import {
   HttpCode,
   HttpStatus,
   ParseUUIDPipe,
+  ForbiddenException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { ApplicationService } from '../../../core/services/application.service';
@@ -23,12 +24,19 @@ import { ApplicationStatusUpdateDto } from '../../dtos/application/application-s
 
 import { Roles } from '../../../shared/decorators/roles.decorator';
 import { CurrentUser } from '../../../shared/decorators/current-user.decorator';
-import type { AuthenticatedUser } from '../../../shared/auth/better-auth-session.service';
+import {
+  isAdminUser,
+  type AuthenticatedUser,
+} from '../../../shared/auth/better-auth-session.service';
+import { OrganizationAccessService } from '../../../shared/auth/organization-access.service';
 
 @ApiTags('applications')
 @Controller('applications')
 export class ApplicationController {
-  constructor(private readonly applicationService: ApplicationService) {}
+  constructor(
+    private readonly applicationService: ApplicationService,
+    private readonly organizationAccess: OrganizationAccessService,
+  ) {}
 
   @Post()
   @Roles('professional')
@@ -38,7 +46,17 @@ export class ApplicationController {
   @ApiResponse({ status: 400, description: 'Datos inválidos' })
   async createApplication(
     @Body() dto: ApplicationCreateDto,
+    @CurrentUser() requester: AuthenticatedUser | undefined,
   ): Promise<ApplicationResponseDto> {
+    if (!requester)
+      throw new ForbiddenException('Se requiere una sesión de usuario.');
+    if (
+      !isAdminUser(requester) &&
+      requester.type !== 'admin' &&
+      requester.id !== dto.candidateId
+    ) {
+      throw new ForbiddenException('Solo puedes postular en tu nombre.');
+    }
     const input = ApplicationDtoDomainMapper.toCreateApplicationInput(dto);
     const application = await this.applicationService.createApplication(input);
     return ApplicationDomainDtoMapper.toDto(application);
@@ -51,8 +69,25 @@ export class ApplicationController {
   @ApiResponse({ status: 404, description: 'Postulación no encontrada' })
   async getApplicationById(
     @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() requester: AuthenticatedUser | undefined,
   ): Promise<ApplicationResponseDto | null> {
     const application = await this.applicationService.getApplicationById(id);
+    if (application && !requester)
+      throw new ForbiddenException('Se requiere una sesión de usuario.');
+    if (application && requester) {
+      if (
+        requester.type === 'professional' &&
+        requester.id === application.candidateId
+      )
+        return ApplicationDomainDtoMapper.toDto(application);
+      if (isAdminUser(requester) || requester.type === 'admin')
+        return ApplicationDomainDtoMapper.toDto(application);
+      await this.organizationAccess.assertApplicationAccess(
+        id,
+        requester,
+        'read',
+      );
+    }
     return application ? ApplicationDomainDtoMapper.toDto(application) : null;
   }
 
@@ -62,7 +97,18 @@ export class ApplicationController {
   @ApiResponse({ status: 200, description: 'Lista de postulaciones' })
   async getAllApplications(
     @Query() query: ApplicationQueryDto,
+    @CurrentUser() requester: AuthenticatedUser | undefined,
   ): Promise<ApplicationPaginatedResponseDto> {
+    if (!requester)
+      throw new ForbiddenException('Se requiere una sesión de usuario.');
+    if (!query.jobId) throw new ForbiddenException('jobId es requerido.');
+    if (requester.type !== 'admin' && !isAdminUser(requester)) {
+      await this.organizationAccess.assertJobAccess(
+        query.jobId,
+        requester,
+        'read',
+      );
+    }
     const pagination = {
       page: query.page,
       limit: query.limit,
@@ -90,7 +136,9 @@ export class ApplicationController {
   async getApplicationsByJob(
     @Param('jobId', ParseUUIDPipe) jobId: string,
     @Query() query: ApplicationQueryDto,
+    @CurrentUser() requester: AuthenticatedUser | undefined,
   ): Promise<ApplicationPaginatedResponseDto> {
+    await this.organizationAccess.assertJobAccess(jobId, requester, 'read');
     const pagination = {
       page: query.page,
       limit: query.limit,
@@ -118,7 +166,16 @@ export class ApplicationController {
   async getApplicationsByCandidate(
     @Param('candidateId', ParseUUIDPipe) candidateId: string,
     @Query() query: ApplicationQueryDto,
+    @CurrentUser() requester: AuthenticatedUser | undefined,
   ): Promise<ApplicationPaginatedResponseDto> {
+    if (
+      !requester ||
+      (!isAdminUser(requester) &&
+        requester.type !== 'admin' &&
+        requester.id !== candidateId)
+    ) {
+      throw new ForbiddenException('Solo puedes consultar tus postulaciones.');
+    }
     const pagination = {
       page: query.page,
       limit: query.limit,
@@ -146,7 +203,13 @@ export class ApplicationController {
   async getApplicationsByOrganization(
     @Param('organizationId', ParseUUIDPipe) organizationId: string,
     @Query() query: ApplicationQueryDto,
+    @CurrentUser() requester: AuthenticatedUser | undefined,
   ): Promise<ApplicationPaginatedResponseDto> {
+    await this.organizationAccess.assertAccess(
+      organizationId,
+      requester,
+      'read',
+    );
     const pagination = {
       page: query.page,
       limit: query.limit,
@@ -179,6 +242,11 @@ export class ApplicationController {
     @Body() dto: ApplicationStatusUpdateDto,
     @CurrentUser() requester: AuthenticatedUser | undefined,
   ): Promise<ApplicationResponseDto | null> {
+    await this.organizationAccess.assertApplicationAccess(
+      id,
+      requester,
+      'recruit',
+    );
     const application = await this.applicationService.updateApplicationStatus(
       id,
       dto.status,
@@ -196,7 +264,19 @@ export class ApplicationController {
   @ApiResponse({ status: 404, description: 'Postulación no encontrada' })
   async deleteApplication(
     @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() requester: AuthenticatedUser | undefined,
   ): Promise<void> {
+    if (!requester)
+      throw new ForbiddenException('Se requiere una sesión de usuario.');
+    const application = await this.applicationService.getApplicationById(id);
+    if (!application) return;
+    if (
+      !isAdminUser(requester) &&
+      requester.type !== 'admin' &&
+      requester.id !== application.candidateId
+    ) {
+      throw new ForbiddenException('Solo puedes eliminar tu postulación.');
+    }
     await this.applicationService.deleteApplication(id);
   }
 }

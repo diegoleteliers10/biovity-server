@@ -11,6 +11,7 @@ import {
   HttpStatus,
   ParseUUIDPipe,
   NotFoundException,
+  ForbiddenException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -31,6 +32,9 @@ import { JobQueryDto } from '../../dtos/job/job-query.dto';
 import { Public } from '../../../shared/decorators/public.decorator';
 import { Roles } from '../../../shared/decorators/roles.decorator';
 import type { JobSort } from '../../../core/repositories/job.repository';
+import { CurrentUser } from '../../../shared/decorators/current-user.decorator';
+import type { AuthenticatedUser } from '../../../shared/auth/better-auth-session.service';
+import { OrganizationAccessService } from '../../../shared/auth/organization-access.service';
 
 const SORT_FIELDS = ['createdat', 'title'] as const;
 const SORT_DIRECTIONS = ['asc', 'desc'] as const;
@@ -74,7 +78,10 @@ interface PaginatedResult<T> {
 @Roles('organization')
 @Controller('jobs')
 export class JobController {
-  constructor(private readonly jobService: JobService) {}
+  constructor(
+    private readonly jobService: JobService,
+    private readonly organizationAccess: OrganizationAccessService,
+  ) {}
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
@@ -86,7 +93,15 @@ export class JobController {
   })
   @ApiResponse({ status: 400, description: 'Datos inválidos' })
   @ApiBody({ type: JobCreateDto })
-  async createJob(@Body() dto: JobCreateDto): Promise<JobResponseDto> {
+  async createJob(
+    @Body() dto: JobCreateDto,
+    @CurrentUser() requester: AuthenticatedUser | undefined,
+  ): Promise<JobResponseDto> {
+    await this.organizationAccess.assertAccess(
+      dto.organizationId,
+      requester,
+      'manage',
+    );
     const input = JobDtoDomainMapper.toCreateJobInput(dto);
     const job = await this.jobService.createJob(input);
     return JobDomainDtoMapper.toDto(job);
@@ -201,7 +216,13 @@ export class JobController {
   async getJobsByOrganization(
     @Param('organizationId', ParseUUIDPipe) organizationId: string,
     @Query() query: JobQueryDto,
+    @CurrentUser() requester: AuthenticatedUser | undefined,
   ): Promise<PaginatedJobResponse> {
+    await this.organizationAccess.assertAccess(
+      organizationId,
+      requester,
+      'read',
+    );
     const pagination = {
       page: query.page,
       limit: query.limit,
@@ -258,8 +279,44 @@ export class JobController {
   async updateJob(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: JobUpdateDto,
+    @CurrentUser() requester: AuthenticatedUser | undefined,
   ): Promise<JobResponseDto> {
-    const input = JobDtoDomainMapper.toCreateJobInput(dto as JobCreateDto);
+    const existingJob = await this.jobService.getJobById(id);
+    if (!existingJob) throw new NotFoundException('Job not found');
+    await this.organizationAccess.assertJobAccess(id, requester, 'manage');
+    if (
+      dto.organizationId &&
+      dto.organizationId !== existingJob.organizationId
+    ) {
+      throw new ForbiddenException(
+        'No puedes cambiar la organización de una oferta.',
+      );
+    }
+    const input = {
+      organizationId: existingJob.organizationId,
+      title: dto.title ?? existingJob.title,
+      description: dto.description ?? existingJob.description,
+      employmentType:
+        dto.employmentType ?? existingJob.employmentType ?? undefined,
+      experienceLevel:
+        dto.experienceLevel ?? existingJob.experienceLevel ?? undefined,
+      salary: (dto.salary ?? existingJob.salary) as Record<string, unknown>,
+      location: (dto.location ?? existingJob.location) as Record<
+        string,
+        unknown
+      >,
+      benefits: (dto.benefits ?? existingJob.benefits) as unknown as Record<
+        string,
+        unknown
+      >[],
+      status: dto.status ?? existingJob.status,
+      expiresAt: dto.expiresAt
+        ? new Date(dto.expiresAt)
+        : existingJob.expiresAt,
+      category: dto.category ?? existingJob.category,
+      requiredSkills: dto.requiredSkills ?? existingJob.requiredSkills,
+      minExperience: dto.minExperience ?? existingJob.minExperience,
+    };
     const job = await this.jobService.updateJob(id, input);
     if (!job) throw new NotFoundException('Job not found');
     return JobDomainDtoMapper.toDto(job);
@@ -276,7 +333,11 @@ export class JobController {
   })
   @ApiResponse({ status: 204, description: 'Oferta eliminada exitosamente' })
   @ApiResponse({ status: 404, description: 'Oferta no encontrada' })
-  async deleteJob(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
+  async deleteJob(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() requester: AuthenticatedUser | undefined,
+  ): Promise<void> {
+    await this.organizationAccess.assertJobAccess(id, requester, 'manage');
     await this.jobService.deleteJob(id);
   }
 

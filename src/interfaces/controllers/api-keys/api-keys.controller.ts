@@ -22,6 +22,7 @@ import {
   ApiKeyResponseDto,
   ApiKeyCreateResponseDto,
 } from '../../dtos/api-keys/api-key-response.dto';
+import { OrganizationAccessService } from '../../../shared/auth/organization-access.service';
 
 @ApiTags('api-keys')
 @Throttle({
@@ -30,7 +31,10 @@ import {
 @Roles('organization')
 @Controller('organizations/:orgId/api-keys')
 export class ApiKeysController {
-  constructor(private readonly apiKeysService: ApiKeysService) {}
+  constructor(
+    private readonly apiKeysService: ApiKeysService,
+    private readonly organizationAccess: OrganizationAccessService,
+  ) {}
 
   @Post()
   @ApiOperation({ summary: 'Create a new API key' })
@@ -41,6 +45,7 @@ export class ApiKeysController {
     @Body() dto: CreateApiKeyDto,
     @CurrentUser() requester: AuthenticatedUser | undefined,
   ) {
+    await this.organizationAccess.assertAccess(orgId, requester, 'manage');
     const userId = requester?.id || null;
     const { rawKey, record } = await this.apiKeysService.create(
       orgId,
@@ -62,7 +67,11 @@ export class ApiKeysController {
   @ApiOperation({ summary: 'List all API keys for an organization' })
   @ApiResponse({ status: 200, type: [ApiKeyResponseDto] })
   @ApiParam({ name: 'orgId', type: 'string', format: 'uuid' })
-  async list(@Param('orgId', ParseUUIDPipe) orgId: string) {
+  async list(
+    @Param('orgId', ParseUUIDPipe) orgId: string,
+    @CurrentUser() requester: AuthenticatedUser | undefined,
+  ) {
+    await this.organizationAccess.assertAccess(orgId, requester, 'manage');
     const keys = await this.apiKeysService.listByOrg(orgId);
     return keys.map(({ keyHash: _k, keyPrefix: _p, ...safe }) => safe);
   }
@@ -75,7 +84,9 @@ export class ApiKeysController {
   async revoke(
     @Param('orgId', ParseUUIDPipe) orgId: string,
     @Param('keyId', ParseUUIDPipe) keyId: string,
+    @CurrentUser() requester: AuthenticatedUser | undefined,
   ) {
+    await this.organizationAccess.assertAccess(orgId, requester, 'manage');
     await this.apiKeysService.revoke(keyId, orgId);
     return { revoked: true };
   }

@@ -13,6 +13,7 @@ import {
   HttpStatus,
   NotFoundException,
   BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -31,13 +32,19 @@ import {
   PaginatedResponse,
   parsePagination,
 } from '../../../shared/pagination/pagination';
+import { CurrentUser } from '../../../shared/decorators/current-user.decorator';
+import type { AuthenticatedUser } from '../../../shared/auth/better-auth-session.service';
+import { OrganizationAccessService } from '../../../shared/auth/organization-access.service';
 
 type ChatRole = 'recruiter' | 'professional';
 
 @ApiTags('chat')
 @Controller('chats')
 export class ChatController {
-  constructor(private readonly chatService: ChatService) {}
+  constructor(
+    private readonly chatService: ChatService,
+    private readonly organizationAccess: OrganizationAccessService,
+  ) {}
 
   private assertChatRole(role: string): ChatRole {
     if (role !== 'recruiter' && role !== 'professional') {
@@ -53,7 +60,15 @@ export class ChatController {
   @ApiOperation({ summary: 'Crear chat' })
   @ApiResponse({ status: 201, description: 'Chat creado' })
   @ApiResponse({ status: 400, description: 'Datos inválidos' })
-  async createChat(@Body() dto: ChatCreateDto): Promise<ChatResponseDto> {
+  async createChat(
+    @Body() dto: ChatCreateDto,
+    @CurrentUser() requester: AuthenticatedUser | undefined,
+  ): Promise<ChatResponseDto> {
+    await this.organizationAccess.assertChatCreation(
+      dto.recruiterId,
+      dto.professionalId,
+      requester,
+    );
     const input = ChatDtoDomainMapper.toCreateChatInput(dto);
     const chat = await this.chatService.createChat(input);
     return ChatDomainDtoMapper.toDto(chat);
@@ -66,7 +81,9 @@ export class ChatController {
   @ApiResponse({ status: 404, description: 'Chat no encontrado' })
   async getChatById(
     @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() requester: AuthenticatedUser | undefined,
   ): Promise<ChatResponseDto> {
+    await this.organizationAccess.assertChatParticipant(id, requester);
     const chat = await this.chatService.getChatById(id);
     if (!chat) throw new NotFoundException('Chat not found');
     return ChatDomainDtoMapper.toDto(chat);
@@ -81,7 +98,14 @@ export class ChatController {
   async getChatsByRecruiter(
     @Param('recruiterId', ParseUUIDPipe) recruiterId: string,
     @Query() query: Record<string, string>,
+    @CurrentUser() requester: AuthenticatedUser | undefined,
   ): Promise<PaginatedResponse<ChatResponseDto>> {
+    if (
+      !requester ||
+      requester.id !== recruiterId ||
+      requester.type !== 'organization'
+    )
+      throw new ForbiddenException('Solo puedes consultar tus chats.');
     const result = await this.chatService.getChatsByRecruiter(
       recruiterId,
       parsePagination(query),
@@ -103,7 +127,14 @@ export class ChatController {
   async getChatsByProfessional(
     @Param('professionalId', ParseUUIDPipe) professionalId: string,
     @Query() query: Record<string, string>,
+    @CurrentUser() requester: AuthenticatedUser | undefined,
   ): Promise<PaginatedResponse<ChatResponseDto>> {
+    if (
+      !requester ||
+      requester.id !== professionalId ||
+      requester.type !== 'professional'
+    )
+      throw new ForbiddenException('Solo puedes consultar tus chats.');
     const result = await this.chatService.getChatsByProfessional(
       professionalId,
       parsePagination(query),
@@ -125,11 +156,22 @@ export class ChatController {
   async getChatByParticipants(
     @Param('recruiterId', ParseUUIDPipe) recruiterId: string,
     @Param('professionalId', ParseUUIDPipe) professionalId: string,
+    @CurrentUser() requester: AuthenticatedUser | undefined,
   ): Promise<ChatResponseDto> {
+    if (!requester)
+      throw new ForbiddenException('Se requiere una sesión de usuario.');
+    if (
+      (requester.id === recruiterId && requester.type !== 'organization') ||
+      (requester.id === professionalId && requester.type !== 'professional') ||
+      (requester.id !== recruiterId && requester.id !== professionalId)
+    )
+      throw new ForbiddenException('No tienes acceso a este chat.');
     const chat = await this.chatService.getChatByParticipants(
       recruiterId,
       professionalId,
     );
+    if (chat)
+      await this.organizationAccess.assertChatParticipant(chat.id, requester);
     if (!chat) throw new NotFoundException('Chat not found');
     return ChatDomainDtoMapper.toDto(chat);
   }
@@ -142,7 +184,13 @@ export class ChatController {
   async updateChat(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: ChatUpdateDto,
+    @CurrentUser() requester: AuthenticatedUser | undefined,
   ): Promise<ChatResponseDto> {
+    await this.organizationAccess.assertChatParticipant(id, requester);
+    if (dto.recruiterId || dto.professionalId)
+      throw new ForbiddenException(
+        'No puedes cambiar los participantes del chat.',
+      );
     const chat = await this.chatService.updateChat(id, dto);
     if (!chat) throw new NotFoundException('Chat not found');
     return ChatDomainDtoMapper.toDto(chat);
@@ -163,8 +211,19 @@ export class ChatController {
   async togglePin(
     @Param('id', ParseUUIDPipe) id: string,
     @Query('role') role: string,
+    @CurrentUser() requester: AuthenticatedUser | undefined,
   ): Promise<ChatResponseDto> {
+    if (!requester)
+      throw new ForbiddenException('Se requiere una sesión de usuario.');
+    const participant = await this.organizationAccess.assertChatParticipant(
+      id,
+      requester,
+    );
     const assertedRole = this.assertChatRole(role);
+    if (participant.role !== assertedRole)
+      throw new ForbiddenException(
+        'No puedes cambiar la vista de otra persona.',
+      );
     const chat = await this.chatService.togglePin(id, assertedRole);
     if (!chat) throw new NotFoundException('Chat not found');
     return ChatDomainDtoMapper.toDto(chat, assertedRole);
@@ -185,8 +244,19 @@ export class ChatController {
   async toggleArchive(
     @Param('id', ParseUUIDPipe) id: string,
     @Query('role') role: string,
+    @CurrentUser() requester: AuthenticatedUser | undefined,
   ): Promise<ChatResponseDto> {
+    if (!requester)
+      throw new ForbiddenException('Se requiere una sesión de usuario.');
+    const participant = await this.organizationAccess.assertChatParticipant(
+      id,
+      requester,
+    );
     const assertedRole = this.assertChatRole(role);
+    if (participant.role !== assertedRole)
+      throw new ForbiddenException(
+        'No puedes cambiar la vista de otra persona.',
+      );
     const chat = await this.chatService.toggleArchive(id, assertedRole);
     if (!chat) throw new NotFoundException('Chat not found');
     return ChatDomainDtoMapper.toDto(chat, assertedRole);
@@ -198,7 +268,14 @@ export class ChatController {
   @ApiParam({ name: 'id', type: 'string', format: 'uuid' })
   @ApiResponse({ status: 204, description: 'Chat eliminado' })
   @ApiResponse({ status: 404, description: 'Chat no encontrado' })
-  async deleteChat(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
-    await this.chatService.deleteChat(id);
+  async deleteChat(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() requester: AuthenticatedUser | undefined,
+  ): Promise<void> {
+    const participant = await this.organizationAccess.assertChatParticipant(
+      id,
+      requester,
+    );
+    await this.chatService.archiveForParticipant(id, participant.role);
   }
 }

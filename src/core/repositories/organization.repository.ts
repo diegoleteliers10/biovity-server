@@ -18,5 +18,14 @@ export interface IOrganizationRepository {
     organizationId: string,
     subscriptionId: string,
   ): Promise<Organization | null>;
+  createWithOwner(
+    entity: Organization,
+    ownerUserId: string,
+  ): Promise<Organization>;
+  transferOwner(
+    organizationId: string,
+    currentOwnerUserId: string,
+    newOwnerUserId: string,
+  ): Promise<void>;
   delete(id: string): Promise<boolean>;
 }

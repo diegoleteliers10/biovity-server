@@ -23,6 +23,9 @@ import {
   THROTTLE_TTL_MS,
 } from '../../../shared/constants/throttling';
 import { SubscriptionDomainDtoMapper } from '../../../shared/mappers/subscription/subscriptionDomain-dto.mapper';
+import { CurrentUser } from '../../../shared/decorators/current-user.decorator';
+import type { AuthenticatedUser } from '../../../shared/auth/better-auth-session.service';
+import { OrganizationAccessService } from '../../../shared/auth/organization-access.service';
 import {
   SubscriptionResponseDto,
   CreatePreferenceDto,
@@ -35,7 +38,10 @@ import {
 })
 @Controller('subscription')
 export class SubscriptionController {
-  constructor(private readonly subscriptionService: SubscriptionService) {}
+  constructor(
+    private readonly subscriptionService: SubscriptionService,
+    private readonly organizationAccess: OrganizationAccessService,
+  ) {}
 
   @Get()
   @Roles('organization')
@@ -55,7 +61,13 @@ export class SubscriptionController {
   @ApiResponse({ status: 404, description: 'Suscripción no encontrada' })
   async getSubscription(
     @Query('organizationId', ParseUUIDPipe) organizationId: string,
+    @CurrentUser() requester: AuthenticatedUser | undefined,
   ): Promise<{ subscription: SubscriptionResponseDto | null }> {
+    await this.organizationAccess.assertAccess(
+      organizationId,
+      requester,
+      'read',
+    );
     const subscription =
       await this.subscriptionService.getSubscriptionByOrganizationId(
         organizationId,
@@ -80,7 +92,13 @@ export class SubscriptionController {
   @ApiResponse({ status: 400, description: 'Datos inválidos' })
   async createPreference(
     @Body() dto: CreatePreferenceDto,
+    @CurrentUser() requester: AuthenticatedUser | undefined,
   ): Promise<CreatePreferenceResponseDto> {
+    await this.organizationAccess.assertAccess(
+      dto.organizationId,
+      requester,
+      'manage',
+    );
     const result = await this.subscriptionService.createMercadoPagoPreference({
       plan: dto.plan,
       organizationId: dto.organizationId,

@@ -70,11 +70,11 @@ export class BetterAuthSessionService {
 
   private extractSignedToken(cookieValue: string): string | null {
     const secret = process.env.BETTER_AUTH_SECRET;
+    if (!secret) return null;
     const lastDot = cookieValue.lastIndexOf('.');
     if (lastDot <= 0) return null;
     const token = cookieValue.slice(0, lastDot);
     const signature = cookieValue.slice(lastDot + 1);
-    if (!secret) return token;
     const expected = createHmac('sha256', secret)
       .update(token)
       .digest('base64');

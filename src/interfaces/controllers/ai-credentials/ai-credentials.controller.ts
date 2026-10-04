@@ -19,6 +19,9 @@ import {
 import { InternalSecretGuard } from '../../../shared/guards/internal-secret.guard';
 import { Roles } from '../../../shared/decorators/roles.decorator';
 import { Throttle } from '@nestjs/throttler';
+import { CurrentUser } from '../../../shared/decorators/current-user.decorator';
+import type { AuthenticatedUser } from '../../../shared/auth/better-auth-session.service';
+import { OrganizationAccessService } from '../../../shared/auth/organization-access.service';
 import {
   THROTTLE_SENSITIVE_LIMIT,
   THROTTLE_TTL_MS,
@@ -31,7 +34,10 @@ import {
 @Roles('organization')
 @Controller('organizations/:orgId/ai-credentials')
 export class AiCredentialsController {
-  constructor(private readonly service: AiCredentialsService) {}
+  constructor(
+    private readonly service: AiCredentialsService,
+    private readonly organizationAccess: OrganizationAccessService,
+  ) {}
 
   @Get()
   @ApiOperation({
@@ -39,7 +45,11 @@ export class AiCredentialsController {
   })
   @ApiResponse({ status: 200, type: AiCredentialResponseDto })
   @ApiParam({ name: 'orgId', type: 'string', format: 'uuid' })
-  async getMasked(@Param('orgId', ParseUUIDPipe) orgId: string) {
+  async getMasked(
+    @Param('orgId', ParseUUIDPipe) orgId: string,
+    @CurrentUser() requester: AuthenticatedUser | undefined,
+  ) {
+    await this.organizationAccess.assertAccess(orgId, requester, 'manage');
     return this.service.getMasked(orgId);
   }
 
@@ -47,7 +57,11 @@ export class AiCredentialsController {
   @ApiOperation({ summary: 'List all AI credentials for an organization' })
   @ApiResponse({ status: 200, type: AiCredentialListItemDto, isArray: true })
   @ApiParam({ name: 'orgId', type: 'string', format: 'uuid' })
-  async list(@Param('orgId', ParseUUIDPipe) orgId: string) {
+  async list(
+    @Param('orgId', ParseUUIDPipe) orgId: string,
+    @CurrentUser() requester: AuthenticatedUser | undefined,
+  ) {
+    await this.organizationAccess.assertAccess(orgId, requester, 'manage');
     return this.service.list(orgId);
   }
 
@@ -58,7 +72,9 @@ export class AiCredentialsController {
   async save(
     @Param('orgId', ParseUUIDPipe) orgId: string,
     @Body() dto: CreateAiCredentialDto,
+    @CurrentUser() requester: AuthenticatedUser | undefined,
   ) {
+    await this.organizationAccess.assertAccess(orgId, requester, 'manage');
     return this.service.save(orgId, dto);
   }
 
@@ -72,7 +88,9 @@ export class AiCredentialsController {
   async activate(
     @Param('orgId', ParseUUIDPipe) orgId: string,
     @Param('credId', ParseUUIDPipe) credId: string,
+    @CurrentUser() requester: AuthenticatedUser | undefined,
   ) {
+    await this.organizationAccess.assertAccess(orgId, requester, 'manage');
     return this.service.activate(orgId, credId);
   }
 
@@ -82,7 +100,11 @@ export class AiCredentialsController {
   })
   @ApiResponse({ status: 200 })
   @ApiParam({ name: 'orgId', type: 'string', format: 'uuid' })
-  async remove(@Param('orgId', ParseUUIDPipe) orgId: string) {
+  async remove(
+    @Param('orgId', ParseUUIDPipe) orgId: string,
+    @CurrentUser() requester: AuthenticatedUser | undefined,
+  ) {
+    await this.organizationAccess.assertAccess(orgId, requester, 'manage');
     await this.service.remove(orgId);
     return { removed: true };
   }
@@ -95,7 +117,9 @@ export class AiCredentialsController {
   async removeById(
     @Param('orgId', ParseUUIDPipe) orgId: string,
     @Param('credId', ParseUUIDPipe) credId: string,
+    @CurrentUser() requester: AuthenticatedUser | undefined,
   ) {
+    await this.organizationAccess.assertAccess(orgId, requester, 'manage');
     await this.service.removeById(orgId, credId);
     return { removed: true };
   }

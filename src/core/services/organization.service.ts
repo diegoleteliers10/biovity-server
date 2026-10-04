@@ -8,7 +8,6 @@ import {
   UpdateOrganizationInput,
 } from '../use-cases/organization/organization.use-case';
 import { Organization } from '../domain/entities/organization.entity';
-import { OrganizationMemberRole } from '../domain/entities/organization-member.entity';
 import {
   parsePagination,
   paginated,
@@ -31,6 +30,7 @@ export class OrganizationService implements IOrganizationUseCase {
 
   async createOrganization(
     data: CreateOrganizationInput,
+    ownerUserId: string,
   ): Promise<Organization> {
     const organization = new Organization(
       this.generateId(),
@@ -42,7 +42,10 @@ export class OrganizationService implements IOrganizationUseCase {
       new Date(),
     );
 
-    return this.organizationRepository.create(organization);
+    return this.organizationRepository.createWithOwner(
+      organization,
+      ownerUserId,
+    );
   }
 
   async getOrganizationById(id: string): Promise<Organization | null> {
@@ -98,6 +101,7 @@ export class OrganizationService implements IOrganizationUseCase {
 
   async transferOwnership(
     organizationId: string,
+    currentOwnerUserId: string,
     newOwnerUserId: string,
   ): Promise<Organization> {
     const organization =
@@ -117,11 +121,11 @@ export class OrganizationService implements IOrganizationUseCase {
       throw new NotFoundException('User is not a member of this organization');
     }
 
-    // Update the new owner's role to admin
-    await this.memberRepository.update(member.id, {
-      role: OrganizationMemberRole.ADMIN,
-    });
-
+    await this.organizationRepository.transferOwner(
+      organizationId,
+      currentOwnerUserId,
+      newOwnerUserId,
+    );
     const updated = await this.organizationRepository.findById(organizationId);
     if (!updated) {
       throw new NotFoundException(

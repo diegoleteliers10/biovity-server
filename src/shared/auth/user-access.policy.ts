@@ -2,12 +2,15 @@ import { ForbiddenException } from '@nestjs/common';
 import type { AuthenticatedUser } from './better-auth-session.service';
 import { isAdminUser } from './better-auth-session.service';
 
-export type UserAccessLevel = 'full' | 'basic' | 'chat' | 'denied';
+export type UserAccessLevel =
+  'full' | 'basic' | 'chat' | 'directory' | 'recruiter-contact' | 'denied';
 
 export const AccessLevel = {
   FULL: 'full' as const,
   BASIC: 'basic' as const,
   CHAT: 'chat' as const,
+  DIRECTORY: 'directory' as const,
+  RECRUITER_CONTACT: 'recruiter-contact' as const,
   DENIED: 'denied' as const,
 };
 
@@ -22,11 +25,11 @@ export function resolveUserReadAccess(
   targetType: string,
   targetId: string,
 ): UserAccessLevel {
-  if (!requester) return 'full';
+  if (!requester) return 'denied';
   if (requester.id === targetId) return 'full';
   if (isAdminUser(requester)) return 'basic';
   if (requester.type === 'organization' && targetType === 'professional') {
-    return 'full';
+    return 'directory';
   }
   if (requester.type === 'professional' && targetType === 'organization') {
     return 'chat';

@@ -116,6 +116,7 @@ export class EventService implements IEventUseCase {
   async getEvents(
     filters?: {
       organizerId?: string;
+      organizationId?: string;
       candidateId?: string;
       userId?: string;
       type?: EventType;
