@@ -20,7 +20,10 @@ export interface IChatUseCase {
     professionalId: string,
   ): Promise<Chat | null>;
   updateChat(id: string, data: UpdateChatInput): Promise<Chat | null>;
-  deleteChat(id: string): Promise<boolean>;
+  archiveForParticipant(
+    id: string,
+    role: 'recruiter' | 'professional',
+  ): Promise<Chat | null>;
   togglePin(
     id: string,
     role: 'recruiter' | 'professional',

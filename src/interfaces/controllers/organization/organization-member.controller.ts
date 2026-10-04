@@ -24,19 +24,31 @@ import {
   PaginatedResponse,
   parsePagination,
 } from '../../../shared/pagination/pagination';
+import { CurrentUser } from '../../../shared/decorators/current-user.decorator';
+import type { AuthenticatedUser } from '../../../shared/auth/better-auth-session.service';
+import { OrganizationAccessService } from '../../../shared/auth/organization-access.service';
 
 @ApiTags('organizations')
 @Roles('organization')
 @Controller('organizations/:organizationId/members')
 export class OrganizationMemberController {
-  constructor(private readonly memberService: OrganizationMemberService) {}
+  constructor(
+    private readonly memberService: OrganizationMemberService,
+    private readonly organizationAccess: OrganizationAccessService,
+  ) {}
 
   @Get()
   @ApiOperation({ summary: 'Listar miembros de la organización' })
   async getMembers(
     @Param('organizationId', ParseUUIDPipe) organizationId: string,
     @Query() query: Record<string, string>,
+    @CurrentUser() requester: AuthenticatedUser | undefined,
   ): Promise<PaginatedResponse<OrganizationMemberResponseDto>> {
+    await this.organizationAccess.assertAccess(
+      organizationId,
+      requester,
+      'read',
+    );
     const result = await this.memberService.getMembers(
       organizationId,
       parsePagination(query),
@@ -53,7 +65,14 @@ export class OrganizationMemberController {
   async addMember(
     @Param('organizationId', ParseUUIDPipe) organizationId: string,
     @Body() dto: AddMemberDto,
+    @CurrentUser() requester: AuthenticatedUser | undefined,
   ): Promise<OrganizationMemberResponseDto> {
+    await this.organizationAccess.assertAccess(
+      organizationId,
+      requester,
+      'manage',
+    );
+    await this.organizationAccess.assertOrganizationMemberUser(dto.userId);
     const member = await this.memberService.addMember({
       organizationId,
       userId: dto.userId,
@@ -67,7 +86,14 @@ export class OrganizationMemberController {
   async updateMemberRole(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateMemberRoleDto,
+    @CurrentUser() requester: AuthenticatedUser | undefined,
   ): Promise<OrganizationMemberResponseDto> {
+    const existing = await this.memberService.getMemberById(id);
+    await this.organizationAccess.assertAccess(
+      existing.organizationId,
+      requester,
+      'manage',
+    );
     const member = await this.memberService.updateMemberRole(id, {
       role: dto.role,
     });
@@ -77,7 +103,16 @@ export class OrganizationMemberController {
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Eliminar miembro de la organización' })
-  async removeMember(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
+  async removeMember(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() requester: AuthenticatedUser | undefined,
+  ): Promise<void> {
+    const existing = await this.memberService.getMemberById(id);
+    await this.organizationAccess.assertAccess(
+      existing.organizationId,
+      requester,
+      'manage',
+    );
     await this.memberService.removeMember(id);
   }
 }

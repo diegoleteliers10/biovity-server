@@ -43,14 +43,11 @@ export class SessionAuthGuard implements CanActivate {
       user?: AuthenticatedUser;
     }>();
 
-    if (this.hasValidInternalKey(request)) {
-      return true;
-    }
-
     const cookies = request.cookies ?? {};
     const cookieValue = SESSION_COOKIE_NAMES.map(name => cookies[name]).find(
       Boolean,
     );
+    if (this.hasValidInternalKey(request) && !cookieValue) return true;
     const user = await this.sessionService.validateSessionCookie(cookieValue);
     if (!user) {
       throw new UnauthorizedException('Se requiere una sesión válida.');

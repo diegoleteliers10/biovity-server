@@ -5,7 +5,10 @@ import type {
 } from '../../../shared/pagination/pagination';
 
 export interface IOrganizationUseCase {
-  createOrganization(data: CreateOrganizationInput): Promise<Organization>;
+  createOrganization(
+    data: CreateOrganizationInput,
+    ownerUserId: string,
+  ): Promise<Organization>;
   getOrganizationById(id: string): Promise<Organization | null>;
   getAllOrganizations(
     pagination?: PaginationQuery,
@@ -17,6 +20,7 @@ export interface IOrganizationUseCase {
   deleteOrganization(id: string): Promise<boolean>;
   transferOwnership(
     organizationId: string,
+    currentOwnerUserId: string,
     newOwnerUserId: string,
   ): Promise<Organization>;
 }

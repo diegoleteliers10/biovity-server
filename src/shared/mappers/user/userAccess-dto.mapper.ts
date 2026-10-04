@@ -33,6 +33,25 @@ export class UserAccessMapper {
       return dto;
     }
 
+    if (level === 'directory' || level === 'recruiter-contact') {
+      dto.name = domain.name;
+      dto.avatar = domain.avatar;
+      dto.profession = domain.profession;
+      dto.createdAt = domain.createdAt;
+      if (domain.location) {
+        const locationDto = new UserLocationDto();
+        locationDto.city = domain.location.city;
+        locationDto.country = domain.location.country;
+        dto.location = locationDto;
+      }
+      dto.skills = domain.skills;
+      if (level === 'recruiter-contact') {
+        dto.email = domain.email;
+        dto.phone = domain.phone;
+      }
+      return dto;
+    }
+
     return UserAccessMapper.toFullDto(domain, dto);
   }
 

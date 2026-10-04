@@ -25,12 +25,18 @@ import {
   ReorderQuestionsDto,
 } from '../../dtos/job-question/question.dto';
 import { QuestionResponseDto } from '../../dtos/job-question/question-response.dto';
+import { CurrentUser } from '../../../shared/decorators/current-user.decorator';
+import type { AuthenticatedUser } from '../../../shared/auth/better-auth-session.service';
+import { OrganizationAccessService } from '../../../shared/auth/organization-access.service';
 
 @ApiTags('job-questions')
 @Roles('organization')
 @Controller()
 export class JobQuestionController {
-  constructor(private readonly jobQuestionService: JobQuestionService) {}
+  constructor(
+    private readonly jobQuestionService: JobQuestionService,
+    private readonly organizationAccess: OrganizationAccessService,
+  ) {}
 
   // Canonical routes. Legacy flat routes below delegate to the same
   // private helpers and stay as deprecated aliases.
@@ -48,7 +54,9 @@ export class JobQuestionController {
   @ApiOperation({ summary: 'Todas las preguntas de una oferta' })
   async getAllQuestionsByJobCanonical(
     @Param('jobId', ParseUUIDPipe) jobId: string,
+    @CurrentUser() requester: AuthenticatedUser | undefined,
   ): Promise<QuestionResponseDto[]> {
+    await this.organizationAccess.assertJobAccess(jobId, requester, 'read');
     return this.listByJob(jobId);
   }
 
@@ -63,10 +71,17 @@ export class JobQuestionController {
   async createQuestionCanonical(
     @Param('jobId', ParseUUIDPipe) jobId: string,
     @Body() dto: CreateQuestionDto,
+    @CurrentUser() requester: AuthenticatedUser | undefined,
   ): Promise<QuestionResponseDto> {
     if (!dto.organizationId) {
       throw new BadRequestException('organizationId es requerido en el body');
     }
+    await this.organizationAccess.assertJobOrganizationAccess(
+      jobId,
+      dto.organizationId,
+      requester,
+      'manage',
+    );
     return this.createOne(jobId, dto.organizationId, dto);
   }
 
@@ -75,24 +90,27 @@ export class JobQuestionController {
   async updateQuestionCanonical(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateQuestionDto,
+    @CurrentUser() requester: AuthenticatedUser | undefined,
   ): Promise<QuestionResponseDto> {
-    return this.updateOne(id, dto);
+    return this.updateOne(id, dto, requester);
   }
 
   @Patch('job-questions/:id/publish')
   @ApiOperation({ summary: 'Publicar pregunta' })
   async publishQuestionCanonical(
     @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() requester: AuthenticatedUser | undefined,
   ): Promise<QuestionResponseDto> {
-    return this.publishOne(id);
+    return this.publishOne(id, requester);
   }
 
   @Patch('job-questions/:id/unpublish')
   @ApiOperation({ summary: 'Despublicar pregunta' })
   async unpublishQuestionCanonical(
     @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() requester: AuthenticatedUser | undefined,
   ): Promise<QuestionResponseDto> {
-    return this.unpublishOne(id);
+    return this.unpublishOne(id, requester);
   }
 
   @Patch('job-questions/job/:jobId/reorder')
@@ -100,8 +118,9 @@ export class JobQuestionController {
   async reorderQuestionsCanonical(
     @Param('jobId', ParseUUIDPipe) jobId: string,
     @Body() dto: ReorderQuestionsDto,
+    @CurrentUser() requester: AuthenticatedUser | undefined,
   ): Promise<QuestionResponseDto[]> {
-    return this.reorder(jobId, dto);
+    return this.reorder(jobId, dto, requester);
   }
 
   @Delete('job-questions/:id')
@@ -109,7 +128,13 @@ export class JobQuestionController {
   @ApiOperation({ summary: 'Eliminar pregunta' })
   async deleteQuestionCanonical(
     @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() requester: AuthenticatedUser | undefined,
   ): Promise<void> {
+    await this.organizationAccess.assertJobQuestionAccess(
+      id,
+      requester,
+      'manage',
+    );
     await this.jobQuestionService.deleteQuestion(id);
   }
 
@@ -135,7 +160,9 @@ export class JobQuestionController {
   async getAllQuestionsByJob(
     @Param('organizationId', ParseUUIDPipe) _organizationId: string,
     @Param('jobId', ParseUUIDPipe) jobId: string,
+    @CurrentUser() requester: AuthenticatedUser | undefined,
   ): Promise<QuestionResponseDto[]> {
+    await this.organizationAccess.assertJobAccess(jobId, requester, 'read');
     return this.listByJob(jobId);
   }
 
@@ -149,7 +176,14 @@ export class JobQuestionController {
     @Param('organizationId', ParseUUIDPipe) organizationId: string,
     @Param('jobId', ParseUUIDPipe) jobId: string,
     @Body() dto: CreateQuestionDto,
+    @CurrentUser() requester: AuthenticatedUser | undefined,
   ): Promise<QuestionResponseDto> {
+    await this.organizationAccess.assertJobOrganizationAccess(
+      jobId,
+      organizationId,
+      requester,
+      'manage',
+    );
     return this.createOne(jobId, organizationId, dto);
   }
 
@@ -161,8 +195,9 @@ export class JobQuestionController {
   async updateQuestion(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateQuestionDto,
+    @CurrentUser() requester: AuthenticatedUser | undefined,
   ): Promise<QuestionResponseDto> {
-    return this.updateOne(id, dto);
+    return this.updateOne(id, dto, requester);
   }
 
   @Patch('jobs/questions/:id/publish')
@@ -172,8 +207,9 @@ export class JobQuestionController {
   })
   async publishQuestion(
     @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() requester: AuthenticatedUser | undefined,
   ): Promise<QuestionResponseDto> {
-    return this.publishOne(id);
+    return this.publishOne(id, requester);
   }
 
   @Patch('jobs/questions/:id/unpublish')
@@ -183,8 +219,9 @@ export class JobQuestionController {
   })
   async unpublishQuestion(
     @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() requester: AuthenticatedUser | undefined,
   ): Promise<QuestionResponseDto> {
-    return this.unpublishOne(id);
+    return this.unpublishOne(id, requester);
   }
 
   @Patch('organizations/:organizationId/jobs/:jobId/questions/reorder')
@@ -196,8 +233,15 @@ export class JobQuestionController {
     @Param('organizationId', ParseUUIDPipe) _organizationId: string,
     @Param('jobId', ParseUUIDPipe) jobId: string,
     @Body() dto: ReorderQuestionsDto,
+    @CurrentUser() requester: AuthenticatedUser | undefined,
   ): Promise<QuestionResponseDto[]> {
-    return this.reorder(jobId, dto);
+    await this.organizationAccess.assertJobOrganizationAccess(
+      jobId,
+      _organizationId,
+      requester,
+      'manage',
+    );
+    return this.reorder(jobId, dto, requester);
   }
 
   @Delete('jobs/questions/:id')
@@ -206,7 +250,15 @@ export class JobQuestionController {
     deprecated: true,
     summary: 'Deprecado: usa DELETE /job-questions/:id',
   })
-  async deleteQuestion(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
+  async deleteQuestion(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() requester: AuthenticatedUser | undefined,
+  ): Promise<void> {
+    await this.organizationAccess.assertJobQuestionAccess(
+      id,
+      requester,
+      'manage',
+    );
     await this.jobQuestionService.deleteQuestion(id);
   }
 
@@ -238,20 +290,42 @@ export class JobQuestionController {
   private async updateOne(
     id: string,
     dto: UpdateQuestionDto,
+    requester: AuthenticatedUser | undefined,
   ): Promise<QuestionResponseDto> {
+    await this.organizationAccess.assertJobQuestionAccess(
+      id,
+      requester,
+      'manage',
+    );
     const input = JobQuestionDtoDomainMapper.toUpdateInput(dto);
     const question = await this.jobQuestionService.updateQuestion(id, input);
     if (!question) throw new NotFoundException('Question not found');
     return JobQuestionDomainDtoMapper.toDto(question);
   }
 
-  private async publishOne(id: string): Promise<QuestionResponseDto> {
+  private async publishOne(
+    id: string,
+    requester: AuthenticatedUser | undefined,
+  ): Promise<QuestionResponseDto> {
+    await this.organizationAccess.assertJobQuestionAccess(
+      id,
+      requester,
+      'manage',
+    );
     const question = await this.jobQuestionService.publishQuestion(id);
     if (!question) throw new NotFoundException('Question not found');
     return JobQuestionDomainDtoMapper.toDto(question);
   }
 
-  private async unpublishOne(id: string): Promise<QuestionResponseDto> {
+  private async unpublishOne(
+    id: string,
+    requester: AuthenticatedUser | undefined,
+  ): Promise<QuestionResponseDto> {
+    await this.organizationAccess.assertJobQuestionAccess(
+      id,
+      requester,
+      'manage',
+    );
     const question = await this.jobQuestionService.unpublishQuestion(id);
     if (!question) throw new NotFoundException('Question not found');
     return JobQuestionDomainDtoMapper.toDto(question);
@@ -260,7 +334,9 @@ export class JobQuestionController {
   private async reorder(
     jobId: string,
     dto: ReorderQuestionsDto,
+    requester: AuthenticatedUser | undefined,
   ): Promise<QuestionResponseDto[]> {
+    await this.organizationAccess.assertJobAccess(jobId, requester, 'manage');
     const items =
       dto.items?.map(item => ({
         id: item.id,

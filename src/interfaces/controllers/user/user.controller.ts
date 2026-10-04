@@ -33,6 +33,7 @@ import {
 import { UserAccessMapper } from '../../../shared/mappers/user/userAccess-dto.mapper';
 import type { UserAccessLevel } from '../../../shared/auth/user-access.policy';
 import type { UserSort } from '../../../core/repositories/user.repository';
+import { OrganizationAccessService } from '../../../shared/auth/organization-access.service';
 
 const USER_SORT_FIELDS = ['createdat', 'name'] as const;
 
@@ -56,7 +57,10 @@ function parseUserSort(raw: string | undefined): UserSort | undefined {
 @ApiTags('users')
 @Controller('users')
 export class UserController {
-  constructor(private readonly userService: UserService) {}
+  constructor(
+    private readonly userService: UserService,
+    private readonly organizationAccess: OrganizationAccessService,
+  ) {}
 
   @Get(':id')
   async getUserById(
@@ -65,7 +69,7 @@ export class UserController {
   ): Promise<UserResponseDto> {
     const user = await this.userService.getUserById(id);
     if (!user) throw new NotFoundException('User not found');
-    const level = assertCanReadUser(requester, user.type, user.id);
+    const level = await this.resolveReadLevel(requester, user.type, user.id);
     return UserAccessMapper.toDto(user, level);
   }
 
@@ -76,7 +80,7 @@ export class UserController {
   ): Promise<UserResponseDto> {
     const user = await this.userService.getUserByEmail(email);
     if (!user) throw new NotFoundException('User not found');
-    const level = assertCanReadUser(requester, user.type, user.id);
+    const level = await this.resolveReadLevel(requester, user.type, user.id);
     return UserAccessMapper.toDto(user, level);
   }
 
@@ -85,7 +89,7 @@ export class UserController {
     @Query() query: UserQueryDto,
     @CurrentUser() requester: AuthenticatedUser | undefined,
   ): Promise<UserPaginatedResponseDto> {
-    const level = this.assertCanListUsers(requester);
+    const level = await this.assertCanListUsers(requester);
     const filters = {
       type: this.resolveListType(requester, query.type),
       isActive: query.isActive,
@@ -130,7 +134,18 @@ export class UserController {
     @CurrentUser() requester: AuthenticatedUser | undefined,
   ): Promise<UserResponseDto> {
     this.assertCanMutateUser(requester, id);
-    const input = UserDtoDomainMapper.toUpdateUserInput(dto);
+    const input =
+      requester && (isAdminUser(requester) || requester.type === 'admin')
+        ? UserDtoDomainMapper.toUpdateUserInput(dto)
+        : {
+            name: dto.name,
+            avatar: dto.avatar,
+            profession: dto.profession,
+            birthday: dto.birthday,
+            phone: dto.phone,
+            location: dto.location,
+            notificationPreferences: dto.notificationPreferences,
+          };
     const user = await this.userService.updateUser(id, input);
     if (!user) throw new NotFoundException('User not found');
     return UserAccessMapper.toDto(user, AccessLevel.FULL);
@@ -171,18 +186,34 @@ export class UserController {
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser() requester: AuthenticatedUser | undefined,
   ): Promise<{ views: number }> {
+    if (!requester) {
+      throw new ForbiddenException('Se requiere una sesión de usuario.');
+    }
+    if (requester.type === 'organization') {
+      await this.assertOrganizationReadAccess(requester);
+    }
+    if (
+      requester.id !== id &&
+      !isAdminUser(requester) &&
+      requester.type !== 'admin'
+    ) {
+      const target = await this.userService.getUserById(id);
+      if (!target) throw new NotFoundException('User not found');
+      await this.resolveReadLevel(requester, target.type, id);
+    }
     const user = await this.userService.incrementViews(id);
-    if (user) assertCanReadUser(requester, user.type, id);
     return { views: user?.profileViews ?? 0 };
   }
 
-  private assertCanListUsers(
+  private async assertCanListUsers(
     requester: AuthenticatedUser | undefined,
-  ): UserAccessLevel {
-    if (!requester) return AccessLevel.FULL;
+  ): Promise<UserAccessLevel> {
+    if (!requester)
+      throw new ForbiddenException('Se requiere una sesión de usuario.');
     if (isAdminUser(requester)) return AccessLevel.BASIC;
     if (requester.type === 'organization') {
-      return AccessLevel.FULL;
+      await this.assertOrganizationReadAccess(requester);
+      return AccessLevel.DIRECTORY;
     }
     throw new ForbiddenException('No tienes permisos para listar usuarios');
   }
@@ -191,18 +222,55 @@ export class UserController {
     requester: AuthenticatedUser | undefined,
     requestedType: string | undefined,
   ): 'professional' | 'organization' | undefined {
-    if (!requester || isAdminUser(requester)) {
+    if (requester && (isAdminUser(requester) || requester.type === 'admin')) {
       return requestedType as 'professional' | 'organization' | undefined;
     }
     // Organizations can only list professionals (no org-to-org reads).
     return 'professional' as const;
   }
 
+  private async resolveReadLevel(
+    requester: AuthenticatedUser | undefined,
+    targetType: string,
+    targetId: string,
+  ): Promise<UserAccessLevel> {
+    const level = assertCanReadUser(requester, targetType, targetId);
+    if (level !== AccessLevel.DIRECTORY || requester?.type !== 'organization') {
+      return level;
+    }
+    const organizationId = await this.assertOrganizationReadAccess(requester);
+    const hasRelationship =
+      await this.organizationAccess.hasCandidateRelationship(
+        organizationId,
+        targetId,
+      );
+    return hasRelationship
+      ? AccessLevel.RECRUITER_CONTACT
+      : AccessLevel.DIRECTORY;
+  }
+
+  private async assertOrganizationReadAccess(
+    requester: AuthenticatedUser,
+  ): Promise<string> {
+    if (!requester.organizationId) {
+      throw new ForbiddenException(
+        'La cuenta no pertenece a una organización.',
+      );
+    }
+    await this.organizationAccess.assertAccess(
+      requester.organizationId,
+      requester,
+      'read',
+    );
+    return requester.organizationId;
+  }
+
   private assertCanMutateUser(
     requester: AuthenticatedUser | undefined,
     targetId: string,
   ): void {
-    if (!requester) return;
+    if (!requester)
+      throw new ForbiddenException('Se requiere una sesión de usuario.');
     if (requester.id === targetId) return;
     if (isAdminUser(requester)) return;
     throw new ForbiddenException(

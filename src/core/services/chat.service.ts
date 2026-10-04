@@ -110,13 +110,19 @@ export class ChatService implements IChatUseCase {
     return this.chatRepository.update(id, updatedChat);
   }
 
-  async deleteChat(id: string): Promise<boolean> {
+  async archiveForParticipant(
+    id: string,
+    role: 'recruiter' | 'professional',
+  ): Promise<Chat | null> {
     const existingChat = await this.chatRepository.findById(id);
     if (!existingChat) {
       throw new NotFoundException(`Chat with id ${id} not found`);
     }
-
-    return this.chatRepository.delete(id);
+    const partial: Partial<Chat> =
+      role === 'recruiter'
+        ? { isArchivedByRecruiter: true }
+        : { isArchivedByProfessional: true };
+    return this.chatRepository.update(id, partial);
   }
 
   async togglePin(

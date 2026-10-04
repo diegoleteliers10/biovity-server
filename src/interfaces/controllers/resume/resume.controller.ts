@@ -10,6 +10,7 @@ import {
   HttpStatus,
   ParseUUIDPipe,
   NotFoundException,
+  ForbiddenException,
   Query,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
@@ -20,6 +21,10 @@ import { ResumeCreateDto } from '../../dtos/resume/resume-create.dto';
 import { ResumeUpdateDto } from '../../dtos/resume/resume-update.dto';
 import { ResumeResponseDto } from '../../dtos/resume/resume-response.dto';
 import { ResumeDomainDtoMapper } from '../../../shared/mappers/resume/resumeDomain-dto.mapper';
+import { CurrentUser } from '../../../shared/decorators/current-user.decorator';
+import type { AuthenticatedUser } from '../../../shared/auth/better-auth-session.service';
+import { isAdminUser } from '../../../shared/auth/better-auth-session.service';
+import { OrganizationAccessService } from '../../../shared/auth/organization-access.service';
 import {
   PaginatedResponse,
   parsePagination,
@@ -28,7 +33,10 @@ import {
 @ApiTags('resume')
 @Controller('resumes')
 export class ResumeController {
-  constructor(private readonly resumeService: ResumeService) {}
+  constructor(
+    private readonly resumeService: ResumeService,
+    private readonly organizationAccess: OrganizationAccessService,
+  ) {}
 
   @Post()
   @Roles('professional')
@@ -36,7 +44,12 @@ export class ResumeController {
   @ApiOperation({ summary: 'Crear currículum' })
   @ApiResponse({ status: 201, description: 'Currículum creado' })
   @ApiResponse({ status: 400, description: 'Datos inválidos' })
-  async createResume(@Body() dto: ResumeCreateDto): Promise<ResumeResponseDto> {
+  async createResume(
+    @Body() dto: ResumeCreateDto,
+    @CurrentUser() requester: AuthenticatedUser | undefined,
+  ): Promise<ResumeResponseDto> {
+    if (!requester || requester.id !== dto.userId)
+      throw new ForbiddenException('Solo puedes crear tu currículum.');
     const input = ResumeDtoDomainMapper.toCreateResumeInput(dto);
     const resume = await this.resumeService.createResume(input);
     return ResumeDomainDtoMapper.toDto(resume);
@@ -49,9 +62,11 @@ export class ResumeController {
   @ApiResponse({ status: 404, description: 'Currículum no encontrado' })
   async getResumeById(
     @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() requester: AuthenticatedUser | undefined,
   ): Promise<ResumeResponseDto> {
     const resume = await this.resumeService.getResumeById(id);
     if (!resume) throw new NotFoundException('Resume not found');
+    await this.organizationAccess.assertResumeAccess(id, requester, 'read');
     return ResumeDomainDtoMapper.toDto(resume);
   }
 
@@ -62,9 +77,15 @@ export class ResumeController {
   @ApiResponse({ status: 404, description: 'Currículum no encontrado' })
   async getResumeByUserId(
     @Param('userId', ParseUUIDPipe) userId: string,
+    @CurrentUser() requester: AuthenticatedUser | undefined,
   ): Promise<ResumeResponseDto> {
     const resume = await this.resumeService.getResumeByUserId(userId);
     if (!resume) throw new NotFoundException('Resume not found');
+    await this.organizationAccess.assertResumeAccess(
+      resume.id,
+      requester,
+      'read',
+    );
     return ResumeDomainDtoMapper.toDto(resume);
   }
 
@@ -73,7 +94,11 @@ export class ResumeController {
   @ApiResponse({ status: 200, description: 'Lista de currículums' })
   async getAllResumes(
     @Query() query: Record<string, string>,
+    @CurrentUser() requester: AuthenticatedUser | undefined,
   ): Promise<PaginatedResponse<ResumeResponseDto>> {
+    if (!requester || (requester.type !== 'admin' && !isAdminUser(requester))) {
+      throw new ForbiddenException('Solo admin puede listar currículums.');
+    }
     const result = await this.resumeService.getAllResumes(
       parsePagination(query),
     );
@@ -92,7 +117,9 @@ export class ResumeController {
   async updateResume(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: ResumeUpdateDto,
+    @CurrentUser() requester: AuthenticatedUser | undefined,
   ): Promise<ResumeResponseDto> {
+    await this.organizationAccess.assertResumeAccess(id, requester, 'manage');
     const input = ResumeDtoDomainMapper.toCreateResumeInput(
       dto as ResumeCreateDto,
     );
@@ -108,7 +135,11 @@ export class ResumeController {
   @ApiParam({ name: 'id', type: 'string', format: 'uuid' })
   @ApiResponse({ status: 204, description: 'Currículum eliminado' })
   @ApiResponse({ status: 404, description: 'Currículum no encontrado' })
-  async deleteResume(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
+  async deleteResume(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() requester: AuthenticatedUser | undefined,
+  ): Promise<void> {
+    await this.organizationAccess.assertResumeAccess(id, requester, 'manage');
     await this.resumeService.deleteResume(id);
   }
 }

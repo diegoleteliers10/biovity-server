@@ -11,6 +11,7 @@ import {
   HttpStatus,
   NotFoundException,
   BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { Roles } from '../../../shared/decorators/roles.decorator';
@@ -29,11 +30,18 @@ import {
   parsePagination,
 } from '../../../shared/pagination/pagination';
 import { Query } from '@nestjs/common';
+import { CurrentUser } from '../../../shared/decorators/current-user.decorator';
+import type { AuthenticatedUser } from '../../../shared/auth/better-auth-session.service';
+import { OrganizationAccessService } from '../../../shared/auth/organization-access.service';
+import { isAdminUser } from '../../../shared/auth/better-auth-session.service';
 
 @ApiTags('organizations')
 @Controller('organizations')
 export class OrganizationController {
-  constructor(private readonly organizationService: OrganizationService) {}
+  constructor(
+    private readonly organizationService: OrganizationService,
+    private readonly organizationAccess: OrganizationAccessService,
+  ) {}
 
   // No @Roles: the caller is the org-typed user that still has no
   // organization (resolveUserRole → 'none') and needs this to onboard.
@@ -41,22 +49,36 @@ export class OrganizationController {
   @HttpCode(HttpStatus.CREATED)
   async createOrganization(
     @Body() dto: OrganizationCreateDto,
+    @CurrentUser() requester: AuthenticatedUser | undefined,
   ): Promise<OrganizationResponseDto> {
+    if (
+      !requester ||
+      requester.type !== 'organization' ||
+      requester.organizationId
+    ) {
+      throw new ForbiddenException(
+        'Solo una cuenta de organización sin organización puede crearla.',
+      );
+    }
     const input: CreateOrganizationInput = {
       name: dto.name,
       website: dto.website,
       phone: dto.phone,
       address: dto.address as Record<string, unknown> | undefined,
     };
-    const organization =
-      await this.organizationService.createOrganization(input);
+    const organization = await this.organizationService.createOrganization(
+      input,
+      requester.id,
+    );
     return OrganizationDomainDtoMapper.toDto(organization);
   }
 
   @Get(':id')
   async getOrganizationById(
     @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() requester: AuthenticatedUser | undefined,
   ): Promise<OrganizationResponseDto> {
+    await this.organizationAccess.assertAccess(id, requester, 'read');
     const organization = await this.organizationService.getOrganizationById(id);
     if (!organization) throw new NotFoundException('Organization not found');
     return OrganizationDomainDtoMapper.toDto(organization);
@@ -65,7 +87,11 @@ export class OrganizationController {
   @Get()
   async getAllOrganizations(
     @Query() query: Record<string, string>,
+    @CurrentUser() requester: AuthenticatedUser | undefined,
   ): Promise<PaginatedResponse<OrganizationResponseDto>> {
+    if (!requester || (requester.type !== 'admin' && !isAdminUser(requester))) {
+      throw new ForbiddenException('Solo admin puede listar organizaciones.');
+    }
     const result = await this.organizationService.getAllOrganizations(
       parsePagination(query),
     );
@@ -80,7 +106,9 @@ export class OrganizationController {
   async updateOrganization(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: OrganizationUpdateDto,
+    @CurrentUser() requester: AuthenticatedUser | undefined,
   ): Promise<OrganizationResponseDto> {
+    await this.organizationAccess.assertAccess(id, requester, 'manage');
     const input: UpdateOrganizationInput = {
       name: dto.name,
       website: dto.website,
@@ -105,7 +133,9 @@ export class OrganizationController {
   @HttpCode(HttpStatus.NO_CONTENT)
   async deleteOrganization(
     @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() requester: AuthenticatedUser | undefined,
   ): Promise<void> {
+    await this.organizationAccess.assertAccess(id, requester, 'manage');
     await this.organizationService.deleteOrganization(id);
   }
 
@@ -118,12 +148,17 @@ export class OrganizationController {
   async transferOwnership(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: TransferOwnershipDto,
+    @CurrentUser() requester: AuthenticatedUser | undefined,
   ): Promise<OrganizationResponseDto> {
+    await this.organizationAccess.assertOrganizationOwner(id, requester);
     if (!dto.newOwnerUserId) {
       throw new BadRequestException('newOwnerUserId is required');
     }
+    if (!requester)
+      throw new ForbiddenException('Se requiere una sesión de usuario.');
     const organization = await this.organizationService.transferOwnership(
       id,
+      requester.id,
       dto.newOwnerUserId,
     );
     return OrganizationDomainDtoMapper.toDto(organization);
