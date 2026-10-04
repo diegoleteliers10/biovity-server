@@ -84,7 +84,9 @@ export const DatabaseConfig = TypeOrmModule.forRootAsync({
         SalarySubmissionEntity,
       ],
       synchronize: false,
-      logging: true,
+      // Query logging runs on the request path. In production it formats and
+      // ships one log line per query, which adds latency to every response.
+      logging: config.get<string>('NODE_ENV') !== 'production',
       // TypeORM 1.x throws on null/undefined in a `where` object. It ignored
       // them before. Pin the old semantics so this upgrade stays
       // behavior-preserving. Remove once every optional filter is explicit.
