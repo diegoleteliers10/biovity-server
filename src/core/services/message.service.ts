@@ -82,13 +82,23 @@ export class MessageService implements IMessageUseCase {
             ? chat.recruiterId
             : null;
       if (recipientId) {
+        const sender = await this.findSenderProfile(data.senderId);
         await this.notificationService.create({
           userId: recipientId,
           type: NotificationType.MESSAGE,
           title: 'Nuevo mensaje',
           body: 'Tienes un nuevo mensaje.',
           link: `/dashboard/messages?chat=${data.chatId}`,
-          data: { chatId: data.chatId, messageId: message.id },
+          data: {
+            chatId: data.chatId,
+            messageId: message.id,
+            // The client renders the toast from these. They stay optional so a
+            // notification written before this change still shows its fallback.
+            ...(sender
+              ? { senderName: sender.name, senderAvatar: sender.avatar }
+              : {}),
+            preview: this.buildPreview(data.content),
+          },
           dedupKey: `message:${message.id}`,
         });
       }
@@ -109,6 +119,27 @@ export class MessageService implements IMessageUseCase {
     } finally {
       await queryRunner.release();
     }
+  }
+
+  private buildPreview(content: string): string {
+    const flat = content.replace(/\s+/g, ' ').trim();
+    return flat.length > 90 ? `${flat.slice(0, 90)}…` : flat;
+  }
+
+  /**
+   * Best-effort lookup for the toast. A missing profile only costs the toast
+   * its avatar and name, so it never blocks the notification.
+   */
+  private async findSenderProfile(
+    senderId: string,
+  ): Promise<{ name: string; avatar: string | null } | null> {
+    const rows = await this.dataSource.query<
+      Array<{ name: string; avatar: string | null }>
+    >(`SELECT name, avatar FROM "user" WHERE id = $1::uuid LIMIT 1`, [
+      senderId,
+    ]);
+    const row = rows[0];
+    return row ? { name: row.name, avatar: row.avatar } : null;
   }
 
   async getMessageById(id: string): Promise<Message | null> {
