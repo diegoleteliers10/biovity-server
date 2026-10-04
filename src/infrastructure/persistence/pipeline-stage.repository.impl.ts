@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { PipelineStageEntity } from '../database/orm/pipeline-stage.entity';
@@ -48,19 +48,30 @@ export class PipelineStageRepositoryImpl implements IPipelineStageRepository {
   }
 
   async reorder(jobId: string, stageIds: string[]): Promise<PipelineStage[]> {
-    const stages = await this.repository.find({
-      where: { jobId },
-    });
-
-    for (const stage of stages) {
-      const newOrder = stageIds.indexOf(stage.id);
-      if (newOrder !== -1) {
-        stage.order = newOrder;
+    return this.repository.manager.transaction(async manager => {
+      const repository = manager.getRepository(PipelineStageEntity);
+      const stages = await repository.find({
+        where: { jobId },
+        lock: { mode: 'pessimistic_write' },
+      });
+      if (
+        stageIds.length !== stages.length ||
+        new Set(stageIds).size !== stages.length ||
+        stages.some(stage => !stageIds.includes(stage.id))
+      ) {
+        return Promise.reject(
+          new BadRequestException(
+            'Include each stage of this job exactly once',
+          ),
+        );
       }
-    }
-
-    const saved = await this.repository.save(stages);
-    return saved.map(orm => PipelineStageDomainOrmMapper.toDomain(orm));
+      const saved = await repository.save(
+        stages.map(stage => ({ ...stage, order: stageIds.indexOf(stage.id) })),
+      );
+      return saved
+        .sort((a, b) => a.order - b.order)
+        .map(orm => PipelineStageDomainOrmMapper.toDomain(orm));
+    });
   }
 
   async delete(id: string): Promise<boolean> {

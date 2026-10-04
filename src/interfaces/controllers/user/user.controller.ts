@@ -223,7 +223,7 @@ export class UserController {
     }
     if (requester.type === 'organization') {
       await this.assertOrganizationReadAccess(requester);
-      return AccessLevel.RECRUITER_CONTACT;
+      return this.organizationContactLevel(requester);
     }
     throw new ForbiddenException('No tienes permisos para listar usuarios');
   }
@@ -249,7 +249,20 @@ export class UserController {
       return level;
     }
     await this.assertOrganizationReadAccess(requester);
-    return AccessLevel.RECRUITER_CONTACT;
+    return this.organizationContactLevel(requester);
+  }
+
+  private async organizationContactLevel(
+    requester: AuthenticatedUser,
+  ): Promise<UserAccessLevel> {
+    const canRecruit =
+      requester.organizationId &&
+      (await this.organizationAccess.hasAccess(
+        requester.organizationId,
+        requester,
+        'recruit',
+      ));
+    return canRecruit ? AccessLevel.RECRUITER_CONTACT : AccessLevel.DIRECTORY;
   }
 
   private async assertOrganizationReadAccess(

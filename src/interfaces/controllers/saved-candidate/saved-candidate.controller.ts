@@ -74,7 +74,7 @@ export class SavedCandidateController {
     await this.organizationAccess.assertAccess(
       dto.organizationId,
       requester,
-      'manage',
+      'recruit',
     );
     return this.service.save(dto.organizationId, dto.candidateId, dto.note);
   }
@@ -97,7 +97,7 @@ export class SavedCandidateController {
     await this.organizationAccess.assertAccess(
       organizationId,
       requester,
-      'manage',
+      'recruit',
     );
     await this.service.unsave(organizationId, candidateId);
   }

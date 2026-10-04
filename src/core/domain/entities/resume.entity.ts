@@ -56,12 +56,13 @@ export class Resume {
     public languages: ResumeLanguage[] = [],
     public links: { url: string }[] = [],
     public cvFile?: {
+      path?: string;
       url: string;
       originalName?: string;
       mimeType?: string;
       size?: number;
       uploadedAt?: Date;
-    },
+    } | null,
     public createdAt: Date = new Date(),
     public updatedAt: Date = new Date(),
   ) {}

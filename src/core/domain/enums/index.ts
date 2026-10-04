@@ -55,6 +55,8 @@ export enum PaymentStatus {
   APPROVED = 'approved',
   REJECTED = 'rejected',
   CANCELLED = 'cancelled',
+  REFUNDED = 'refunded',
+  CHARGED_BACK = 'charged_back',
 }
 
 export enum SkillLevel {

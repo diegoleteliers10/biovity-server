@@ -39,12 +39,13 @@ export class ResumeDtoDomainMapper {
       cvFile: dto.cvFile
         ? {
             url: dto.cvFile.url,
+            path: dto.cvFile.path,
             originalName: dto.cvFile.originalName,
             mimeType: dto.cvFile.mimeType,
             size: dto.cvFile.size,
             uploadedAt: dto.cvFile.uploadedAt,
           }
-        : undefined,
+        : dto.cvFile,
     };
   }
 }

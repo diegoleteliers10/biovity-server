@@ -98,7 +98,7 @@ export class ResumeService implements IResumeUseCase {
       certifications: data.certifications ?? existingResume.certifications,
       languages: data.languages ?? existingResume.languages,
       links: data.links ?? existingResume.links,
-      cvFile: data.cvFile ?? existingResume.cvFile,
+      cvFile: data.cvFile === undefined ? existingResume.cvFile : data.cvFile,
       updatedAt: new Date(),
     };
 

@@ -37,7 +37,7 @@ export class CandidateSummaryDto {
 
   @ApiProperty({ example: 'juan@example.com' })
   @IsString()
-  email: string;
+  email?: string;
 
   @ApiPropertyOptional({ example: 'https://example.com/avatar.jpg' })
   @IsOptional()

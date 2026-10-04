@@ -5,6 +5,7 @@ export class SubscriptionDomainOrmMapper {
   static toOrm(domain: Subscription): Partial<SubscriptionEntity> {
     return {
       id: domain.id,
+      createdAt: domain.createdAt,
       organizationId: domain.organizationId,
       planName: domain.planName,
       startedAt: domain.startedAt,
