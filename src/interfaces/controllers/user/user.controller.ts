@@ -218,7 +218,9 @@ export class UserController {
   ): Promise<UserAccessLevel> {
     if (!requester)
       throw new ForbiddenException('Se requiere una sesión de usuario.');
-    if (isAdminUser(requester)) return AccessLevel.BASIC;
+    if (isAdminUser(requester) || requester.type === 'admin') {
+      return AccessLevel.BASIC;
+    }
     if (requester.type === 'organization') {
       await this.assertOrganizationReadAccess(requester);
       return AccessLevel.DIRECTORY;
@@ -280,7 +282,7 @@ export class UserController {
     if (!requester)
       throw new ForbiddenException('Se requiere una sesión de usuario.');
     if (requester.id === targetId) return;
-    if (isAdminUser(requester)) return;
+    if (isAdminUser(requester) || requester.type === 'admin') return;
     throw new ForbiddenException(
       'No tienes permisos para modificar este usuario',
     );

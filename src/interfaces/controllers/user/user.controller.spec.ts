@@ -11,6 +11,13 @@ const orphanOrganization: AuthenticatedUser = {
   organizationId: null,
 };
 
+const adminUser: AuthenticatedUser = {
+  id: '33333333-3333-4333-8333-333333333333',
+  email: 'admin@example.com',
+  type: 'admin',
+  organizationId: null,
+};
+
 describe('UserController organization directory access', () => {
   const userService = {
     getUserById: jest.fn(),
@@ -33,6 +40,21 @@ describe('UserController organization directory access', () => {
       controller.getAllUsers({}, orphanOrganization),
     ).rejects.toBeInstanceOf(ForbiddenException);
     expect(userService.getAllUsers).not.toHaveBeenCalled();
+  });
+
+  it('allows admin accounts to list organization users', async () => {
+    userService.getAllUsers.mockResolvedValue({
+      data: [],
+      total: 0,
+      page: 1,
+      limit: 20,
+      totalPages: 0,
+    });
+
+    await expect(
+      controller.getAllUsers({ type: 'organization' } as never, adminUser),
+    ).resolves.toMatchObject({ data: [], total: 0 });
+    expect(organizationAccess.assertAccess).not.toHaveBeenCalled();
   });
 
   it('denies candidate reads for an organization without membership', async () => {
