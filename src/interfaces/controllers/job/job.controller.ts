@@ -32,6 +32,7 @@ import { JobQueryDto } from '../../dtos/job/job-query.dto';
 import { Public } from '../../../shared/decorators/public.decorator';
 import { Roles } from '../../../shared/decorators/roles.decorator';
 import type { JobSort } from '../../../core/repositories/job.repository';
+import type { JobFilters } from '../../../core/use-cases/job/job.use-case';
 import { CurrentUser } from '../../../shared/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../../../shared/auth/better-auth-session.service';
 import { OrganizationAccessService } from '../../../shared/auth/organization-access.service';
@@ -126,7 +127,9 @@ export class JobController {
     @Param('id', ParseUUIDPipe) id: string,
   ): Promise<JobResponseDto> {
     const result = await this.jobService.getJobByIdWithApplicationCount(id);
-    if (!result) throw new NotFoundException('Job not found');
+    if (!result || !result.job.isActive()) {
+      throw new NotFoundException('Job not found');
+    }
     const jobDto = JobDomainDtoMapper.toDto(result.job);
     return {
       ...jobDto,
@@ -153,9 +156,10 @@ export class JobController {
     description: 'Lista de ofertas de trabajo',
   })
   async getAllJobs(@Query() query: JobQueryDto): Promise<PaginatedJobResponse> {
+    const publicStatus: JobFilters['status'] = 'active';
     const filters = {
       organizationId: query.organizationId,
-      status: query.status,
+      status: publicStatus,
       search: query.search,
       category: query.category,
       sort: parseJobSort(query.sort),
@@ -239,6 +243,7 @@ export class JobController {
     const jobsResult = (await this.jobService.getAllJobsWithApplicationCounts(
       organizationId,
       pagination,
+      query.status,
     )) as {
       data: JobWithCount[];
       total: number;
@@ -332,6 +337,10 @@ export class JobController {
     description: 'ID de la oferta de trabajo',
   })
   @ApiResponse({ status: 204, description: 'Oferta eliminada exitosamente' })
+  @ApiResponse({
+    status: 409,
+    description: 'La oferta tiene postulaciones y no se puede eliminar',
+  })
   @ApiResponse({ status: 404, description: 'Oferta no encontrada' })
   async deleteJob(
     @Param('id', ParseUUIDPipe) id: string,
@@ -339,6 +348,29 @@ export class JobController {
   ): Promise<void> {
     await this.organizationAccess.assertJobAccess(id, requester, 'manage');
     await this.jobService.deleteJob(id);
+  }
+
+  @Get('managed/:id')
+  @ApiOperation({ summary: 'Obtener una oferta para gestión interna' })
+  @ApiParam({ name: 'id', type: 'string', format: 'uuid' })
+  @ApiResponse({
+    status: 200,
+    description: 'Oferta encontrada',
+    type: JobResponseDto,
+  })
+  @ApiResponse({ status: 403, description: 'Sin acceso a la oferta' })
+  @ApiResponse({ status: 404, description: 'Oferta no encontrada' })
+  async getManagedJobById(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() requester: AuthenticatedUser | undefined,
+  ): Promise<JobResponseDto> {
+    await this.organizationAccess.assertJobAccess(id, requester, 'read');
+    const result = await this.jobService.getJobByIdWithApplicationCount(id);
+    if (!result) throw new NotFoundException('Job not found');
+    return {
+      ...JobDomainDtoMapper.toDto(result.job),
+      totalApplications: result.totalApplications,
+    };
   }
 
   // View counting is a state change, so the canonical verb is POST.
@@ -378,6 +410,10 @@ export class JobController {
   }
 
   private async doIncrementViews(id: string): Promise<JobResponseDto> {
+    const existingJob = await this.jobService.getJobById(id);
+    if (!existingJob || !existingJob.isActive()) {
+      throw new NotFoundException('Job not found');
+    }
     const job = await this.jobService.incrementJobViews(id);
     if (!job) throw new NotFoundException('Job not found');
     return JobDomainDtoMapper.toDto(job);

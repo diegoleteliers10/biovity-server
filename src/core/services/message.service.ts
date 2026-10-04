@@ -12,6 +12,8 @@ import { Message, MessageContent } from '../domain/entities/message.entity';
 import { MessageType } from '../domain/enums';
 import { MessageEntity } from '../../infrastructure/database/orm/message.entity';
 import { ChatEntity } from '../../infrastructure/database/orm/chat.entity';
+import { NotificationService } from '../../shared/notification/notification.service';
+import { NotificationType } from '../domain/enums';
 
 @Injectable()
 export class MessageService implements IMessageUseCase {
@@ -22,6 +24,7 @@ export class MessageService implements IMessageUseCase {
     private readonly chatRepository: IChatRepository,
     @InjectDataSource()
     private readonly dataSource: DataSource,
+    private readonly notificationService: NotificationService,
   ) {}
 
   private generateId(): string {
@@ -71,6 +74,24 @@ export class MessageService implements IMessageUseCase {
       });
 
       await queryRunner.commitTransaction();
+
+      const recipientId =
+        data.senderId === chat.recruiterId
+          ? chat.professionalId
+          : data.senderId === chat.professionalId
+            ? chat.recruiterId
+            : null;
+      if (recipientId) {
+        await this.notificationService.create({
+          userId: recipientId,
+          type: NotificationType.MESSAGE,
+          title: 'Nuevo mensaje',
+          body: 'Tienes un nuevo mensaje.',
+          link: `/dashboard/messages?chat=${data.chatId}`,
+          data: { chatId: data.chatId, messageId: message.id },
+          dedupKey: `message:${message.id}`,
+        });
+      }
 
       return new Message(
         savedEntity.id,

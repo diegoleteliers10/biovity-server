@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException, Inject } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+  Inject,
+} from '@nestjs/common';
 import * as crypto from 'crypto';
 import { IJobRepository } from '../repositories/job.repository';
 import { IOrganizationRepository } from '../repositories/organization.repository';
@@ -105,10 +110,12 @@ export class JobService implements IJobUseCase {
   async getAllJobsWithApplicationCounts(
     organizationId: string,
     pagination?: PaginationOptions,
+    status?: JobFilters['status'],
   ): Promise<PaginatedResult<JobWithApplications>> {
     return this.jobRepository.findAllWithApplicationCounts(
       organizationId,
       pagination,
+      status,
     );
   }
 
@@ -145,6 +152,12 @@ export class JobService implements IJobUseCase {
     const existingJob = await this.jobRepository.findById(id);
     if (!existingJob) {
       throw new NotFoundException(`Job with id ${id} not found`);
+    }
+
+    if ((await this.jobRepository.countApplications(id)) > 0) {
+      throw new ConflictException(
+        'No puedes eliminar una oferta con postulaciones. Ciérrala para conservar el historial.',
+      );
     }
 
     return this.jobRepository.delete(id);

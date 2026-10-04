@@ -27,7 +27,7 @@ export function resolveUserReadAccess(
 ): UserAccessLevel {
   if (!requester) return 'denied';
   if (requester.id === targetId) return 'full';
-  if (isAdminUser(requester)) return 'basic';
+  if (isAdminUser(requester) || requester.type === 'admin') return 'basic';
   if (requester.type === 'organization' && targetType === 'professional') {
     return 'directory';
   }

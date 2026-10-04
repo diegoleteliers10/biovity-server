@@ -350,13 +350,7 @@ export class OrganizationAccessService {
       requester.organizationId
     ) {
       await this.assertAccess(requester.organizationId, requester, 'read');
-      if (
-        await this.hasCandidateRelationship(
-          requester.organizationId,
-          target.userId,
-        )
-      )
-        return;
+      return;
     }
     throw new ForbiddenException('No tienes acceso a este currículum.');
   }

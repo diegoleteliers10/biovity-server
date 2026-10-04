@@ -218,10 +218,12 @@ export class UserController {
   ): Promise<UserAccessLevel> {
     if (!requester)
       throw new ForbiddenException('Se requiere una sesión de usuario.');
-    if (isAdminUser(requester)) return AccessLevel.BASIC;
+    if (isAdminUser(requester) || requester.type === 'admin') {
+      return AccessLevel.BASIC;
+    }
     if (requester.type === 'organization') {
       await this.assertOrganizationReadAccess(requester);
-      return AccessLevel.DIRECTORY;
+      return AccessLevel.RECRUITER_CONTACT;
     }
     throw new ForbiddenException('No tienes permisos para listar usuarios');
   }
@@ -246,15 +248,8 @@ export class UserController {
     if (level !== AccessLevel.DIRECTORY || requester?.type !== 'organization') {
       return level;
     }
-    const organizationId = await this.assertOrganizationReadAccess(requester);
-    const hasRelationship =
-      await this.organizationAccess.hasCandidateRelationship(
-        organizationId,
-        targetId,
-      );
-    return hasRelationship
-      ? AccessLevel.RECRUITER_CONTACT
-      : AccessLevel.DIRECTORY;
+    await this.assertOrganizationReadAccess(requester);
+    return AccessLevel.RECRUITER_CONTACT;
   }
 
   private async assertOrganizationReadAccess(
@@ -280,7 +275,7 @@ export class UserController {
     if (!requester)
       throw new ForbiddenException('Se requiere una sesión de usuario.');
     if (requester.id === targetId) return;
-    if (isAdminUser(requester)) return;
+    if (isAdminUser(requester) || requester.type === 'admin') return;
     throw new ForbiddenException(
       'No tienes permisos para modificar este usuario',
     );
