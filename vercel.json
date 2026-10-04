@@ -13,5 +13,6 @@
     }
   ],
   "buildCommand": "bun run build",
-  "outputDirectory": "dist"
+  "outputDirectory": "dist",
+  "regions": ["sa-east-1"]
 }
