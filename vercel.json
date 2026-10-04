@@ -14,5 +14,5 @@
   ],
   "buildCommand": "bun run build",
   "outputDirectory": "dist",
-  "regions": ["sa-east-1"]
+  "regions": ["gru1"]
 }
