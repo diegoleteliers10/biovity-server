@@ -54,6 +54,12 @@ export class JobRepositoryImpl implements IJobRepository {
 
     if (filters?.status) {
       queryBuilder.andWhere('job.status = :status', { status: filters.status });
+      if (filters.status === 'active') {
+        queryBuilder.andWhere(
+          '(job.expiresAt IS NULL OR job.expiresAt > :activeAt)',
+          { activeAt: new Date() },
+        );
+      }
     }
 
     if (filters?.organizationId) {
@@ -122,6 +128,7 @@ export class JobRepositoryImpl implements IJobRepository {
   async findAllWithApplicationCounts(
     organizationId: string,
     pagination?: PaginationOptions,
+    status?: JobFilters['status'],
   ): Promise<PaginatedResult<JobWithApplications>> {
     const page = pagination?.page || 1;
     const limit = pagination?.limit || 10;
@@ -134,6 +141,10 @@ export class JobRepositoryImpl implements IJobRepository {
       .createQueryBuilder('job')
       .leftJoinAndSelect('job.organization', 'organization')
       .where('job.organizationId = :organizationId', { organizationId });
+
+    if (status) {
+      queryBuilder.andWhere('job.status = :status', { status });
+    }
 
     const total = await queryBuilder.getCount();
 

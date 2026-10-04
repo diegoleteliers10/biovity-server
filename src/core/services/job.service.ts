@@ -110,10 +110,12 @@ export class JobService implements IJobUseCase {
   async getAllJobsWithApplicationCounts(
     organizationId: string,
     pagination?: PaginationOptions,
+    status?: JobFilters['status'],
   ): Promise<PaginatedResult<JobWithApplications>> {
     return this.jobRepository.findAllWithApplicationCounts(
       organizationId,
       pagination,
+      status,
     );
   }
 

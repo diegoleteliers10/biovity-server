@@ -28,6 +28,7 @@ import { QuestionResponseDto } from '../../dtos/job-question/question-response.d
 import { CurrentUser } from '../../../shared/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../../../shared/auth/better-auth-session.service';
 import { OrganizationAccessService } from '../../../shared/auth/organization-access.service';
+import { JobService } from '../../../core/services/job.service';
 
 @ApiTags('job-questions')
 @Roles('organization')
@@ -36,6 +37,7 @@ export class JobQuestionController {
   constructor(
     private readonly jobQuestionService: JobQuestionService,
     private readonly organizationAccess: OrganizationAccessService,
+    private readonly jobService: JobService,
   ) {}
 
   // Canonical routes. Legacy flat routes below delegate to the same
@@ -47,7 +49,7 @@ export class JobQuestionController {
   async getPublishedQuestionsCanonical(
     @Param('jobId', ParseUUIDPipe) jobId: string,
   ): Promise<QuestionResponseDto[]> {
-    return this.listPublished(jobId);
+    return this.listPublishedForActiveJob(jobId);
   }
 
   @Get('job-questions/job/:jobId')
@@ -149,7 +151,7 @@ export class JobQuestionController {
   async getPublishedQuestions(
     @Param('jobId', ParseUUIDPipe) jobId: string,
   ): Promise<QuestionResponseDto[]> {
-    return this.listPublished(jobId);
+    return this.listPublishedForActiveJob(jobId);
   }
 
   @Get('organizations/:organizationId/jobs/:jobId/questions')
@@ -265,6 +267,16 @@ export class JobQuestionController {
   private async listPublished(jobId: string): Promise<QuestionResponseDto[]> {
     const questions = await this.jobQuestionService.getQuestionsByJobId(jobId);
     return JobQuestionDomainDtoMapper.toDtoList(questions);
+  }
+
+  private async listPublishedForActiveJob(
+    jobId: string,
+  ): Promise<QuestionResponseDto[]> {
+    const job = await this.jobService.getJobById(jobId);
+    if (!job || !job.isActive()) {
+      throw new NotFoundException('Job not found');
+    }
+    return this.listPublished(jobId);
   }
 
   private async listByJob(jobId: string): Promise<QuestionResponseDto[]> {
