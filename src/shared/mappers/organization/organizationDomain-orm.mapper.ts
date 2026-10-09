@@ -21,8 +21,9 @@ export class OrganizationDomainOrmMapper {
     orgOrm.foundedYear = domain.foundedYear;
     orgOrm.linkedinUrl = domain.linkedinUrl;
     orgOrm.twitterUrl = domain.twitterUrl;
-    orgOrm.jobs = [];
 
+    // Never set relation arrays here: saving an entity with jobs: [] makes
+    // TypeORM DELETE the organization's jobs (and fail on application FK).
     return orgOrm;
   }
 
