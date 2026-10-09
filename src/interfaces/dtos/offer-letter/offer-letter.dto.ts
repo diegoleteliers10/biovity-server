@@ -22,6 +22,18 @@ export class OfferLetterDataDto {
 
   @IsOptional()
   @IsString()
+  logoUrl?: string;
+
+  @IsOptional()
+  @IsString()
+  letterRef?: string;
+
+  @IsOptional()
+  @IsString()
+  issueDate?: string;
+
+  @IsOptional()
+  @IsString()
   greeting?: string;
 
   @IsOptional()
@@ -55,11 +67,43 @@ export class OfferLetterDataDto {
 
   @IsOptional()
   @IsString()
+  contractType?: string;
+
+  @IsOptional()
+  @IsString()
+  workSchedule?: string;
+
+  @IsOptional()
+  @IsString()
+  probationPeriod?: string;
+
+  @IsOptional()
+  @IsString()
+  noticePeriod?: string;
+
+  @IsOptional()
+  @IsString()
+  vacationDays?: string;
+
+  @IsOptional()
+  @IsString()
+  bonusDetails?: string;
+
+  @IsOptional()
+  @IsString()
+  offerValidUntil?: string;
+
+  @IsOptional()
+  @IsString()
   conditions?: string;
 
   @IsOptional()
   @IsString()
   closing?: string;
+
+  @IsOptional()
+  @IsString()
+  acceptanceNote?: string;
 
   @IsOptional()
   @IsString()
@@ -72,6 +116,18 @@ export class OfferLetterDataDto {
   @IsOptional()
   @IsString()
   companyAddress?: string;
+
+  @IsOptional()
+  @IsString()
+  hrContactName?: string;
+
+  @IsOptional()
+  @IsString()
+  hrContactEmail?: string;
+
+  @IsOptional()
+  @IsString()
+  hrContactPhone?: string;
 
   [key: string]: unknown;
 }
