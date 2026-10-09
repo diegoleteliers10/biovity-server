@@ -37,8 +37,14 @@ export interface EventContent {
   title: string;
 }
 
+export interface OfferContent {
+  offerLetterId: string;
+  title: string;
+  status: 'sent' | 'accepted' | 'rejected';
+}
+
 export type MessageContent =
-  string | FileContent | AudioContent | ImageContent | EventContent;
+  string | FileContent | AudioContent | ImageContent | EventContent | OfferContent;
 
 @Entity('message')
 @Index('idx_message_chat', ['chatId'])

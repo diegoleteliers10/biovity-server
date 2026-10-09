@@ -26,8 +26,14 @@ export interface EventContent {
   title: string;
 }
 
+export interface OfferContent {
+  offerLetterId: string;
+  title: string;
+  status: 'sent' | 'accepted' | 'rejected';
+}
+
 export type MessageContent =
-  string | FileContent | AudioContent | ImageContent | EventContent;
+  string | FileContent | AudioContent | ImageContent | EventContent | OfferContent;
 
 export class Message {
   constructor(

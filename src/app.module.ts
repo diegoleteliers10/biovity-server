@@ -26,6 +26,7 @@ import { ChatModule } from './interfaces/controllers/chat/chat.module';
 import { MessageModule } from './interfaces/controllers/message/message.module';
 import { ResumeModule } from './interfaces/controllers/resume/resume.module';
 import { ApplicationModule } from './interfaces/controllers/application/application.module';
+import { OfferLetterModule } from './interfaces/controllers/offer-letter/offer-letter.module';
 import { SavedJobModule } from './interfaces/controllers/saved-job/saved-job.module';
 import { JobQuestionModule } from './interfaces/controllers/job-question/job-question.module';
 import { HealthModule } from './interfaces/controllers/health/health.module';
@@ -76,6 +77,7 @@ import { AuthModule } from './shared/auth/auth.module';
     MessageModule,
     ResumeModule,
     ApplicationModule,
+    OfferLetterModule,
     SavedJobModule,
     HealthModule,
     EventModule,
