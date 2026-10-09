@@ -90,6 +90,7 @@ export enum MessageType {
   AUDIO = 'audio',
   IMAGE = 'image',
   EVENT = 'event',
+  OFFER = 'offer',
 }
 
 export enum QuestionType {

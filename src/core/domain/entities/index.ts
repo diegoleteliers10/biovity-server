@@ -12,3 +12,4 @@ export * from './saved-job.entity';
 export * from './saved-search.entity';
 export * from './subscription.entity';
 export * from './user.entity';
+export * from './offer-letter.entity';
