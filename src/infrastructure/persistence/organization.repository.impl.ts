@@ -165,12 +165,18 @@ export class OrganizationRepositoryImpl implements IOrganizationRepository {
     });
     if (!existingOrganization) return null;
 
-    const updatedOrganizationOrm = {
+    const merged: Record<string, unknown> = {
       ...existingOrganization,
       ...OrganizationDomainOrmMapper.toOrm(entity as Organization),
     };
+    // Relation arrays must never reach save(): an empty array instructs
+    // TypeORM to delete the related rows.
+    delete merged.jobs;
+    delete merged.users;
+    delete merged.members;
+    delete merged.subscription;
     const savedOrganization = await this.organizationRepository.save(
-      updatedOrganizationOrm,
+      merged as unknown as OrganizationEntity,
     );
     return OrganizationDomainOrmMapper.toDomain(savedOrganization);
   }
