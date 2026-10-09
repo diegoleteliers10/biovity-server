@@ -130,6 +130,15 @@ export class OrganizationRepositoryImpl implements IOrganizationRepository {
       : null;
   }
 
+  async findBySlug(slug: string): Promise<Organization | null> {
+    const organizationOrm = await this.organizationRepository.findOne({
+      where: { slug },
+    });
+    return organizationOrm
+      ? OrganizationDomainOrmMapper.toDomain(organizationOrm)
+      : null;
+  }
+
   async findAll(pagination?: {
     take?: number;
     skip?: number;

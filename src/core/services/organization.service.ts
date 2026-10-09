@@ -28,6 +28,28 @@ export class OrganizationService implements IOrganizationUseCase {
     return crypto.randomUUID();
   }
 
+  private slugify(name: string): string {
+    const base = name
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 60)
+      .replace(/-+$/g, '');
+    return base || 'empresa';
+  }
+
+  private async generateUniqueSlug(name: string): Promise<string> {
+    const base = this.slugify(name);
+    for (let n = 1; n <= 100; n += 1) {
+      const candidate = n === 1 ? base : `${base}-${n}`;
+      const taken = await this.organizationRepository.findBySlug(candidate);
+      if (!taken) return candidate;
+    }
+    return `${base}-${crypto.randomUUID().slice(0, 8)}`;
+  }
+
   async createOrganization(
     data: CreateOrganizationInput,
     ownerUserId: string,
@@ -40,6 +62,14 @@ export class OrganizationService implements IOrganizationUseCase {
       data.address,
       new Date(),
       new Date(),
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      await this.generateUniqueSlug(data.name),
     );
 
     return this.organizationRepository.createWithOwner(
@@ -85,6 +115,9 @@ export class OrganizationService implements IOrganizationUseCase {
       description: data.description ?? existingOrganization.description,
       industry: data.industry ?? existingOrganization.industry,
       size: data.size ?? existingOrganization.size,
+      foundedYear: data.foundedYear ?? existingOrganization.foundedYear,
+      linkedinUrl: data.linkedinUrl ?? existingOrganization.linkedinUrl,
+      twitterUrl: data.twitterUrl ?? existingOrganization.twitterUrl,
     };
 
     return this.organizationRepository.update(id, updatedOrganization);

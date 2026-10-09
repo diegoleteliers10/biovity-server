@@ -26,5 +26,9 @@ export class Organization {
     public description?: string,
     public industry?: string,
     public size?: string,
+    public slug?: string,
+    public foundedYear?: number,
+    public linkedinUrl?: string,
+    public twitterUrl?: string,
   ) {}
 }
