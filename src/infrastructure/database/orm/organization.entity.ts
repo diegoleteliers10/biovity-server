@@ -36,6 +36,9 @@ export class OrganizationEntity {
     zipCode?: string;
   };
 
+  @Column({ nullable: true, unique: true })
+  public slug?: string;
+
   @Column({ nullable: true })
   public logo?: string;
 
@@ -47,6 +50,15 @@ export class OrganizationEntity {
 
   @Column({ nullable: true })
   public size?: string;
+
+  @Column({ type: 'int', nullable: true })
+  public foundedYear?: number;
+
+  @Column({ nullable: true })
+  public linkedinUrl?: string;
+
+  @Column({ nullable: true })
+  public twitterUrl?: string;
 
   @CreateDateColumn()
   public createdAt: Date = new Date();

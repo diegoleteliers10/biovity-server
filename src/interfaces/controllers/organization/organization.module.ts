@@ -12,6 +12,7 @@ import { OrganizationController } from './organization.controller';
 import { OrganizationMetricsController } from './organization-metrics.controller';
 import { OrganizationMemberController } from './organization-member.controller';
 import { OrganizationService } from '../../../core/services/organization.service';
+import { OrganizationPublicService } from '../../../core/services/organization-public.service';
 import { OrganizationMetricsService } from '../../../core/services/organization-metrics.service';
 import { OrganizationMemberService } from '../../../core/services/organization-member.service';
 import { OrganizationRepositoryImpl } from '../../../infrastructure/persistence/organization.repository.impl';
@@ -35,6 +36,7 @@ import { OrganizationMemberRepositoryImpl } from '../../../infrastructure/persis
   ],
   providers: [
     OrganizationService,
+    OrganizationPublicService,
     OrganizationMetricsService,
     OrganizationMemberService,
     {

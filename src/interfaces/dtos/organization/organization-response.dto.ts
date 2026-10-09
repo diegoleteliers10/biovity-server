@@ -4,6 +4,9 @@ import {
   IsObject,
   IsDate,
   IsUUID,
+  IsInt,
+  Min,
+  Max,
 } from 'class-validator';
 
 export class OrganizationIntegrationsDto {
@@ -55,6 +58,22 @@ export class OrganizationResponseDto {
   @IsOptional()
   @IsString()
   size?: string;
+
+  @IsOptional()
+  @IsString()
+  slug?: string;
+
+  @IsOptional()
+  @IsInt()
+  foundedYear?: number;
+
+  @IsOptional()
+  @IsString()
+  linkedinUrl?: string;
+
+  @IsOptional()
+  @IsString()
+  twitterUrl?: string;
 
   @IsDate()
   createdAt: Date;

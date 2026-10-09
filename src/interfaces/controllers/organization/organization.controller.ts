@@ -16,9 +16,11 @@ import {
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { Roles } from '../../../shared/decorators/roles.decorator';
 import { OrganizationService } from '../../../core/services/organization.service';
+import { OrganizationPublicService } from '../../../core/services/organization-public.service';
 import { OrganizationCreateDto } from '../../dtos/organization/organization-create.dto';
 import { OrganizationUpdateDto } from '../../dtos/organization/organization-update.dto';
 import { OrganizationResponseDto } from '../../dtos/organization/organization-response.dto';
+import { OrganizationPublicResponseDto } from '../../dtos/organization/organization-public-response.dto';
 import { TransferOwnershipDto } from '../../dtos/organization/transfer-ownership.dto';
 import { OrganizationDomainDtoMapper } from '../../../shared/mappers/organization/organizationDomain-dto.mapper';
 import {
@@ -31,6 +33,7 @@ import {
 } from '../../../shared/pagination/pagination';
 import { Query } from '@nestjs/common';
 import { CurrentUser } from '../../../shared/decorators/current-user.decorator';
+import { Public } from '../../../shared/decorators/public.decorator';
 import type { AuthenticatedUser } from '../../../shared/auth/better-auth-session.service';
 import { OrganizationAccessService } from '../../../shared/auth/organization-access.service';
 import { isAdminUser } from '../../../shared/auth/better-auth-session.service';
@@ -41,6 +44,7 @@ export class OrganizationController {
   constructor(
     private readonly organizationService: OrganizationService,
     private readonly organizationAccess: OrganizationAccessService,
+    private readonly organizationPublic: OrganizationPublicService,
   ) {}
 
   // No @Roles: the caller is the org-typed user that still has no
@@ -71,6 +75,33 @@ export class OrganizationController {
       requester.id,
     );
     return OrganizationDomainDtoMapper.toDto(organization);
+  }
+
+  // Public company profile. Declared before :id so "public" is never
+  // captured by the ParseUUIDPipe route.
+  @Get('public')
+  @Public()
+  @ApiOperation({
+    summary: 'Listar perfiles públicos de empresas',
+  })
+  async listPublicOrganizations(
+    @Query() query: Record<string, string>,
+  ): Promise<PaginatedResponse<OrganizationPublicResponseDto>> {
+    return this.organizationPublic.listPublic(parsePagination(query));
+  }
+
+  @Get('public/:slugOrId')
+  @Public()
+  @ApiOperation({
+    summary: 'Obtener el perfil público de una empresa por slug o id',
+  })
+  async getPublicOrganization(
+    @Param('slugOrId') slugOrId: string,
+  ): Promise<OrganizationPublicResponseDto> {
+    const organization =
+      await this.organizationPublic.getPublicBySlugOrId(slugOrId);
+    if (!organization) throw new NotFoundException('Organization not found');
+    return organization;
   }
 
   @Get(':id')
@@ -119,6 +150,9 @@ export class OrganizationController {
       description: dto.description,
       industry: dto.industry,
       size: dto.size,
+      foundedYear: dto.foundedYear,
+      linkedinUrl: dto.linkedinUrl,
+      twitterUrl: dto.twitterUrl,
     };
     const organization = await this.organizationService.updateOrganization(
       id,

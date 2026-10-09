@@ -21,6 +21,14 @@ export interface JobBenefits {
   title: string;
 }
 
+/** Public company summary embedded in job responses (never secrets). */
+export interface JobOrganizationSummary {
+  id: string;
+  name: string;
+  slug?: string;
+  logo?: string;
+}
+
 export class Job {
   constructor(
     public id: string,
@@ -40,6 +48,7 @@ export class Job {
     public category?: string,
     public requiredSkills: string[] = [],
     public minExperience?: number,
+    public organization?: JobOrganizationSummary,
   ) {}
 
   public isActive(): boolean {

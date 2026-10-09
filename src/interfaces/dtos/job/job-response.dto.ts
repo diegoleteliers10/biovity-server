@@ -79,6 +79,26 @@ export class JobBenefitsDto {
   title: string;
 }
 
+export class JobOrganizationDto {
+  @ApiProperty({ format: 'uuid', description: 'ID de la organización' })
+  @IsUUID()
+  id: string;
+
+  @ApiProperty({ description: 'Nombre de la organización' })
+  @IsString()
+  name: string;
+
+  @ApiPropertyOptional({ description: 'Slug del perfil público' })
+  @IsOptional()
+  @IsString()
+  slug?: string;
+
+  @ApiPropertyOptional({ description: 'URL del logo' })
+  @IsOptional()
+  @IsString()
+  logo?: string;
+}
+
 export class JobResponseDto {
   @ApiProperty({ format: 'uuid', description: 'ID de la oferta' })
   @IsUUID()
@@ -200,4 +220,13 @@ export class JobResponseDto {
   @IsOptional()
   @IsNumber()
   minExperience?: number;
+
+  @ApiPropertyOptional({
+    description: 'Resumen público de la empresa (slug para /companies/<slug>)',
+    type: JobOrganizationDto,
+  })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => JobOrganizationDto)
+  organization?: JobOrganizationDto;
 }

@@ -17,6 +17,10 @@ export class OrganizationDomainOrmMapper {
     orgOrm.description = domain.description;
     orgOrm.industry = domain.industry;
     orgOrm.size = domain.size;
+    orgOrm.slug = domain.slug;
+    orgOrm.foundedYear = domain.foundedYear;
+    orgOrm.linkedinUrl = domain.linkedinUrl;
+    orgOrm.twitterUrl = domain.twitterUrl;
     orgOrm.jobs = [];
 
     return orgOrm;
@@ -38,6 +42,10 @@ export class OrganizationDomainOrmMapper {
       entity.description,
       entity.industry,
       entity.size,
+      entity.slug,
+      entity.foundedYear,
+      entity.linkedinUrl,
+      entity.twitterUrl,
     );
   }
 }

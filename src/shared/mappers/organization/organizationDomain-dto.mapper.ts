@@ -14,6 +14,10 @@ export class OrganizationDomainDtoMapper {
     dto.description = domain.description;
     dto.industry = domain.industry;
     dto.size = domain.size;
+    dto.slug = domain.slug;
+    dto.foundedYear = domain.foundedYear;
+    dto.linkedinUrl = domain.linkedinUrl;
+    dto.twitterUrl = domain.twitterUrl;
     dto.subscriptionId = domain.subscriptionId;
     dto.createdAt = domain.createdAt;
     dto.updatedAt = domain.updatedAt;

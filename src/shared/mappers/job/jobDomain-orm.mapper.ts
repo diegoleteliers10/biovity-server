@@ -26,7 +26,7 @@ export class JobDomainOrmMapper {
   }
 
   static toDomain(entity: JobEntity): Job {
-    return new Job(
+    const job = new Job(
       entity.id,
       entity.organizationId,
       entity.title,
@@ -45,5 +45,19 @@ export class JobDomainOrmMapper {
       entity.requiredSkills,
       entity.minExperience,
     );
+
+    // The ORM relation is a full OrganizationEntity; expose only the public
+    // summary so secrets (integrations, phone, address) never leak into
+    // job payloads.
+    if (entity.organization) {
+      job.organization = {
+        id: entity.organization.id,
+        name: entity.organization.name,
+        slug: entity.organization.slug ?? undefined,
+        logo: entity.organization.logo ?? undefined,
+      };
+    }
+
+    return job;
   }
 }

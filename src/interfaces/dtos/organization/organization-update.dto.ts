@@ -1,4 +1,5 @@
-import { IsString, IsOptional, IsObject } from 'class-validator';
+import { IsString, IsOptional, IsObject, IsInt, Min, Max } from 'class-validator';
+import { Type } from 'class-transformer';
 import { OrganizationAddressDto } from './organization-create.dto';
 
 export class OrganizationUpdateDto {
@@ -41,4 +42,19 @@ export class OrganizationUpdateDto {
   @IsOptional()
   @IsString()
   size?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1500)
+  @Max(2100)
+  foundedYear?: number;
+
+  @IsOptional()
+  @IsString()
+  linkedinUrl?: string;
+
+  @IsOptional()
+  @IsString()
+  twitterUrl?: string;
 }

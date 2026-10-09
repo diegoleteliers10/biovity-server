@@ -47,4 +47,7 @@ export interface UpdateOrganizationInput {
   description?: string;
   industry?: string;
   size?: string;
+  foundedYear?: number;
+  linkedinUrl?: string;
+  twitterUrl?: string;
 }
