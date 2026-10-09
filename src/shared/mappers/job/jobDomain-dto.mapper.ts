@@ -1,5 +1,5 @@
 import { Job } from '../../../core/domain/entities/job.entity';
-import { JobResponseDto } from '../../../interfaces/dtos/job/job-response.dto';
+import { JobResponseDto, JobOrganizationDto } from '../../../interfaces/dtos/job/job-response.dto';
 
 export class JobDomainDtoMapper {
   static toDto(domain: Job): JobResponseDto {
@@ -21,6 +21,13 @@ export class JobDomainDtoMapper {
     dto.category = domain.category;
     dto.requiredSkills = domain.requiredSkills;
     dto.minExperience = domain.minExperience;
+    if (domain.organization) {
+      dto.organization = new JobOrganizationDto();
+      dto.organization.id = domain.organization.id;
+      dto.organization.name = domain.organization.name;
+      dto.organization.slug = domain.organization.slug;
+      dto.organization.logo = domain.organization.logo;
+    }
     return dto;
   }
 }
