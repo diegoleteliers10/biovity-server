@@ -15,7 +15,7 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import { EventService } from '../../../core/services/event.service';
 import { OrganizationAccessService } from '../../../shared/auth/organization-access.service';
 import type { AuthenticatedUser } from '../../../shared/auth/better-auth-session.service';
-import { ParticipantStatus } from '../../../core/domain/enums';
+import { EventType, ParticipantStatus } from '../../../core/domain/enums';
 
 describe('EventController', () => {
   it('forwards the application filter to the event service', async () => {
@@ -303,5 +303,76 @@ describe('Event RSVP controller authorization', () => {
       'rsvp',
     );
     expect(eventService.updateParticipantStatus).not.toHaveBeenCalled();
+  });
+});
+
+describe('Event create/edit controller authorization', () => {
+  const requester: AuthenticatedUser = {
+    id: '22222222-2222-4222-8222-222222222222',
+    email: 'organizer@example.com',
+    type: 'organization',
+    organizationId: '33333333-3333-4333-8333-333333333333',
+  };
+  const eventService = { createEvent: jest.fn(), updateEvent: jest.fn() };
+  const organizationAccess = {
+    assertEventCreation: jest.fn(),
+    assertEventAccess: jest.fn(),
+  };
+  let moduleRef: TestingModule;
+  let controller: EventController;
+
+  beforeEach(async () => {
+    jest.clearAllMocks();
+    moduleRef = await Test.createTestingModule({
+      controllers: [EventController],
+      providers: [
+        { provide: EventService, useValue: eventService },
+        { provide: OrganizationAccessService, useValue: organizationAccess },
+      ],
+    }).compile();
+    controller = moduleRef.get(EventController);
+  });
+
+  afterEach(async () => {
+    await moduleRef.close();
+  });
+
+  it('blocks denied creation before service execution', async () => {
+    organizationAccess.assertEventCreation.mockRejectedValue(
+      new ForbiddenException(),
+    );
+    const dto: EventCreateDto = {
+      title: 'Interview',
+      type: EventType.INTERVIEW,
+      organizerId: requester.id,
+      startAt: '2026-10-10T15:00:00Z',
+      timeZone: 'America/Santiago',
+    };
+
+    await expect(controller.createEvent(dto, requester)).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
+    expect(organizationAccess.assertEventCreation).toHaveBeenCalledWith(
+      requester,
+      dto,
+    );
+    expect(eventService.createEvent).not.toHaveBeenCalled();
+  });
+
+  it('blocks denied manage access before edit service execution', async () => {
+    organizationAccess.assertEventAccess.mockRejectedValue(
+      new ForbiddenException(),
+    );
+    const eventId = '11111111-1111-4111-8111-111111111111';
+
+    await expect(
+      controller.updateEvent(eventId, { timeZone: 'Asia/Tokyo' }, requester),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(organizationAccess.assertEventAccess).toHaveBeenCalledWith(
+      eventId,
+      requester,
+      'manage',
+    );
+    expect(eventService.updateEvent).not.toHaveBeenCalled();
   });
 });
