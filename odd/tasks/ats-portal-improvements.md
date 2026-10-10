@@ -320,12 +320,37 @@ Still unverified:
 - Controller tests mock access or services. They do not prove guard-to-database behavior, real organization membership, or persistence-failure behavior.
 - Timezone create and edit tests do not prove authorization or persistence-failure handling.
 - Offer-creation tests do not yet prove rollback at each transaction write failure.
-- Hiring-record tests do not prove real membership checks or persistence-failure behavior.
+- ATS-07-2 tests below cover mock denials and rejected writes. They do not prove real membership checks, PostgreSQL constraints, partial-record absence, or rollback.
 - The inspected candidate-tag controller does not show a separate check that the candidate belongs to a job or application in the tag organization. Keep this ownership rule open. This audit does not establish a defect.
 - Production rewrite, cookie, and internal-key configuration remain unverified.
 - No retention interval or candidate-data deletion/export policy was found in the inspected paths. Keep the policy open.
 
-Next bounded task, ATS-07-2: add hiring-record tests for denied membership through the authorization path and for persistence failures. Make the tests prove that denied reads and writes do not reach persistence, and that failed writes return the expected error without a partial record. Keep production verification, tag ownership, and retention policy open.
+### ATS-07-2 existing-mock coverage
+
+State: focused mock coverage passed. Commit and native review remain pending. The user chose the current mocks and explicit evidence limits.
+
+Route: delegated direct. One bounded writer extends the controller spec and adds a service spec. The agreed public methods are evaluation reads and writes, note reads and creation, and note deletion.
+
+- [x] Record the agreed test scope before changing tests.
+- [x] Check denied evaluation and note access before downstream reads or writes. Note deletion first reads metadata, so its denial must prevent deletion only.
+- [x] Check rejected evaluation upserts, note creation, and note deletion. Check missing write results and missing notes through the controller.
+- [x] Run the focused Jest specs, backend typecheck, and scoped diff check. Record observed results.
+- [ ] Record the work-unit commit without staging unrelated changes.
+
+Test-first exception: this slice adds regression coverage for existing behavior and does not change production code. No behavioral RED is claimed. Unexpected failures or defects that need production changes stop this slice.
+
+Limits: access and persistence mocks do not prove database membership, actual PostgreSQL constraints, or rollback semantics. A rejected or missing write result does not prove that no partial record exists. The repository saves evaluation or note data before it reloads the result, so a reload failure can follow a successful write. No database, guard-to-database, HTTP filter, production, RSVP, tag-ownership, or retention-policy coverage is added.
+
+Forecast: about 420 authored changed lines including the existing untracked controller tests. The approved `feature-branch-chain` strategy applies. The user authorized inclusion of the existing 9 hiring-record controller cases. Stage only this slice and preserve the prior document edits and staged migration. Observed checks on 2026-10-10:
+
+- Baseline `npx jest --runInBand src/interfaces/controllers/application/application-hiring-record.controller.spec.ts`: 1 suite, 9 tests passed.
+- `npx jest --runInBand src/interfaces/controllers/application/application-hiring-record.controller.spec.ts src/core/services/application-hiring-record.service.spec.ts`: 2 suites, 24 tests passed. Added 12 controller cases and 3 service cases.
+- `npx tsc --noEmit`: passed, exit 0.
+- `git diff --check -- src/interfaces/controllers/application/application-hiring-record.controller.spec.ts src/core/services/application-hiring-record.service.spec.ts odd/tasks/ats-portal-improvements.md docs/plans/backend-roadmap.md`: passed, exit 0. The specs are untracked, so this diff check covers only tracked documents until staging.
+- `npx prettier --write src/interfaces/controllers/application/application-hiring-record.controller.spec.ts src/core/services/application-hiring-record.service.spec.ts`: passed before the focused tests.
+- No server, build, migration, production check, or RSVP change ran.
+
+Delivery: commit pending. Include both specs and only the ATS-07-2 document hunks. The existing controller cases are part of the authorized slice. Native RDD mode is on. The current-worktree assessment returned high/unassessable because untracked files need an explicit inventory declaration. No native approval is claimed.
 
 ## ATS-02 checklist
 
