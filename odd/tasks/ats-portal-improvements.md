@@ -31,7 +31,7 @@ The repositories contain many hiring features, but several cross-system workflow
 | ATS-02 | Add durable offer-response email delivery from NestJS through the Next.js outbox. | Implemented, native review pending | The user chose the first recruiter with active access to the offer organization. The response transaction stores that recipient and an immutable intent. Focused and repository checks pass. The migration is in source and unapplied. |
 | ATS-03 | Link interview events to applications and filter them with tenant-safe access. | Focused verification passed, production verification pending | Backend Jest passed (2 suites, 2 tests) and frontend Node test passed (1 test). Sentinel approved the organization-boundary fix. Database deployment remains pending. |
 | ATS-04 | Add legal company verification with admin review and server-side hiring gates. | In progress | Added focused edge coverage for verified/suspended submission blocks, rejected-request resubmission, review audit values, repeated review rejection, and admin queue identity checks (2 suites, 12 tests). Public organization lookup/list and public job queries pass separately (2 suites, 3 tests). Backend typecheck passes. The user chose mandatory legal review for existing organizations. Keep them `unverified` until an admin reviews them. Native review and migration remain pending. |
-| ATS-05 | Complete interview scheduling with explicit time zones, change history, reminders, and structured interviewer outcomes. | Timezone slice implemented; RSVP rules and history remain open | ATS-05-TZ implements the approved UTC instant and organizer-selected IANA zone, default `America/Santiago`. The 2026-10-10 exploration found RSVP identity and event-access checks in the controller, but no RSVP controller test. The service accepts the supplied RSVP status. Notifications run best-effort after persistence. Current event and participant models show no change history. See ATS-05-1 and Phase 4 of `docs/plans/backend-roadmap.md`. |
+| ATS-05 | Complete interview scheduling with explicit time zones, change history, reminders, and structured interviewer outcomes. | Timezone slice implemented; RSVP rules and history remain open | ATS-05-TZ implements the approved UTC instant and organizer-selected IANA zone, default `America/Santiago`. The 2026-10-10 exploration found RSVP identity and event-access checks in the controller, and ATS-05-1a now verifies missing or mismatched identity and denied event RSVP access with controller mocks (1 suite, 6 tests). Backend typecheck passed. This does not prove cookie-session guards, database membership, persistence, or transition policy. The service accepts the supplied RSVP status. Notifications run best-effort after persistence. Current event and participant models show no change history. See ATS-05-1 and Phase 4 of `docs/plans/backend-roadmap.md`. |
 | ATS-06 | Complete offer, candidate, and professional portal workflows in the shared roadmap. | In progress | Phase 5 CV signed-URL tests now cover missing session, invalid and mismatched paths, backend denial, Storage access, and private caching. `node --test tests/cv-security.test.cjs` passed (8 tests). Native review preflight is blocked because this session has no capture interface for schema-bound intended-untracked selection. Remaining Phase 5 policy choices and the other phases stay open. |
 | ATS-07 | Audit permissions, error paths, data retention, and cross-repository ownership for all hiring writes. | In progress | Offer creation now commits the offer, chat, and message in one transaction. Earlier focused checks passed (2 suites, 8 tests), and hiring-plan and status-history denial tests passed (1 suite, 7 tests). The 2026-10-10 read-only audit found the listed access checks, but mocked controller tests do not prove guard-to-database behavior. Persistence failure coverage remains incomplete for hiring records, event timezone writes, and each offer-creation transaction write. Retention and deletion/export policy remain open. The inspected frontend application write calls NestJS, but production rewrite, cookie, and internal-key settings remain unverified. Production behavior, native review, and full route coverage remain open. See ATS-07-1 below. |
 | ATS-08 | Verify the full delivered scope and update roadmap evidence. | In progress | 2026-10-10: backend `npx jest --runInBand` passed 46 suites and 203 tests. Frontend `node --test tests/*.test.cjs` passed 193 tests with no failures or skips. `npx tsc --noEmit` passed in both repositories. All four commands exited 0. Scoped lint exited 1 in both repositories: ESLint checked 133 changed TypeScript files and reported 1,470 errors in 72 files, including 1,392 Prettier errors and 78 TypeScript lint errors, with no warnings. Biome checked 94 changed supported files and reported 5 errors, 3 warnings, and 1 information item. No base comparison was run. Backend `git diff --check` exited 2 on CRLF lines in three files. `git -c core.whitespace=cr-at-eol diff --check` passed. Frontend diff checks and staged diff checks in both repositories passed. Keep ATS-08 open for lint triage, native review, and production checks. No server, build, migration, or production check ran. |
@@ -207,12 +207,12 @@ Next step: complete native RDD review for this slice. Apply ignored migration `1
 
 ## ATS-05-1 RSVP rules and interview history
 
-State: exploration recorded. Implementation is blocked on the RSVP product policy below.
+State: RSVP transition rules and history remain blocked on the product policy below. ATS-05-1a independently verifies the existing controller authorization checks.
 
 Exploration evidence from 2026-10-10:
 
 - `PATCH /events/:id/participants/:userId` checks requester identity and event RSVP access in the controller.
-- The RSVP service accepts the status supplied by the caller. No RSVP controller test was found.
+- The RSVP service accepts the status supplied by the caller. The original exploration found no RSVP controller test. ATS-05-1a adds controller-mock authorization coverage below.
 - Organizer edits and cancellations, and participant RSVP changes, trigger best-effort in-app notifications after persistence.
 - Current event and participant models do not show a change-history record.
 - The frontend supports event creation, editing, deletion, and display of event time, link, and status.
@@ -240,6 +240,38 @@ Checklist:
 - [ ] Verify frontend RSVP and event status updates against the server response.
 
 Delivery: use `feature-branch-chain` on `codex/ats-portal-improvements` in both repositories. Keep ATS-05-1 as a separate work-unit slice and record its commit ID after the commit. No commit exists for this documentation update.
+
+## ATS-05-1a RSVP controller authorization
+
+State: focused checks passed. Commit and native review are pending. The user authorized controller-mock tests and inclusion of the 3 existing event filter and timezone tests in the same spec commit.
+
+Route: delegated direct. One writer adds tests to the existing controller spec and records evidence in the task plan and roadmap.
+
+Scope: `EventController.updateParticipantStatus` only. Check missing requester, mismatched path identity, and event RSVP access denial before the event service runs. Matching identity must reach the event access check. Keep RSVP transition policy and event history open. Do not test accepted or declined response changes, or cancelled or completed events.
+
+- [x] Record the agreed scope before test code.
+- [x] Add the controller authorization regression tests.
+- [x] Run the event controller Jest spec, backend typecheck, and scoped diff check.
+- [ ] Commit the authorized spec and only ATS-05-1a document changes.
+
+Test-first exception: regression coverage for existing behavior only. Production code stays unchanged, so no behavioral RED is claimed.
+
+Limits: mocked event access and service calls do not prove global session-cookie guard behavior, actual database membership, persistence, notifications, or RSVP transition policy. The global guard is outside this fixture. Runtime HTTP checks are not applicable to this controller-mock slice.
+
+Forecast: below 400 authored changed lines, including the existing spec. Delivery uses the approved `feature-branch-chain` strategy. Native review is pending and the parent will run its assessment after this commit.
+
+Rollback: remove the added RSVP describe block and the ATS-05-1a documentation updates. Preserve the 3 existing filter and timezone tests.
+
+Observed checks on 2026-10-10:
+
+- Baseline `npx jest --runInBand src/interfaces/controllers/event/event.controller.spec.ts`: 1 suite, 3 tests passed.
+- After adding authorization coverage, the same command passed 1 suite and 6 tests. Added missing requester, mismatched participant identity, and matching-identity access denial tests. No behavioral RED occurred or is claimed.
+- `npx tsc --noEmit`: passed, exit 0.
+- `git diff --check -- src/interfaces/controllers/event/event.controller.spec.ts odd/tasks/ats-portal-improvements.md docs/plans/backend-roadmap.md`: passed, exit 0. The isolated cached diff must also cover the untracked spec before commit.
+- `npx prettier --write src/interfaces/controllers/event/event.controller.spec.ts`: passed before the final tests. Applied a direct slop check to the new code and prose. The exact `/remove-ai-slop` skill is absent from the configured user and project skill paths.
+- No server, build, migration, production source change, or RSVP policy change ran.
+
+Commit: pending. Preserve the unrelated staged migration and all prior document edits. The parent owns native assessment and review after this work-unit commit.
 
 ## ATS-10 scope and acceptance
 
