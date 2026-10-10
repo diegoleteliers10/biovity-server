@@ -350,7 +350,7 @@ Verified in the inspected code:
 Still unverified:
 
 - Controller tests mock access or services. They do not prove guard-to-database behavior, real organization membership, or persistence-failure behavior.
-- Timezone create and edit tests do not prove authorization or persistence-failure handling.
+- ATS-07-3 adds create/edit authorization-denial, write-rejection, and best-effort notification regression coverage with mocks. Actual membership, database constraints, rollback, and durable delivery remain unverified.
 - Offer-creation tests do not yet prove rollback at each transaction write failure.
 - ATS-07-2 tests below cover mock denials and rejected writes. They do not prove real membership checks, PostgreSQL constraints, partial-record absence, or rollback.
 - The inspected candidate-tag controller does not show a separate check that the candidate belongs to a job or application in the tag organization. Keep this ownership rule open. This audit does not establish a defect.
@@ -383,6 +383,48 @@ Forecast: about 420 authored changed lines including the existing untracked cont
 - No server, build, migration, production check, or RSVP change ran.
 
 Delivery: commit pending. Include both specs and only the ATS-07-2 document hunks. The existing controller cases are part of the authorized slice. Native RDD mode is on. The current-worktree assessment returned high/unassessable because untracked files need an explicit inventory declaration. No native approval is claimed.
+
+### ATS-07-3 event create/edit failure coverage
+
+State: focused checks passed. Commit and native review are pending. Production behavior stays unchanged.
+
+Objective: verify authorization denials and failure ordering for event creation and editing, and preserve successful saved results after best-effort notification failures.
+
+Route: delegated direct. One bounded writer adds controller cases and a new service spec, then updates only this slice's documentation.
+
+Scope and acceptance:
+
+- Denied create or manage access must prevent service execution.
+- Event-save or participant-seed rejection must prevent commit and notification calls. Check the rollback and release calls without claiming database rollback proof.
+- An event-update rejection must prevent notification calls.
+- Notification rejection after saved create or edit must preserve the successful saved result and reach the existing logger.
+- Use the existing public controller/service methods with mocked external dependencies. Do not change production source, RSVP transition rules, event history, connection/start-transaction handling, or migrations.
+
+Checklist:
+
+- [x] ATS-07-3-PLAN: record scope and limits before test edits, then mirror and read back the full task document in Engram.
+- [x] ATS-07-3-TESTS: add controller authorization and service failure-order regression cases.
+- [x] ATS-07-3-CHECKS: run focused Jest, backend typecheck, scoped diff checks, and isolated cached diff check.
+- [ ] ATS-07-3-COMMIT: commit only this slice and record its commit ID. The parent owns native assessment and review.
+
+Checks: `npx jest --runInBand src/interfaces/controllers/event/event.controller.spec.ts src/core/services/event.service.spec.ts`, `npx tsc --noEmit`, and `git diff --check -- src/interfaces/controllers/event/event.controller.spec.ts src/core/services/event.service.spec.ts odd/tasks/ats-portal-improvements.md docs/plans/backend-roadmap.md`. Before commit, check the isolated cached diff.
+
+Test-first exception: these regression tests cover existing behavior without production edits. No behavioral RED is required or claimed. Runtime HTTP checks do not apply to this mock-level slice.
+
+Limits: mocks do not prove global cookie-session guards, database membership, PostgreSQL constraints or rollback, durable notification delivery, or RSVP transition policy. A rollback call is control-flow evidence only. A notification failure log is not retry or delivery proof. Database tests, other persistence paths, full-route coverage, native review, production, retention, and event history remain open.
+
+Forecast: below 400 authored changed lines. Use the existing `feature-branch-chain` strategy. Rollback removes the new service spec, added create/edit controller cases, and ATS-07-3 document hunks only. Preserve all prior tests, document edits, and the staged migration.
+
+Verification on 2026-10-10:
+
+- `npx jest --runInBand src/interfaces/controllers/event/event.controller.spec.ts src/core/services/event.service.spec.ts`: passed, 2 suites and 13 tests. Added 2 controller denial cases and 5 service cases. No behavioral RED occurred because production behavior stayed unchanged.
+- `npx tsc --noEmit`: passed, exit 0.
+- `git diff --check -- src/interfaces/controllers/event/event.controller.spec.ts src/core/services/event.service.spec.ts odd/tasks/ats-portal-improvements.md docs/plans/backend-roadmap.md`: passed, exit 0. The new service spec also needs the isolated cached diff check before commit.
+- `npx prettier --write src/interfaces/controllers/event/event.controller.spec.ts src/core/services/event.service.spec.ts`: passed before tests.
+- Both full Engram task-document parts were saved and read back before test edits. Refresh them after these results and the commit record.
+- No production source, RSVP policy, history, migration, server, or build changed. The exact `/remove-ai-slop` skill remains unavailable. The loaded standards were applied directly.
+
+Commit: pending. The parent owns native assessment and review. No native approval is claimed.
 
 ## ATS-02 checklist
 
