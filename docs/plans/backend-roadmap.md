@@ -1,295 +1,294 @@
-# Plan: Roadmap Backend Biovity — Hardening, Cron, Emails y Deuda
+# Roadmap de ATS, portal y operaciones internas
 
-## Estado: APROBADO
+**Estado:** aprobado para ejecución
+**Actualizado:** 2026-10-10
+**Repositorios:** `biovity` y `biovity-server`
 
-Fecha: 2026-08-24
-Fuente: Issues de Linear, proyecto *Biovity Backend/API* y *Biovity Landing*.
-Repos: `biovity-server` (NestJS) y `biovity` (Next.js).
+Este roadmap convierte la auditoría del ATS y del portal profesional en trabajo ejecutable. La meta es cerrar los flujos de contratación, ayudar al equipo de Biovity a operar la plataforma y medir los resultados con datos confiables.
 
----
+### Trabajo entregado en esta actualización
 
-## Alcance
+- La bandeja de avisos lee y marca avisos desde NestJS.
+- El alta de organización crea la organización y vincula al usuario con una transacción de NestJS.
+- Si el alta queda incompleta, la cuenta puede completar la organización desde el panel después de verificar el correo.
+- Las respuestas para cuentas existentes conservan el mensaje genérico de Better Auth.
+- Los cambios administrativos de nombre, tipo y estado usan NestJS. Better Auth elimina las sesiones cuando cambia el estado de una cuenta.
+- La migración existente `biovity/lib/db/migrations/004_add_admin_user_type.sql` agrega el tipo `admin` a PostgreSQL.
+- Las evaluaciones y notas se leen y escriben por NestJS. La API valida puntajes y permisos de reclutamiento, y solo permite borrar una nota a su autor.
+- Las preferencias in-app se guardan con el perfil y `NotificationService` las respeta por canal y tipo de evento.
+- La deduplicación in-app usa una reserva con clave única. La migración TypeORM está lista y aún debe aplicarse en cada base de datos.
+- Se quitó el control de correo de preferencias hasta que el servicio de envío respete ese ajuste.
+- Las transiciones de etapa guardan una nota interna de rechazo en el historial, con actor y fecha, y la vista de postulación muestra el historial a reclutadores.
+- La migración de la nota interna está lista. Falta aplicarla en las bases de datos objetivo.
+- El plan de seguimiento guarda responsable, próxima acción y fecha objetivo por candidatura. El API valida que el responsable sea owner, admin o recruiter de la misma organización. La pantalla de detalle lo edita; el tablero muestra responsables, antigüedad y atrasos, y filtra por responsable o atraso. Las pruebas del controlador confirman que el acceso denegado bloquea la lectura del historial y la actualización del plan (1 suite, 7 pruebas). `npx tsc --noEmit` pasó.
+- El selector de responsables carga todas las páginas e incluye al dueño de la organización. La migración se niega a revertir si ya hay planes guardados. Antes de una reversión manual, se debe exportar esos datos.
+- El backend envía avisos in-app de lunes a viernes a las 09:00 de Chile para candidaturas vencidas o sin cambios por siete días. Avisa al responsable o, si no hay uno, al dueño. Aplica preferencias y conserva la reserva de deduplicación por 25 horas.
+- ATS-10 agrega una página admin para revisar chats sin organización, inspeccionar participantes e historial, y asignar una organización verificada por chat. Todas las rutas comprueban que el actor tenga una sesión admin autenticada. La asignación guarda el admin y la hora. El sistema deja sin asignar los casos sin evidencia suficiente y bloquea los envíos de organización.
+- La migración `1791800000004-ApplicationHiringPlan` está lista. Falta aplicarla en las bases de datos objetivo.
+- La bandeja de consultas de contacto ahora tiene estados, responsable, fecha de seguimiento, nota de resolución e historial. La API admin de NestJS posee estos campos y Next.js conserva `is_read` y los datos del formulario. La migración `026_contact_message_operations.sql` está lista y falta aplicarla en las bases de datos objetivo.
+- El registro de organización rechaza proveedores personales comunes, exige que el dominio del correo coincida con el dominio del sitio web y requiere verificar ese correo antes del inicio de sesión. Esta es la regla de activación para registros nuevos. La validación corre en el formulario y en el servidor antes de crear la cuenta.
+- La cola admin de operaciones muestra ofertas activas vencidas y postulaciones abiertas sin próxima acción o con fecha vencida, con fecha de Chile, filtros y paginación. Es una vista de solo lectura y no requiere migración.
+- Los correos de verificación, restablecimiento, bienvenida, lista de espera, invitaciones y cartas de oferta del flujo Next.js entran en una outbox persistente. El alta de lista de espera y su correo se guardan en una transacción. Las invitaciones agotadas y vencidas pueden crear una nueva generación idempotente. El worker limita los reintentos incluso si un proceso se detiene tras tomar una fila. NestJS llama al worker cada cinco minutos por una ruta interna. Admin puede ver fallos y reintentar antes de que venza el contenido. La migración `027_email_outbox.sql` falta aplicarla.
+- La verificación legal de empresas tiene estados y solicitudes con historial. Admin puede aprobar o rechazar cada solicitud. La API bloquea la publicación y las acciones de reclutamiento hasta la aprobación. Las ofertas públicas y los perfiles de empresa ocultan organizaciones no verificadas. La migración TypeORM `1791800000005-OrganizationVerification` falta aplicarla.
+- Los chats nuevos guardan la organización cuando el servidor valida que el reclutador es miembro. La reutilización de chats incluye esa organización. La migración aditiva `1791800000006-ChatOrganization` combina el propietario directo y las filas de miembros, elimina duplicados y asigna solo cuando queda exactamente una organización. Los chats heredados ambiguos quedan sin asignar y los envíos de organización se bloquean para esos chats. La migración está staged y no se ha aplicado.
 
-Este plan cubre el trabajo de backend pendiente y el trabajo del frontend que debe hacerse a la par.
+## Estado actual
 
-**Fuera de alcance** (se definen después, no están en este plan):
+La auditoría encontró estas funciones en el código:
 
-- BIO-53 Recomendaciones personalizadas de empleos.
-- BIO-54 AI matching de candidatos en home organización.
-- BIO-51 Integración UI de suscripción con Mercado Pago.
+- El ATS tiene ofertas, postulaciones, etapas configurables, historial de cambios, evaluaciones, notas, etiquetas, búsqueda de talento, plantillas, calendario, mensajes, ofertas laborales y métricas.
+- El portal profesional tiene perfil, CV, búsqueda de empleos, postulaciones, alertas, mensajes, calendario y métricas.
+- La API tiene eventos y participantes, miembros de organización, registros de actividad, alertas de empleo, administración y servicios de notificación.
+- El frontend y el backend acceden a algunas tablas compartidas. `NotificationService` escribe notificaciones en el backend. Evaluaciones y notas ahora también usan NestJS.
 
----
+La lista anterior confirma que existen modelos o pantallas. No confirma que los flujos funcionen de extremo a extremo ni que tengan permisos, reintentos y trazabilidad suficientes.
 
-## Punto de partida: estado real del repo
+## Reglas de ejecución
 
-Linear está desactualizado frente al código. Verificado en `biovity-server`:
+1. Verifica el comportamiento actual antes de crear una tabla, pantalla o servicio nuevo.
+2. Asigna un único servicio como dueño de cada grupo de campos mutables. Si dos sistemas comparten una tabla, separa los campos y define una API para cada comando antes de cambiar el esquema.
+3. Reutiliza el historial de etapas, eventos, evaluaciones y métricas que ya existen cuando cubran el requisito.
+4. Mantén la decisión de contratación en manos de una persona. La IA solo aporta evidencia y sugerencias.
+5. Define las políticas de datos antes de automatizar la retención o eliminación.
+6. Trata la documentación y los issues antiguos como referencias. Confirma cada pendiente contra el código actual.
 
-| Tema | Estado en código | Issue | Acción |
-|------|------------------|-------|--------|
-| Auth sesiones (Better Auth) | Existe. `SessionAuthGuard` global, `@Public()`, `x-internal-key` | BIO-33 cancelada | Nada |
-| Guards de autorización | Falta `RolesGuard` y `@Roles()` | BIO-37 In Progress | Completar |
-| Interceptors | Existe. Logging, transform, cache, timeout, error-format | BIO-38 Done | Nada |
-| Swagger | Existe en `/api/docs` (no producción) | BIO-34 Done | Nada |
-| Filtros de excepciones globales | No existe. Sin `APP_FILTER` ni `useGlobalFilters` | BIO-36 Backlog | Hacer |
-| Rate limiting | No existe. Sin `@nestjs/throttler` | BIO-35 Backlog | Hacer |
-| Validación de variables de entorno | No existe. `ConfigModule.forRoot` sin schema | BIO-39 Backlog | Hacer |
-| Graceful shutdown | No existe. Sin `enableShutdownHooks` | BIO-41 Backlog | Hacer |
-| Cron | `@nestjs/schedule` instalado. Solo cron semanal de métricas | BIO-55 Backlog | Hacer |
-| Emails | `EmailService` con Resend. Fallo silencioso si falta API key. `NotificationService` escribe notificaciones pero nada despacha email | BIO-52, BIO-62 Backlog | Hacer |
+## Fase 0: verificar flujos y propiedad de datos
 
-En `biovity` (Next.js):
-
-- `app/api/cron/route.ts` solo hace `SELECT 1` y no tiene autenticación (BIO-7).
-- `lib/mail.ts` usa fallback `re_mock_key`. Los emails fallan en silencio en producción (BIO-62).
-- Migraciones 001 a 021 en `lib/db/migrations/` escriben sobre la misma DB Supabase que NestJS (BIO-65).
-
----
-
-## Fase 0 — Frontera de doble escritor
-
-**Issue:** BIO-65
-**Duración estimada:** medio día
-**Repo:** `biovity-server` (doc) y `biovity` (referencia)
+**Prioridad:** P0
+**Repositorios:** ambos
+**Bloquea:** todas las fases que agreguen persistencia o notificaciones
 
 ### Trabajo
 
-1. Crear `docs/adr/001-table-ownership.md` con la matriz de ownership:
+1. Hecho: documenta los dueños actuales y objetivo en `docs/adr/001-table-ownership.md`.
+2. Hecho: migra la lectura y actualización de avisos a la API NestJS.
+3. Hecho: migra la creación de organización y el vínculo inicial del usuario a una ruta interna transaccional de NestJS.
+4. Hecho: migra evaluaciones y notas a NestJS. La API limita lotes a 100, exige permiso `recruit` y limita el borrado al autor.
+5. Hecho: guarda notas internas opcionales de rechazo en el historial y muestra las transiciones a reclutadores. Pendiente: agregar catálogo de motivos definidos por organización.
+6. Hecho en parte: el mapa asigna las postulaciones, mensajes, eventos, ofertas y alertas de empleo a NestJS. Los controladores trazados comprueban la propiedad del registro. Pendiente: completar el mapa de rutas y verificar el comportamiento en producción.
+7. Hecho en parte (auditoría ATS-07 del 2026-10-10): la creación de postulaciones comprueba rol profesional e identidad de candidato o admin; los cambios de plan y etapa comprueban acceso de reclutamiento, y la transacción comprueba la organización del responsable. Las notas de eventos comprueban permiso de gestión del evento. La respuesta a ofertas usa una transición condicional desde `sent`; las pruebas existentes cubren respuestas simultáneas. La creación de ofertas guarda oferta, chat y mensaje en una transacción. Los registros de contratación comprueban acceso de reclutamiento y el borrado de notas comprueba autor. Las rutas de alertas comprueban que la sesión sea dueña antes de llamar al servicio. Las etiquetas comprueban acceso a los datos de su organización. La escritura de postulaciones inspeccionada en frontend llama a NestJS. Pendiente: las pruebas de controladores usan accesos o servicios simulados y no prueban el recorrido de guardia a base de datos, membresía real ni fallos de persistencia. Las pruebas de zona horaria no prueban permisos ni fallos de persistencia. Las pruebas de ofertas no cubren rollback ante el fallo de cada escritura de la transacción. La configuración de rewrite, cookies y clave interna en producción sigue sin verificar. La auditoría no encontró una regla de retención ni una política de borrado o exportación de datos de candidatos. La relación entre candidato y vacante o postulación para asignar etiquetas sigue como regla de producto abierta; esta auditoría no confirma un defecto. Próximo paso acotado ATS-07-2: probar la autorización y los fallos de persistencia en registros de contratación. La auditoría fue de solo lectura y no verificó producción.
+8. Hecho en parte: las notificaciones de postulaciones, mensajes y eventos ocurren después de la escritura principal. Los fallos se registran en logs, sin reintento duradero. `NotificationService` puede absorber errores de inserción. ATS-07 mantiene el resultado del mensaje guardado cuando falla la consulta del perfil emisor o la creación de la notificación. Tres pruebas enfocadas cubren los fallos auxiliares y de persistencia. Pendiente: definir un flujo durable de reintentos y sus responsables.
+9. Hecho en parte: `docs/adr/001-table-ownership.md` registra los hallazgos de esta auditoría. Pendiente: completar la revisión de rutas y producción, y resolver la política de destinatario del correo de respuesta de oferta.
+10. Hecho en código (ATS-07): las rutas Next.js de carga y descarga comprueban que el usuario autenticado sea participante del chat antes de acceder a Storage. La descarga valida la ruta `messages/<chatId>/<filename>` y responde con `private, no-store`. Cinco pruebas enfocadas, TypeScript, Biome y `git diff --check` del frontend pasan. `git diff --check` del backend sigue mostrando CRLF en tres archivos ajenos a este cambio. Pendiente: verificar en producción y completar la auditoría de rutas y permisos.
 
-   | Dueño | Tablas |
-   |-------|--------|
-   | NestJS | `job`, `application`, `application_answer`, `application_status_history`, `resume`, `organization`, `organization_member`, `user`, `subscription`, `saved_job`, `saved_search`, `pipeline_stage`, `job_question`, `job_template`, `candidate_tag`, `candidate_tag_assignment`, `saved_candidate`, `salary_submission`, `event`, `event_participant`, `chat`, `message`, `ai_credential`, `api_key`, `activity_log` |
-   | Next.js | `waitlist`, `notification`, `contact_message`, `application_evaluation`, `application_note`, `short_link` |
+### Criterios de salida
 
-2. Declarar la regla: un servicio no escribe tablas del otro. Lecturas cruzadas se documentan caso por caso.
-3. Listar dependencias cruzadas actuales. Ejemplo: `organization_ai_credentials` la escribe NestJS y la lee Next.js. Definir plan para cada una.
-4. Definir el proceso de migración coordinado entre repos: numeración por rango (Next.js continúa su serie, NestJS usa timestamps).
+- Cada campo mutable tiene un servicio dueño y una ruta de escritura documentados.
+- Cada tabla compartida tiene un dueño de esquema para sus migraciones.
+- Las llamadas que cruzan repositorios tienen un contrato documentado.
+- El equipo puede seguir cada flujo desde la acción del usuario hasta el resultado guardado.
+- La lista de pendientes antiguos tiene estado verificado en código.
 
-### Criterios de aceptación
+## Fase 1: entregar avisos de forma confiable
 
-- La matriz vive en `docs/` y referencia las migraciones de ambos repos.
-- Cada tabla tiene un único dueño declarado.
-- Las dependencias cruzadas quedan listadas con plan.
-
-### Por qué primero
-
-BIO-52 y BIO-55 escriben tablas sensibles. Sin frontera definida, ambos corren riesgo de conflicto de esquema y de doble escritura.
-
----
-
-## Fase 1 — Hardening del backend
-
-**Issues:** BIO-36, BIO-39, BIO-41, BIO-35, BIO-37, espejo de BIO-62
-**Duración estimada:** 2 a 3 días
-**Repo:** `biovity-server`, salvo punto 6
-
-### 1.1 Filtros de excepciones globales (BIO-36)
-
-- `HttpExceptionFilter`: formatea errores HTTP con shape consistente `{ success, message, error, statusCode, timestamp, path }`.
-- `AllExceptionsFilter`: captura errores no manejados, loguea con contexto, responde 500 sin filtrar internals.
-- Registrar como `APP_FILTER` en `app.module.ts`.
-- Alinear el shape con `error-format.interceptor.ts` existente. Un solo formato de error en toda la API.
-
-### 1.2 Validación de variables de entorno (BIO-39)
-
-- Crear `src/infrastructure/config/env.schema.ts` con zod (ya instalado).
-- Validar al inicio en `main.ts` antes de `NestFactory.create`.
-- Mensajes de error claros: variable faltante, formato inválido.
-- Variables mínimas: `DATABASE_*`, `JWT_SECRET`, `INTERNAL_API_KEY`, `RESEND_API_KEY` (condicional a entorno), `MERCADOPAGO_*` (condicional a entorno).
-- Fail-fast: la app no arranca con config inválida.
-
-### 1.3 Graceful shutdown (BIO-41)
-
-- `app.enableShutdownHooks()` en `main.ts`.
-- Cerrar el pool de PostgreSQL (`DataSource.destroy`) en `onModuleDestroy` de `DatabaseConfig`.
-- Manejar `SIGTERM` y `SIGINT`. Loguear el cierre.
-
-### 1.4 Rate limiting (BIO-35)
-
-- Instalar `@nestjs/throttler`.
-- Storage distribuido con Upstash Redis. Comparte la cuenta con BIO-59 del frontend.
-- Límites por tipo de ruta:
-
-  | Grupo | Límite propuesto |
-  |-------|------------------|
-  | Default global | 100 req / minuto |
-  | Auth y login | 5 req / minuto |
-  | Escrituras (POST/PUT/DELETE) | 30 req / minuto |
-  | Público (jobs, salaries) | 60 req / minuto |
-
-- Mantener fallback en memoria para desarrollo local.
-- Headers estándar de rate limit en la respuesta.
-
-### 1.5 Cerrar guards de autorización (BIO-37)
-
-- Crear `RolesGuard` en `src/shared/guards/`.
-- Crear decorador `@Roles(...)` en `src/shared/decorators/`.
-- Aplicar `@Roles('admin')` a las rutas de `admin.controller.ts` y `api-keys`, `ai-credentials`.
-- Auditar cobertura: todo endpoint es `@Public()` o requiere sesión por decisión explícita, no por omisión.
-- Documentar la matriz rol-ruta en `docs/`.
-
-### 1.6 Fix de fallo silencioso de emails (espejo de BIO-62)
-
-- `email.service.ts`: en producción, sin `RESEND_API_KEY` o `EMAIL_FROM`, el envío falla con error explícito. No usa mock.
-- Mock permitido solo con `NODE_ENV` development o test.
-- Loguear cada envío con destinatario y template.
-- Misma corrección ya agendada en `biovity` (BIO-62). Hacer ambos en el mismo PR cruzado o en PRs coordinados el mismo día.
-
-### Criterios de aceptación de la fase
-
-- `bun run build` y `bun run lint` pasan.
-- Un error no manejado responde con el shape global de error, no con stack trace.
-- La app no arranca sin env requerido, con mensaje que nombra la variable.
-- `kill -TERM` cierra conexiones sin errores.
-- Un burst de peticiones recibe 429 con headers.
-- Un usuario no admin recibe 403 en rutas admin.
-
----
-
-## Fase 2 — Cron y emails transaccionales
-
-**Issues:** BIO-55, BIO-7, BIO-52
-**Duración estimada:** 1 a 2 semanas
+**Prioridad:** P1
 **Repositorios:** ambos
+**Depende de:** Fase 0
 
-### 2.1 Expiración automática de ofertas (BIO-55)
+### Trabajo
 
-Backend, NestJS es dueño de la tabla `job`:
+1. Define el catálogo de eventos y destinatarios: nueva postulación, cambio de etapa, rechazo, entrevista, oferta laboral, respuesta a oferta y mensaje nuevo.
+2. Hecho en código para correos iniciados en Next.js: agrega outbox persistente, reintentos, clave idempotente de proveedor y estado. El registro de lista de espera y el correo de bienvenida son atómicos. Una invitación vencida puede reencolarse con una nueva generación. ATS-02 está implementado y sus pruebas enfocadas pasan. NestJS guarda la respuesta final y una intención durable en una transacción. Un puente reintenta el correo mediante una ruta privada de Next.js. El usuario eligió al primer reclutador con acceso activo a la organización. La selección valida el acceso actual del reclutador del chat y, si no es elegible, elige al miembro elegible más antiguo. La outbox acepta una repetición idéntica y rechaza una carga distinta para la misma clave. El puente usa `OFFER_RESPONSE_EMAIL_DISPATCH_URL` y `EMAIL_OUTBOX_SECRET`. No se cambiaron ni verificaron valores de producción. La migración `1791800000008-OfferResponseEmailIntent` está en el código y sigue sin aplicar. Espera a la revisión nativa y al acceso de producción aprobado. ATS-11 está implementado: el repositorio de intención guarda la respuesta, el estado e historial de la candidatura, el mensaje existente y la intención en una sola transacción. Sus pruebas enfocadas pasaron (5 suites, 16 pruebas) y `npx tsc --noEmit` pasó. No hizo falta un cambio de esquema. Las revisiones nativas de ATS-02 y ATS-11 siguen pendientes. Revisar también los eventos restantes.
+3. Hecho: respeta las preferencias in-app por canal y tipo de evento. La preferencia de correo queda pendiente hasta que el envío aplique el mismo control.
+4. Hecho: reserva cada clave de deduplicación en una tabla con clave única y borra reservas vencidas cada hora.
+5. Hecho en código para outbox Next.js: guarda intentos, éxito, fallo y último error. Admin ve correos agotados y puede reintentarlos si el contenido no venció. Las filas agotadas con un lease vencido pasan a estado fallido y no superan el máximo de intentos por fallos del worker.
+6. Hecho en código para outbox Next.js: el flujo registra el correo antes de llamar al proveedor; el worker entrega fuera de la transacción del producto.
+7. Hecho en código: la ruta del worker valida un secreto compartido. NestJS llama la ruta cada cinco minutos con `EMAIL_OUTBOX_DISPATCH_URL` y `EMAIL_OUTBOX_SECRET`. Pendiente: configurar estas variables y verificar remitente y cron en producción.
+8. Agrega avisos dentro del producto y correo donde el evento lo requiera.
 
-1. `JobExpirationService` con `@Cron` diario (ejemplo: 03:00 America/Santiago).
-2. Query: ofertas con `deadline < now` y estado abierto. Cerrar estado y quitar del listado público.
-3. Loguear cuántas ofertas expiraron en cada corrida.
-4. Endpoint interno de trigger manual para probar: `POST /api/v1/internal/jobs/expire` protegido con `InternalSecretGuard` existente.
+### Criterios de salida
 
-Frontend, a la par (BIO-7):
+- Cada evento acordado crea como máximo un aviso lógico por destinatario.
+- Los fallos de correo se pueden reintentar y consultar.
+- Un reintento usa la misma clave de proveedor. La outbox ofrece entrega al menos una vez y deja documentado el riesgo de repetición después de la ventana de idempotencia.
+- Las preferencias de usuario bloquean los canales que el usuario desactivó.
+- La aplicación nueva y cada cambio de estado muestran el aviso correcto en el portal.
 
-1. Eliminar el keep-alive `SELECT 1` de `app/api/cron/route.ts` o dejarlo solo si Vercel lo exige para el plan.
-2. Si queda ruta cron: verificar `Authorization: Bearer CRON_SECRET` o `x-vercel-cron`. Retornar 401 sin credencial válida.
-3. Agregar `CRON_SECRET` a `.env.example` de `biovity`.
-4. Actualizar `vercel.json`.
+## Fase 2: hacer que el pipeline indique la próxima acción
 
-### 2.2 Dispatcher de notificaciones por email (BIO-52)
-
-Backend NestJS, según la frontera de la Fase 0 (`notification` es de Next.js, el dispatch se coordina):
-
-1. Definir el contrato en el ADR de la Fase 0: quién escribe `notification`, quién despacha email, con qué trigger.
-2. Opción recomendada: NestJS expone el envío transaccional. Next.js, al escribir la notificación, encola el email vía API interna o el cron procesa la cola `notification` no despachada.
-3. Emails clave:
-
-   | Evento | Destinatario | Trigger |
-   |--------|--------------|---------|
-   | Postulación nueva | Organización | Creación de application en NestJS |
-   | Cambio de estado de postulación | Profesional | Update de application en NestJS |
-   | Nuevo mensaje | Contraparte del chat | Creación de message en NestJS |
-
-4. Respetar las preferencias de notificación existentes en el frontend (`use-notification-preferences`). El backend consulta el flag de opt-out por tipo antes de enviar.
-5. Idempotencia: marcar la notificación como despachada. Un reenvío de cron no duplica emails.
-6. Plantillas con el layout de marca existente en `lib/mail.ts`. Mover o compartir el layout para no duplicarlo en NestJS.
-
-### Criterios de aceptación de la fase
-
-- Una oferta vencida queda cerrada sin acción manual y desaparece del listado público.
-- El cron del frontend responde 401 sin secreto válido.
-- Una postulación nueva genera email a la organización.
-- Un cambio de estado genera email al profesional.
-- Las preferencias de opt-out se respetan.
-- Ningún email se envía dos veces por el mismo evento.
-
----
-
-## Fase 3 — Alertas de empleo
-
-**Issue:** BIO-17
-**Duración estimada:** 1 semana
+**Prioridad:** P1
 **Repositorios:** ambos
+**Depende de:** Fase 0
 
-### 3.1 Backend
+### Trabajo
 
-1. Entidad y tabla `job_alert`: `id`, `userId`, `keywords`, `location`, `frequency` (daily, weekly), `isActive`, `createdAt`, `updatedAt`.
-2. CRUD completo: crear, listar, editar, eliminar. Rutas bajo `/api/v1/job-alerts`, protegidas por sesión.
-3. DTOs con validación class-validator, mappers siguiendo la convención `jobAlertDomain-orm.mapper.ts`.
-4. Matcher: query de ofertas nuevas que calzan con keywords y ubicación desde la última corrida. Se ejecuta en el cron diario junto a la Fase 2.
-5. El matcher genera notificaciones y emails reutilizando el dispatcher de BIO-52.
+1. Hecho: `application_status_history` guarda actor, hora, estado anterior y estado nuevo. La creación de una candidatura y su estado inicial comparten una transacción. El detalle muestra el historial a reclutadores.
+2. Hecho en parte: el equipo puede guardar una nota interna de rechazo. Pendiente: agrega un motivo estructurado por organización y una nota adicional.
+3. Hecho en parte: cada etapa tiene una proyección a uno de los seis estados públicos actuales. Pendiente: define reglas explícitas de terminalidad y reapertura para etapas personalizadas.
+4. Hecho: la candidatura y su etapa comparten la misma oferta. La API comprueba la oferta y una clave foránea compuesta lo aplica en PostgreSQL.
+5. Hecho: el historial guarda IDs y copias de nombres de etapa. La migración también completa los registros iniciales que faltaban.
+6. Hecho en código: la migración crea etapas iniciales y asigna las candidaturas actuales. La creación de ofertas nuevas crea el mismo conjunto. Pendiente: aplicar la migración en las bases de datos objetivo.
+7. Hecho: el portal y las métricas conservan `application.status` como estado público de resultado.
+8. Hecho: el tablero, detalle, scorecard, filtros y acciones masivas usan IDs de etapas configurables. Las herramientas de IA pueden consultar las etapas activas de una oferta y mover la candidatura por ID, con aprobación humana y nota requerida para rechazo.
+9. Hecho: la eliminación archiva las etapas personalizadas. La configuración muestra las etapas archivadas y bloquea su edición. La API también rechaza cambios a etapas fijas o archivadas. El reordenamiento solo envía etapas activas. Las candidaturas archivadas siguen visibles y pueden salir de la etapa. No se permiten nuevas transiciones hacia etapas archivadas. Las seis etapas integradas no se pueden archivar mientras las rutas antiguas dependan de ellas.
+10. Hecho en código: define responsable, próxima acción y fecha objetivo por candidatura. El API solo acepta un responsable owner, admin o recruiter de la misma organización. El selector carga todos los miembros y al owner. Pendiente: aplicar la migración en las bases de datos objetivo.
+11. Hecho en código: muestra antigüedad en la etapa y casos vencidos con fecha de calendario de Chile; permite filtrar por responsable y atraso.
+12. Hecho en código: envía recordatorios en días hábiles a las 09:00 de Chile para candidaturas vencidas o sin cambios por siete días. Avisa al responsable o al dueño si no hay responsable. Usa preferencias in-app y una clave diaria con reserva por 25 horas.
 
-### 3.2 Frontend
+### Criterios de salida
 
-1. `jobAlertsCard.tsx`: inputs controlados con `value` y `onChange` para keywords, ubicación, frecuencia.
-2. Conectar `homeContent.tsx` con los endpoints vía hook nuevo. Reemplazar el `console.log` con TODO.
-3. Estados de loading y error en el card.
+- Cada cambio de etapa tiene actor y hora en el historial.
+- El tablero usa las etapas configuradas para la oferta y el portal profesional conserva estados de resultado comprensibles.
+- La API y la base de datos rechazan una etapa que pertenezca a otra oferta.
+- Cada rechazo guarda un motivo definido por la organización.
+- El equipo puede filtrar candidaturas por responsable, próxima acción y atraso.
+- Renombrar, archivar o reordenar etapas no cambia el historial guardado. Una etapa archivada conserva las candidaturas existentes y no recibe nuevas.
+- Las reglas de reapertura y eliminación de etapas no borran el historial.
 
-### Criterios de aceptación
+## Fase 3: guiar la activación de organizaciones y la operación interna
 
-- Un profesional crea, edita y elimina alertas desde el dashboard.
-- Una oferta nueva que calza genera notificación y email según la frecuencia configurada.
-- Sin alertas activas, el card muestra el estado vacío correcto.
+**Prioridad:** P1
+**Repositorios:** ambos
+**Depende de:** Fases 0 y 1
 
----
+### Trabajo
 
-## Fase 4 — Calidad y deuda
+1. Hecho para registros nuevos: se rechazan proveedores personales comunes; el dominio del correo corporativo debe coincidir con el del sitio web; Better Auth exige verificar ese correo antes de iniciar sesión. Esto verifica el control del correo y del dominio, no la existencia legal de la empresa. Pendiente: audita cuentas antiguas contra esta regla y define la completitud del perfil.
+2. Hecho en código: conserva el alta básica con correo corporativo verificado. La verificación legal usa estados `unverified`, `pending`, `verified`, `rejected` y `suspended`, solicitudes con historial, datos legales, fuente de registro, revisor, fecha y motivo de decisión. Admin puede aprobar o rechazar solicitudes. La API permite guardar borradores y perfiles antes de aprobar. Bloquea la publicación y las acciones de reclutamiento hasta que la empresa quede verificada. Las vistas públicas ocultan ofertas y perfiles de empresas no verificadas. ATS-04 agrega pruebas enfocadas para bloquear nuevos pedidos en estados verificado y suspendido, permitir reenvío tras rechazo, guardar motivo y revisor, y evitar una segunda revisión; el control de la cola admin ahora exige identidad admin autenticada. Las nuevas pruebas públicas verifican que el perfil y la lista de empresas filtren por estado verificado y que la consulta de vacantes públicas exija una organización verificada. Las pruebas públicas pasaron (2 suites, 3 pruebas); las pruebas de solicitud, revisión y cola admin pasaron aparte (2 suites, 12 pruebas). `npx tsc --noEmit` pasó. Decisión del usuario: las organizaciones existentes quedan `unverified` hasta una revisión legal admin. Pendiente: revisión nativa, prueba integral y aplicación de `1791800000005-OrganizationVerification` en las bases objetivo. Antes de migrar, inventaría las empresas existentes y planifica su revisión inicial.
+3. Pendiente: crea una cola interna que muestre organizaciones nuevas, hitos faltantes y la próxima fecha de seguimiento.
+   - ATS-12, implementado en código: agrega un filtro de lectura en la cola admin para encontrar organizaciones sin trabajos activos. Usa `job.status = active` como regla para un trabajo activo. Conserva la búsqueda, la paginación y los filtros actuales de trabajos vencidos y seguimiento de postulaciones. Las pruebas enfocadas (1 suite, 4 pruebas en backend; 2 pruebas en frontend), `npx tsc --noEmit` en ambos repositorios y los chequeos `git diff --check` acotados pasaron. No existe un commit de unidad de trabajo. La revisión nativa RDD sigue pendiente porque el usuario no eligió la estrategia de cadena. Este filtro no completa la cola general ni define asignación, responsables, fechas de seguimiento, cambios de estado o acciones de escritura. La parte del criterio sobre actividad reciente sigue pendiente.
+4. Hecho en código para consultas de contacto y señales de vacantes/postulaciones: las colas admin filtran, buscan y paginan; la de contacto permite asignar, resolver, reabrir y consultar cambios. La cola de vacantes/postulaciones es de solo lectura. ATS-07 ahora crea la oferta, reutiliza o crea el chat, inserta el mensaje, actualiza el último mensaje y guarda el vínculo en una transacción. Las pruebas enfocadas pasaron (2 suites, 8 pruebas), al igual que `npx tsc --noEmit` y el `git diff --check` limitado a los seis archivos del task. La notificación ocurre después del commit y sigue como mejor esfuerzo. La revisión nativa y la auditoría completa de rutas siguen pendientes. Pendiente: integra ofertas incompletas y fallos de correo o IA en colas accionables.
+5. Hecho en código para consultas de contacto: asigna un administrador y un estado. Pendiente: define responsables, estado y próxima acción para el resto de tareas internas.
+6. Define rutinas y tiempos objetivo para revisar organizaciones, moderar ofertas, responder consultas y resolver reportes.
+7. Hecho en código para consultas de contacto: registra actor, hora y cambios en el historial. Pendiente: añade acciones de soporte para las otras colas.
+8. Empieza con estas colas concretas. No crees un CRM genérico hasta que el equipo confirme otros casos de uso.
 
-**Issues:** BIO-32, BIO-59, BIO-10, BIO-66, BIO-63
-**Duración estimada:** flexible, orden por valor
+### Criterios de salida
 
-### 4.1 Unificar sistemas de tipos (BIO-32, High)
+- El equipo puede encontrar organizaciones sin oferta activa o sin actividad reciente.
+- Cada tarea interna tiene responsable, estado y siguiente fecha de acción.
+- El equipo puede ver consultas y reportes abiertos y cerrados.
+- Las acciones administrativas quedan en el registro de actividad.
 
-- Generar tipos canónicos desde el OpenAPI del backend (`swagger.json` de `/api/docs`).
-- Migrar `lib/types/dashboard.ts`, `lib/types/messages.ts`, `lib/types/trabajos.ts` a los tipos de la API.
-- Alinear `jobPostingSchema` con el contrato real.
-- Espejo en backend: mantener los DTO response como fuente única de verdad y exportar el JSON schema en CI.
+## Fase 4: coordinar entrevistas y registrar sus resultados
 
-### 4.2 CSP y rate limiting distribuido (BIO-59)
+**Prioridad:** P2
+**Repositorios:** ambos
+**Depende de:** Fase 1
 
-- CSP en `next.config.ts` compatible con Supabase, Resend, Vercel Analytics y Featurebase.
-- Migrar rate limiting en memoria de `lib/rate-limit.ts` y `lib/ai/rate-limit.ts` a Upstash Redis.
-- Comparte la cuenta Upstash con el punto 1.4 de la Fase 1. Hacer juntos.
+### Trabajo
 
-### 4.3 Límites en rutas de upload (BIO-10, High)
+1. Hecho y verificado con pruebas focalizadas: `Event` guarda `applicationId`, NestJS valida su relación con la candidatura y permite filtrar por ese ID. El detalle de candidatura lista sus entrevistas vinculadas. Backend: 2 suites y 2 pruebas. Frontend: 1 prueba. Pendiente: aplicar/verificar este flujo con la base de datos objetivo.
+2. Implementado y corregido, alcance ATS-05-TZ: guarda la hora como un instante UTC y la zona IANA elegida por quien organiza, con `America/Santiago` por defecto. Cada participante ve su hora local y la zona del evento. El API conserva el instante y la zona en creación y edición, y rechaza zonas con desplazamiento numérico. El formulario rechaza horas nuevas inexistentes o repetidas por el cambio de horario. El calendario semanal cubre las 24 horas y coloca el evento de Tokio el domingo a las 00:30. La evidencia figura en `odd/tasks/ats-portal-improvements.md`.
 
-- `app/api/upload/cv/route.ts`: límite de 5 MB y validación de tipo MIME real, no solo extensión.
-- `app/api/upload/avatar/route.ts`: usar `validateAvatarFile` de `lib/validations/profile.ts`. Eliminar la validación duplicada.
-- Rate limiting a ambas rutas con la infraestructura del punto 4.2.
+   Las pruebas focalizadas pasaron: backend, 1 suite y 3 pruebas del API. Frontend, 8 pruebas del API, de las vistas y del calendario semanal. Los tipos, los formatos focalizados y las comprobaciones directas del cambio de horario pasaron. El diff del frontend pasó. El diff normal del backend falla solo por los tres archivos CRLF existentes, y `git -c core.whitespace=cr-at-eol diff --check` pasó.
 
-### 4.4 Auditoría de grants de admin (BIO-66, Low)
+   Las pruebas fallaron antes de las dos correcciones, y Sentinel devolvió APPROVE después. La aprobación RDD nativa sigue pendiente. La migración `1791800000009-EventTimeZone.ts` está ignorada por Git y no se ha aplicado. No se ejecutó ningún stage, commit, servidor, build ni migración. La previsión supera 400 líneas modificadas y no permite aislar un conteo exacto de esta parte entre cambios anteriores. El usuario eligió `feature-branch-chain`: una rama `codex/ats-portal-improvements` para ambos repositorios. Los commits de trabajo se planifican por slice y sus IDs se registran en `odd/tasks/ats-portal-improvements.md`.
 
-- Migrar `ADMIN_EMAILS` a tabla o campo en DB con auditoría: quién, cuándo, por qué.
-- `ADMIN_EMAILS` queda solo como bootstrap del primer admin.
-- Segunda fase opcional: vista de gestión en el dashboard admin.
+3. Pendiente, ATS-05-1: aplica reglas de RSVP y guarda el historial de cambios. La exploración del 2026-10-10 confirmó que `PATCH /events/:id/participants/:userId` comprueba la identidad solicitante y el acceso RSVP al evento. El servicio acepta el estado recibido y no se encontró una prueba del controller RSVP. Los cambios y cancelaciones del organizador, y los cambios de RSVP, activan avisos in-app best-effort después de guardar. Los modelos actuales de evento y participante no muestran historial. El frontend permite crear, editar y borrar eventos, y muestra hora, enlace y estado. Antes de definir pruebas de transición, el usuario debe decidir si una persona puede cambiar una respuesta aceptada o rechazada y si puede responder después de cancelar o completar el evento. No se debe inventar esta política.
+4. Pendiente: envía recordatorios idempotentes y notifica cambios a todos los participantes. La notificación actual después de guardar es best-effort y no acredita entrega confiable a todos.
+5. Pendiente: registra el resultado de la entrevista y la evaluación de cada entrevistador.
+6. Pendiente: revisa la necesidad de sincronizar calendarios externos con organizaciones usuarias antes de elegir proveedores.
 
-### 4.5 Chores (BIO-63, Low)
+### Criterios de salida
 
-- Corregir drift de `.env.example`, remover `console.log`, actualizar `CLAUDE.md`, resolver lockfile duplicado.
+- Cada entrevista enlaza una candidatura, un instante UTC, una zona IANA del evento y participantes. La creación y edición conservan el instante y la zona. Cada participante ve su hora local y la zona del evento.
+- Un cambio o cancelación llega a todas las personas afectadas.
+- Las personas pueden confirmar o rechazar asistencia.
+- Cada participante puede cambiar su RSVP solo según las reglas que apruebe el producto. Las respuestas a eventos cancelados o completados siguen la política aprobada.
+- El historial registra quién cambió el evento o el RSVP, cuándo y qué valores cambiaron.
+- La organización puede registrar el resultado de la entrevista.
 
----
+La siguiente tarea de implementación ATS-05-1 debe probar las reglas aprobadas, la autorización del controller, los fallos de persistencia, el historial y el comportamiento de avisos. La política RSVP pendiente bloquea las pruebas de transición y cualquier cambio de regla. El plan y la evidencia están en `odd/tasks/ats-portal-improvements.md`.
 
-## Dependencias y orden
+La entrega usa `feature-branch-chain`: una rama, `codex/ats-portal-improvements`, compartida por ambos repositorios. Agrupa cada slice en un commit de trabajo y registra su ID en el plan. Esta actualización documental no crea un commit.
+
+## Fase 5: completar evaluación y control de IA
+
+**Prioridad:** P2
+**Repositorios:** ambos
+**Depende de:** Fases 0 y 2
+
+### Trabajo
+
+1. Hecho: migra evaluaciones y notas a NestJS con permiso `recruit`, límite de 100 evaluaciones por lote y borrado de notas solo por su autor.
+2. Hecho: valida puntajes de 0 a 5, contextos permitidos y justificación para evaluaciones neutrales o negativas.
+3. Define criterios de evaluación por etapa y rol entrevistador.
+4. Muestra evidencia que sustenta las sugerencias de IA y permite corregirlas.
+5. Guarda quién revisó o cambió una sugerencia de IA y por qué.
+6. Evita que un puntaje de IA avance o rechace una candidatura sin una acción humana.
+7. Hecho en código: limita el acceso a CV, notas y evaluaciones según el rol de organización. La ruta CV de URL firmada valida sesión, permiso del backend y ruta almacenada antes de acceder a Storage. Sus pruebas cubren sesión ausente, rutas inválidas y distintas, denegación del backend, ausencia de acceso a Storage y caché privada. `node --test tests/cv-security.test.cjs` pasó (8 pruebas, incluyendo la cobertura previa de borrado).
+
+### Criterios de salida
+
+- Cada evaluación muestra criterios, autor y fecha.
+- Una recomendación de IA incluye evidencia y permite una decisión humana distinta.
+- El registro de actividad muestra cambios a la evaluación y a las sugerencias de IA.
+- Un miembro sin permiso no puede leer notas o datos de candidatos.
+
+## Fase 6: medir el embudo y la calidad del servicio
+
+**Prioridad:** P2
+**Repositorios:** ambos
+**Depende de:** Fases 1, 2 y 4
+
+### Trabajo
+
+1. Define el significado y la fuente de cada métrica antes de agregarla a un panel.
+2. Agrega tiempo por etapa, tiempo hasta primera respuesta, conversión entre etapas, tiempo hasta contratación y ofertas sin respuesta.
+3. Registra la fuente de cada oferta y candidatura con una taxonomía acordada.
+4. Compara cohortes por periodo, tipo de cargo y fuente. No mezcles grupos con distinto volumen o contexto.
+5. Permite revisar las filas fuente de cada cifra agregada.
+6. Usa los resultados para decidir dónde hacen falta recomendaciones de empleo y matching de candidatos.
+
+### Criterios de salida
+
+- Cada métrica tiene una definición y una fuente documentadas.
+- Los conteos del panel se pueden comparar con las filas fuente.
+- La fuente de una oferta o candidatura se conserva durante el proceso.
+- El panel muestra tiempos y conversiones con los filtros acordados.
+
+## Fase 7: definir el ciclo de vida de datos de candidatos
+
+**Prioridad:** P1 para definir política; P2 para automatizar
+**Repositorios:** ambos
+**Depende de:** Fase 0 y revisión de política de producto y legal
+
+### Trabajo
+
+1. Define qué datos se guardan, para qué se usan y durante cuánto tiempo.
+2. Define cómo una persona solicita una copia, corrección o eliminación de sus datos.
+3. Incluye CV y archivos, postulaciones, mensajes, notas, evaluaciones, puntajes de IA y respaldos alcanzables.
+4. Define excepciones, como una retención aprobada, y quién puede autorizarlas.
+5. Implementa exportación y eliminación con una bitácora que indique qué datos se borraron o por qué se retuvieron.
+6. Comunica los cambios y solicita consentimiento cuando el producto lo requiera.
+
+### Criterios de salida
+
+- La política define retención por tipo de dato y finalidad.
+- Una solicitud se puede seguir desde su recepción hasta su cierre.
+- La exportación incluye todos los datos dentro del alcance acordado.
+- La eliminación verifica registros y archivos. Cada excepción tiene responsable y motivo.
+
+## Trabajo técnico pendiente por verificar
+
+El roadmap del 2026-08-24 describía estos temas como pendientes. El código actual ya contiene varias de esas piezas. Verifica comportamiento de producción antes de abrir trabajo nuevo.
+
+| Tema | Evidencia actual | Siguiente paso |
+|---|---|---|
+| Verificación local ATS-08, 2026-10-10 | Backend: `npx jest --runInBand` pasó 46 suites y 203 tests. Frontend: `node --test tests/*.test.cjs` pasó 193 tests, sin fallos ni omisiones. `npx tsc --noEmit` pasó en ambos repositorios. Los cuatro comandos salieron con código 0. ESLint revisó 133 archivos TypeScript cambiados y reportó 1.470 errores en 72 archivos: 1.392 de Prettier y 78 de reglas TypeScript, sin advertencias. Biome revisó 94 archivos cambiados compatibles y reportó 5 errores, 3 advertencias y 1 aviso informativo. Ambos comandos de lint salieron con código 1. No se comparó con la base. `git diff --check` del backend salió con código 2 por CRLF en tres archivos. La variante `git -c core.whitespace=cr-at-eol diff --check` pasó. Los controles de diff del frontend y de cambios staged en ambos repositorios pasaron | Mantener ATS-08 abierto para revisar los errores de lint, completar la revisión nativa y verificar producción. No se inició un servidor, se ejecutó un build ni se aplicaron migraciones |
+| Validación de entorno, guards por rol, filtros HTTP y throttling | Configuración y clases presentes en `biovity-server/src` | Revisar rutas, límites efectivos y configuración de producción |
+| Notificaciones y correo | `NotificationService` guarda avisos in-app y reserva claves con una restricción única. Next.js ya tiene `email_outbox` para los correos enumerados arriba. `EmailService` de NestJS aún envía directo y registra fallos por excepción/log | Pasar el correo de respuesta de oferta de NestJS por el contrato outbox. Aplicar `027_email_outbox.sql`, configurar el puente cron y revisar entregas en producción |
+| Historial y etapas | `application_status_history` guarda actor, hora, nota interna y snapshots de etapa. `application` referencia una etapa de la misma oferta. Tablero, detalle, scorecard, acciones masivas y herramientas de IA usan etapas configurables. El plan de seguimiento persiste responsable, próxima acción y fecha objetivo | Aplicar las migraciones pendientes. Después, agregar motivos estructurados, recordatorios y reglas de terminalidad/reapertura |
+| Métricas | Existe `organization-metrics.service.ts` con tiempos y conversiones | Acordar definiciones, fuentes y controles de los datos |
+| Eventos y entrevistas | Existen `Event`, `EventParticipant` y páginas de calendario | Validar vinculación con candidaturas, avisos, cambios y resultados |
+| Expiración de ofertas y cron | Existe un cron semanal para informes. El roadmap anterior describía vencimiento automático como pendiente | Confirmar tareas programadas y seguridad de rutas cron en producción |
+| Privacidad y ciclo de vida de datos | No se confirmó un flujo integral en esta revisión | Inventariar datos y archivos antes de definir automatizaciones |
+| Frontera de escritores y migraciones | Notificaciones, alta de organización, cambios administrativos de usuarios, evaluaciones y notas ya usan NestJS | Trazar los flujos restantes y actualizar la matriz de ownership |
+| Asociación de organización en chats | Los chats nuevos validan la membresía y los envíos de organización usan la organización guardada en el chat. Los chats heredados sin una coincidencia única quedan sin asignar y bloquean esos envíos | Aplicar `1791800000006-ChatOrganization` y `1791800000007-ChatOrganizationReview` en el despliegue aprobado. Definir el proceso operativo de revisión admin y asignación de chats heredados |
+| Revisión admin de chats heredados | ATS-10 está implementado y sus rutas requieren un admin autenticado. La página limita la cola a chats sin organización, muestra participantes e historial y permite asignar una organización verificada por chat. La escritura condicional conserva asignaciones existentes y registra el actor y la hora. Las pruebas enfocadas del controller pasaron: 1 suite y 5 tests. El typecheck del backend pasó. RDD está activo, pero el STATUS nativo pidió una captura de selección que esta sesión no puede ejecutar. No se inició una transacción de revisión | Completar la revisión técnica nativa. Aplicar `1791800000006-ChatOrganization` y `1791800000007-ChatOrganizationReview` después de la revisión, con credenciales y contexto de despliegue definidos. `1791800000006-ChatOrganization` está staged. `1791800000007-ChatOrganizationReview` está ignorada por Git. `1791800000000-application-hiring-records` está untracked y su estado en producción no está verificado. Definir el proceso operativo para asignar chats cuando haya evidencia suficiente |
+
+## Orden de ejecución
 
 ```text
-Fase 0 (BIO-65)
-  └── Fase 2 (BIO-55 + BIO-7, luego BIO-52)
-        └── Fase 3 (BIO-17 depende del dispatcher de emails)
-
-Fase 1 (independiente, puede correr en paralelo con Fase 0 y 2)
-  └── 1.4 throttler Upstash se coordina con 4.2 (BIO-59)
-
-Fase 4 (después de Fase 1 y 2)
-  └── 4.1 depende de OpenAPI estable, es decir, después de Fase 2
-  └── 4.3 depende de 4.2
+Fase 0: propiedad de datos y flujos
+  ├── Fase 1: avisos confiables
+  │     ├── Fase 3: activación y operación interna
+  │     └── Fase 4: entrevistas
+  ├── Fase 2: pipeline accionable
+  │     ├── Fase 5: evaluación y control de IA
+  │     └── Fase 6: métricas
+  └── Fase 7: política y ciclo de vida de datos
 ```
 
-Reglas:
-
-- BIO-52 y BIO-55 requieren la Fase 0 completada.
-- BIO-7 y BIO-55 se hacen juntos, mismo día.
-- BIO-35 backend y BIO-59 frontend comparten cuenta Upstash. Coordinar.
-- BIO-17 depende del dispatcher de BIO-52.
-
----
-
-## Definiciones pendientes (fuera de este plan)
-
-| Issue | Bloqueo |
-|-------|---------|
-| BIO-53 | Definir heurística de recomendación y criterios de ranking |
-| BIO-54 | Definir qué subsistema de scoring se usa y si se persisten scores |
-| BIO-51 | Definir flujo de pago: webhook vs redirect, planes, ciclo de facturación |
-
-Cuando estén definidas, se agregan como fase nueva en este documento.
+No inicies una fase dependiente hasta que sus criterios de salida tengan evidencia en los dos repositorios y, cuando aplique, en producción. Actualiza este documento cuando una revisión cambie el alcance o revele una función ya completa.
