@@ -637,3 +637,49 @@ Design: keep the current email-intent repository as the response transaction bou
 - Run focused backend tests, type checking, and diff checks. Do not start a server or run a build.
 
 Verification: the focused Jest run first failed with 2 suites and 5 tests after the new cases were valid. After implementation, the focused Jest command passed with 5 suites and 16 tests. A parent spot-check repeated that command and passed. `npx tsc --noEmit` passed. `git diff --check` on the ATS-11 paths passed. The service no longer performs application or message writes after the transaction. No migration or production data change was made. Native review remains pending because the selectorless status requests schema-bound untracked-file selection and this session has no valid capture operation for that schema. No substitute review ran.
+
+## ATS-07-7 application initial status-history persistence tests
+
+State: planned. Add mock-based coverage for initial status-history persistence in `ApplicationRepositoryImpl.create`. Do not change production code unless a test proves a concrete defect. Stop and report before expanding scope if a production defect appears.
+
+Route: delegated direct. One bounded writer updates this task plan, the existing application repository spec, and the backend roadmap.
+
+Scope and acceptance:
+
+- Verify a successful create inserts one initial status-history row with the saved application ID, status, candidate ID, and creation time.
+- Verify a rejected history insert propagates out of the transaction callback after the application save call.
+- Use the existing mocks. Do not claim that they prove PostgreSQL rollback or row absence.
+- Preserve unrelated staged, unstaged, and untracked work. Commit only the exact test and documentation hunks through an isolated temporary index.
+- Do not stage migrations or deletions. Do not open a pull request.
+
+Checklist:
+
+- [x] ATS-07-7-PLAN: record scope, acceptance, route, forecast, commands, and mock limits before editing tests.
+- [x] ATS-07-7-TESTS: add success and rejected-history-insert cases without production changes.
+- [x] ATS-07-7-CHECKS: run the requested formatter, focused Jest spec, backend typecheck, and scoped diff check.
+- [ ] ATS-07-7-COMMIT: inspect the complete isolated staged diff, commit only this slice, and record the commit ID. The parent owns native assessment and review.
+
+Test-first exception: this slice adds regression tests for existing behavior. Production code stays unchanged, so no behavioral RED is claimed. If the rejected-insert test exposes a concrete production defect, stop before changing production code.
+
+Forecast: under 400 authored changed lines. Use the existing `feature-branch-chain` strategy. Rollback removes only the new create tests and ATS-07-7 documentation hunks. Preserve all other worktree and index content.
+
+Checks:
+
+- Run `npx prettier --write src/infrastructure/persistence/application.repository.impl.spec.ts odd/tasks/ats-portal-improvements.md docs/plans/backend-roadmap.md`.
+- Run `npx jest --runInBand src/infrastructure/persistence/application.repository.impl.spec.ts`.
+- Run `npx tsc --noEmit`.
+- Run scoped `git diff --check` for the three allowed paths.
+- Inspect and check the complete isolated staged diff before commit.
+
+Mock limits: the tests observe calls and promise rejection in a mocked transaction callback. They do not prove PostgreSQL transaction rollback, row absence, or database constraints.
+
+Verification on 2026-10-10:
+
+- `npx prettier --write src/infrastructure/persistence/application.repository.impl.spec.ts odd/tasks/ats-portal-improvements.md docs/plans/backend-roadmap.md`: passed. The two documentation files were unchanged by formatting.
+- `npx jest --runInBand src/infrastructure/persistence/application.repository.impl.spec.ts`: passed (1 suite, 6 tests).
+- `npx tsc --noEmit`: passed, exit 0.
+- `git diff --check -- src/infrastructure/persistence/application.repository.impl.spec.ts odd/tasks/ats-portal-improvements.md docs/plans/backend-roadmap.md`: passed, exit 0.
+- Isolated `git diff --cached --check`: passed, exit 0. The complete isolated diff contains only the new application repository spec and ATS-07-7 additions to the task plan and roadmap.
+- No production source, migration, server, build, or database action ran. The mocks do not prove real rollback or row absence.
+
+Commit: pending. No native approval is claimed.
