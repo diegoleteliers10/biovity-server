@@ -286,6 +286,43 @@ Commit: pending. Preserve the unrelated staged migration and all prior document 
 
 Status: implementation complete. Native technical review and migration approval remain pending.
 
+## ATS-07-4 offer transaction write failures
+
+State: tests and checks passed. This test-only slice covers the remaining mocked write failures in offer creation. Commit and native review status remain pending.
+
+Problem: `OfferLetterRepositoryImpl.createWithMessage` performs the offer save, chat `lastMessage` update, and offer-to-chat/message link update inside its transaction callback. Existing service tests cover chat insert and message insert failures, but they do not cover these three writes.
+
+Route: delegated direct. The bounded change touches this service spec and the two roadmap documents. Forecast: under 400 authored changed lines. The `.atl/skill-registry.md` file is absent. The exact available TypeScript, testing, writing, unslop, and work-unit skills were loaded.
+
+Scope and acceptance:
+
+- Add a mock failure case for offer save, chat `lastMessage` update, and offer-to-chat/message link update.
+- For each case, assert that the transaction callback rejects and that the post-commit notification does not run.
+- Preserve the existing chat insert and message insert failure cases.
+- Do not change production code, database schema, migrations, or database state.
+- Do not claim actual database rollback, row absence, membership enforcement, or PostgreSQL constraint behavior.
+
+Checklist:
+
+- [x] ATS-07-4-PLAN: record scope, acceptance, checks, route, forecast, and mock limits in the task plan and Engram.
+- [x] ATS-07-4-TESTS: add the three remaining mock write-failure cases and preserve chat/message insert failures.
+- [x] ATS-07-4-CHECKS: run the focused Jest spec, backend typecheck, scoped formatter, and scoped diff check.
+- [ ] ATS-07-4-COMMIT: commit only this work unit and record its commit ID. The parent owns native assessment and review.
+
+Test-first exception: this slice adds regression tests for existing behavior and changes no production behavior. Do not claim a behavioral RED.
+
+Checks:
+
+- Run Prettier on the three allowed paths before checks.
+- Run `npx jest --runInBand src/core/services/offer-letter.service.spec.ts`.
+- Run `npx tsc --noEmit`.
+- Run scoped `git diff --check` for the three allowed paths.
+
+Mock limits: the tests can prove that a mocked write rejection rejects the transaction callback and skips notification. They cannot prove that a real database rolls back writes or leaves no rows. Database-backed verification remains open.
+
+Verification: `npx jest --runInBand src/core/services/offer-letter.service.spec.ts` passed (1 suite, 9 tests). `npx tsc --noEmit` passed. `npx prettier --write src/core/services/offer-letter.service.spec.ts odd/tasks/ats-portal-improvements.md docs/plans/backend-roadmap.md` passed. Scoped `git diff --check` passed after the final document update.
+
+
 ## ATS-07 message attachment access
 
 - Require an authenticated session and confirm that the user matches the chat recruiter or professional before upload or download.
