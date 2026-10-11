@@ -54,7 +54,7 @@ The repositories contain many hiring features, but several cross-system workflow
 
 ## ATS-12 operations queue filter
 
-State: Implemented. Focused tests, both repository type checks, and scoped diff checks pass. No work-unit commit exists. Native RDD review remains pending because the user has not selected the chain strategy.
+State: Implemented. Focused tests, both repository type checks, and scoped diff checks pass. Frontend commit: `b64b7a8`. Backend commit: `b930672`. Native RDD review remains pending.
 
 Objective: let admins find organizations that have no active jobs in the operations queue.
 
@@ -95,7 +95,7 @@ Forecast: under 400 authored changed lines. Generated files do not count.
 - GREEN: `npx tsc --noEmit` passed in `biovity-server` and `biovity`.
 - Structural check: scoped `git diff --check` passed in both repositories. The backend check used `core.whitespace=cr-at-eol` for the existing CRLF files.
 - Read-only check: the service query uses `SELECT` statements and does not write organization or job data.
-- Delivery: no work-unit commit exists. Native RDD review remains pending because the user has not selected the chain strategy.
+- Delivery: frontend work-unit commit `b64b7a8`; backend work-unit commit `b930672`. Native RDD review remains pending. The user selected `feature-branch-chain` for both repositories.
 
 ## ATS-05 timezone slice
 
