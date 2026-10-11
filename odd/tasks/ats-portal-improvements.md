@@ -323,6 +323,38 @@ Mock limits: the tests can prove that a mocked write rejection rejects the trans
 Verification: `npx jest --runInBand src/core/services/offer-letter.service.spec.ts` passed (1 suite, 9 tests). `npx tsc --noEmit` passed. `npx prettier --write src/core/services/offer-letter.service.spec.ts odd/tasks/ats-portal-improvements.md docs/plans/backend-roadmap.md` passed. Scoped `git diff --check` passed after the final document update.
 
 
+## ATS-07-5 event timezone persistence tests
+
+State: focused tests and checks passed. The work-unit commit remains pending. No production code changed.
+
+Objective: verify that event repository create and update preserve the UTC instant and IANA timezone when mapping to and from ORM entities.
+
+Scope and acceptance:
+
+- Add mock-based unit tests for `EventRepositoryImpl.create` and `update`.
+- Verify create saves and returns the expected UTC instant and IANA zone.
+- Verify update writes the UTC instant and zone together, then returns the values from the reloaded event.
+- Keep the test focused on the repository public methods and mocked ORM repository.
+- Do not change production code, migrations, RSVP policy, database settings, frontend files, or other tasks.
+
+Route: delegated direct. One writer adds tests to the existing event repository spec and updates this plan and the shared roadmap. Forecast: under 400 authored changed lines. Generated files do not count. Preserve the existing staged migration and prior staged or unstaged document changes. The `.atl/skill-registry.md` file is absent. The requested skill paths were checked; `/Users/dleteliers/.agents/skills/deslop/SKILL.md` is available, while `/remove-ai-slop` is not in the registry.
+
+Test-first exception: the repository already copies `timeZone` and `startAt` through create and update. This slice adds tests for existing behavior and changes no production behavior, so a behavioral RED is not applicable.
+
+Mock limits: these tests prove the values passed to mocked ORM methods and returned by mocked reloads. They do not prove PostgreSQL durability, migration state, database rollback, or behavior in a real database.
+
+Checks:
+
+- [x] Format only the three allowed paths with `npx prettier --write src/infrastructure/persistence/event.repository.impl.spec.ts odd/tasks/ats-portal-improvements.md docs/plans/backend-roadmap.md` before tests.
+- [x] Run `npx jest --runInBand src/infrastructure/persistence/event.repository.impl.spec.ts` (1 suite, 3 tests passed).
+- [x] Run `npx tsc --noEmit` (passed).
+- [x] Run `git diff --check` scoped to the three allowed paths. It passed. The three paths contain no CRLF.
+- [ ] Stage only ATS-07-5 additions, inspect the isolated staged diff, commit the work unit, and record its ID. Preserve the migration and earlier document changes.
+
+Verification: `npx jest --runInBand src/infrastructure/persistence/event.repository.impl.spec.ts` passed (1 suite, 3 tests). `npx tsc --noEmit` passed. `git diff --check -- src/infrastructure/persistence/event.repository.impl.spec.ts odd/tasks/ats-portal-improvements.md docs/plans/backend-roadmap.md` passed. Prettier passed before tests.
+
+Commit: pending. The parent owns native assessment and review. No native approval is claimed.
+
 ## ATS-07 message attachment access
 
 - Require an authenticated session and confirm that the user matches the chat recruiter or professional before upload or download.
