@@ -304,3 +304,5 @@ Fase 0: propiedad de datos y flujos
 ```
 
 No inicies una fase dependiente hasta que sus criterios de salida tengan evidencia en los dos repositorios y, cuando aplique, en producción. Actualiza este documento cuando una revisión cambie el alcance o revele una función ya completa.
+
+ATS-07-7 (2026-10-10): las pruebas con mocks de `ApplicationRepositoryImpl.create` verifican la inserción del historial de estado inicial y la propagación del rechazo de esa inserción. Jest pasó 1 suite y 6 pruebas. `npx tsc --noEmit`, Prettier y el diff acotado pasaron. Estos mocks no demuestran rollback real de PostgreSQL ni ausencia de filas. Commit: pendiente.
