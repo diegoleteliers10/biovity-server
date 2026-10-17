@@ -22,6 +22,7 @@ import { Throttle } from '@nestjs/throttler';
 import { CurrentUser } from '../../../shared/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../../../shared/auth/better-auth-session.service';
 import { OrganizationAccessService } from '../../../shared/auth/organization-access.service';
+import { Public } from '../../../shared/decorators/public.decorator';
 import {
   THROTTLE_SENSITIVE_LIMIT,
   THROTTLE_TTL_MS,
@@ -125,6 +126,7 @@ export class AiCredentialsController {
   }
 
   @Get('active')
+  @Public()
   @UseGuards(InternalSecretGuard)
   @ApiOperation({
     summary: 'Get the decrypted active credential (server-to-server only)',

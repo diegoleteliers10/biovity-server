@@ -50,6 +50,12 @@ export class MessageController {
       dto.chatId,
       requester,
     );
+    if (participant.role === 'recruiter') {
+      await this.organizationAccess.assertChatOrganizationSend(
+        dto.chatId,
+        requester,
+      );
+    }
     const input = MessageDtoDomainMapper.toCreateMessageInput(
       dto,
       participant.participantId,

@@ -12,5 +12,6 @@ export class Chat {
     public isPinnedByProfessional: boolean = false,
     public isArchivedByRecruiter: boolean = false,
     public isArchivedByProfessional: boolean = false,
+    public organizationId: string | null = null,
   ) {}
 }

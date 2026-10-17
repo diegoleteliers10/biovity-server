@@ -5,6 +5,7 @@ import {
   IsObject,
   IsOptional,
   IsString,
+  IsDateString,
   IsUUID,
   MaxLength,
   ValidateNested,
@@ -136,6 +137,9 @@ export class CreateOfferLetterDto {
   @IsUUID()
   applicationId: string;
 
+  @IsDateString()
+  expiresOn: string;
+
   @IsOptional()
   @IsUUID()
   chatId?: string;
@@ -157,4 +161,13 @@ export class CreateOfferLetterDto {
 export class RespondOfferLetterDto {
   @IsIn(['accepted', 'rejected'])
   response: 'accepted' | 'rejected';
+}
+
+export class ResendOfferLetterDto {
+  @IsDateString()
+  expiresOn: string;
+
+  @IsString()
+  @MaxLength(500)
+  pdfPath: string;
 }

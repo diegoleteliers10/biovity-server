@@ -88,7 +88,8 @@ export class SavedSearchController {
       requester,
       'manage',
     );
-    const savedSearch = await this.service.execute(id);
+    const savedSearch = await this.service.getById(id);
+    if (!savedSearch) throw new NotFoundException('Saved search not found');
     return SavedSearchDomainDtoMapper.toDto(savedSearch);
   }
 

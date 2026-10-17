@@ -1,24 +1,17 @@
 import { Injectable, NotFoundException, Inject } from '@nestjs/common';
 import * as crypto from 'crypto';
 import { ISavedSearchRepository } from '../repositories/saved-search.repository';
-import { IUserRepository } from '../repositories/user.repository';
 import { SavedSearch } from '../domain/entities/saved-search.entity';
-import { NotificationType } from '../domain/enums';
-import { NotificationService } from '../../shared/notification/notification.service';
 import {
   CreateSavedSearchInput,
   UpdateSavedSearchInput,
 } from '../../shared/mappers/saved-search/savedSearchDto-domain.mapper';
-import { CreateNotificationInput } from '../../shared/notification/notification.types';
 
 @Injectable()
 export class SavedSearchService {
   constructor(
     @Inject('ISavedSearchRepository')
     private readonly repository: ISavedSearchRepository,
-    @Inject('IUserRepository')
-    private readonly userRepository: IUserRepository,
-    private readonly notificationService: NotificationService,
   ) {}
 
   private generateId(): string {
@@ -54,7 +47,10 @@ export class SavedSearchService {
     if (!existing) {
       throw new NotFoundException(`Saved search with id ${id} not found`);
     }
-    return this.repository.update(id, data);
+    return this.repository.update(id, {
+      ...data,
+      notifyEnabled: data.notifyEnabled ?? existing.notifyEnabled,
+    });
   }
 
   async delete(id: string): Promise<boolean> {
@@ -63,33 +59,5 @@ export class SavedSearchService {
       throw new NotFoundException(`Saved search with id ${id} not found`);
     }
     return this.repository.delete(id);
-  }
-
-  async execute(id: string): Promise<SavedSearch> {
-    const savedSearch = await this.repository.findById(id);
-    if (!savedSearch) {
-      throw new NotFoundException(`Saved search with id ${id} not found`);
-    }
-
-    if (savedSearch.notifyEnabled) {
-      const userIds = await this.userRepository.findIdsByOrganizationId(
-        savedSearch.organizationId,
-      );
-
-      const notificationInputs: CreateNotificationInput[] = userIds.map(
-        userId => ({
-          userId,
-          type: NotificationType.JOB_ALERT,
-          title: `Nuevos resultados para: ${savedSearch.name}`,
-          body: `Tu busqueda guardada "${savedSearch.name}" tiene nuevos matches.`,
-          link: '/dashboard/organization/talent',
-          data: { savedSearchId: savedSearch.id },
-        }),
-      );
-
-      await this.notificationService.createMany(notificationInputs);
-    }
-
-    return savedSearch;
   }
 }

@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { CandidateTagEntity } from '../../../infrastructure/database/orm/candidate-tag.entity';
 import { CandidateTagAssignmentEntity } from '../../../infrastructure/database/orm/candidate-tag-assignment.entity';
+import { UserEntity } from '../../../infrastructure/database/orm/user.entity';
 import { CandidateTagController } from './candidate-tag.controller';
 import { CandidateTagService } from '../../../core/services/candidate-tag.service';
 
@@ -10,6 +11,7 @@ import { CandidateTagService } from '../../../core/services/candidate-tag.servic
     TypeOrmModule.forFeature([
       CandidateTagEntity,
       CandidateTagAssignmentEntity,
+      UserEntity,
     ]),
   ],
   controllers: [CandidateTagController],

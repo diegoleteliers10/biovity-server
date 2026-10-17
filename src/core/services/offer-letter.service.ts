@@ -7,11 +7,11 @@ import {
 } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { IOfferLetterRepository } from '../repositories/offer-letter.repository';
-import { ApplicationStatus, NotificationType } from '../domain/enums';
-import { ApplicationService } from './application.service';
-import { EmailService } from './email.service';
+import { NotificationType } from '../domain/enums';
 import { NotificationService } from '../../shared/notification/notification.service';
+import { IOfferResponseEmailIntentRepository } from '../repositories/offer-response-email-intent.repository';
 import type {
   OfferLetter,
   OfferLetterData,
@@ -24,6 +24,7 @@ export interface CreateOfferLetterInput {
   letterData: OfferLetterData;
   pdfPath: string;
   chatId?: string;
+  expiresOn?: string;
 }
 
 export interface OfferLetterWithMeta {
@@ -31,20 +32,33 @@ export interface OfferLetterWithMeta {
   chatId: string | null;
 }
 
-interface UserRow {
-  id: string;
-  name: string | null;
-  email: string;
-}
+export type CreateOfferLetterResult =
+  OfferLetterWithMeta | { kind: 'invalid_expiry' };
+
+const santiagoDate = (date: Date): string => {
+  const parts = new Intl.DateTimeFormat('en', {
+    timeZone: 'America/Santiago',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(date);
+  return `${parts.find(part => part.type === 'year')?.value}-${parts.find(part => part.type === 'month')?.value}-${parts.find(part => part.type === 'day')?.value}`;
+};
+
+const isOfferPdfPath = (applicationId: string, pdfPath: string): boolean =>
+  new RegExp(
+    `^offer-letters/${applicationId}/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\\.pdf$`,
+    'i',
+  ).test(pdfPath);
 
 @Injectable()
 export class OfferLetterService {
   constructor(
     @Inject('IOfferLetterRepository')
     private readonly offerLetterRepository: IOfferLetterRepository,
-    private readonly applicationService: ApplicationService,
+    @Inject('IOfferResponseEmailIntentRepository')
+    private readonly emailIntentRepository: IOfferResponseEmailIntentRepository,
     private readonly notificationService: NotificationService,
-    private readonly emailService: EmailService,
     @InjectDataSource()
     private readonly dataSource: DataSource,
   ) {}
@@ -79,10 +93,13 @@ export class OfferLetterService {
   async createAndSend(
     input: CreateOfferLetterInput,
     requesterId: string,
-  ): Promise<OfferLetterWithMeta> {
+  ): Promise<CreateOfferLetterResult> {
+    if (input.expiresOn && input.expiresOn < santiagoDate(new Date())) {
+      return { kind: 'invalid_expiry' };
+    }
     const app = await this.assertApplication(input.applicationId);
 
-    const offerLetter = await this.offerLetterRepository.create({
+    const offerLetter: OfferLetter = {
       id: '',
       applicationId: input.applicationId,
       jobId: app.jobId,
@@ -96,98 +113,17 @@ export class OfferLetterService {
       sentAt: new Date(),
       createdAt: new Date(),
       updatedAt: new Date(),
+      expiresAt: null,
+    };
+    const title = input.title ?? `Carta de oferta - ${app.jobTitle}`;
+    const created = await this.offerLetterRepository.createWithMessage({
+      offerLetter,
+      recruiterId: requesterId,
+      messageTitle: title,
+      expiresOn: input.expiresOn,
     });
 
-    // Insert the chat message from the recruiter and link it to the letter.
-    // Column names come from the ORM entities: chats archive per side and
-    // carry DB defaults for timestamps, so only the required fields are set.
-    let chatId: string;
-    const chats = await this.dataSource.query<Array<{ id: string }>>(
-      `SELECT id FROM chat
-       WHERE "recruiterId" = $1 AND "professionalId" = $2
-         AND "is_archived_recruiter" = false AND "is_archived_professional" = false
-       ORDER BY "createdAt" DESC LIMIT 1`,
-      [requesterId, app.candidateId],
-    );
-
-    if (chats[0]) {
-      chatId = chats[0].id;
-    } else {
-      const created = await this.dataSource.query<Array<{ id: string }>>(
-        `INSERT INTO chat ("id", "recruiterId", "professionalId")
-         VALUES (uuid_generate_v4(), $1, $2) RETURNING id`,
-        [requesterId, app.candidateId],
-      );
-      chatId = created[0].id;
-    }
-
-    const title = input.title ?? `Carta de oferta - ${app.jobTitle}`;
-    const inserted = await this.dataSource.query<Array<{ id: string }>>(
-      `INSERT INTO message
-        ("id", "chatId", "senderId", "content", "type", "content_type")
-       VALUES (
-         uuid_generate_v4(), $1, $2, $3, 'offer', $4::jsonb
-       ) RETURNING id`,
-      [
-        chatId,
-        requesterId,
-        title,
-        JSON.stringify({
-          offerLetterId: offerLetter.id,
-          title,
-          status: 'sent',
-        }),
-      ],
-    );
-    const messageId = inserted[0].id;
-
-    // Mirror the chat row update that MessageService performs on send.
-    await this.dataSource.query(
-      `UPDATE chat SET "lastMessage" = $2, "updatedAt" = now() WHERE id = $1`,
-      [chatId, title],
-    );
-
-    await this.offerLetterRepository.setMessageContext(
-      offerLetter.id,
-      chatId,
-      messageId,
-    );
-
-    // The message is inserted directly, so notify the candidate here (the
-    // MessageService notification does not run for this path).
-    try {
-      await this.notificationService.create({
-        userId: app.candidateId,
-        type: NotificationType.MESSAGE,
-        title: 'Nueva carta de oferta',
-        body: `Recibiste una carta de oferta para ${app.jobTitle}.`,
-        link: `/dashboard/messages?chat=${chatId}`,
-        data: { offerLetterId: offerLetter.id, chatId, jobId: app.jobId },
-        dedupKey: `offer:${offerLetter.id}:sent`,
-      });
-    } catch (error) {
-      console.error(
-        '[OfferLetterService] candidate notification failed:',
-        error,
-      );
-    }
-
-    return { offerLetter: { ...offerLetter, chatId, messageId }, chatId };
-  }
-
-  private async touchMessage(
-    messageId: string | null,
-    content: {
-      offerLetterId: string;
-      title: string;
-      status: OfferLetterStatus;
-    },
-  ): Promise<void> {
-    if (!messageId) return;
-    await this.dataSource.query(
-      `UPDATE message SET "content_type" = $2::jsonb WHERE id = $1`,
-      [messageId, JSON.stringify(content)],
-    );
+    return { offerLetter: created.offerLetter, chatId: created.chatId };
   }
 
   async findById(id: string): Promise<OfferLetter | null> {
@@ -196,6 +132,35 @@ export class OfferLetterService {
 
   async findByApplicationId(applicationId: string): Promise<OfferLetter[]> {
     return this.offerLetterRepository.findByApplicationId(applicationId);
+  }
+
+  async cancel(id: string, actorId: string): Promise<boolean> {
+    const offer = await this.findById(id);
+    if (!offer) return false;
+    return this.offerLetterRepository.cancel(id, offer.organizationId, actorId);
+  }
+
+  async resend(
+    id: string,
+    actorId: string,
+    expiresOn: string,
+    pdfPath: string,
+  ): Promise<boolean | 'invalid_expiry' | 'invalid_pdf_path'> {
+    if (expiresOn < santiagoDate(new Date())) {
+      return 'invalid_expiry';
+    }
+    const offer = await this.findById(id);
+    if (!offer) return false;
+    if (!isOfferPdfPath(offer.applicationId, pdfPath)) {
+      return 'invalid_pdf_path';
+    }
+    return this.offerLetterRepository.resend(
+      id,
+      offer.organizationId,
+      actorId,
+      expiresOn,
+      pdfPath,
+    );
   }
 
   assertCanView(
@@ -229,132 +194,84 @@ export class OfferLetterService {
     }
 
     const nextStatus: OfferLetterStatus = response;
-    const updated = await this.offerLetterRepository.updateStatus(
-      id,
-      nextStatus,
-    );
-
-    await this.touchMessage(offer.messageId ?? null, {
-      offerLetterId: offer.id,
-      title: offer.title ?? 'Carta de oferta',
-      status: nextStatus,
+    const committed = await this.emailIntentRepository.commitResponse({
+      offerId: offer.id,
+      candidateId: requesterId,
+      response,
     });
+    if (committed.kind === 'already_responded') {
+      throw new BadRequestException(
+        'La oferta ya no está disponible para responder.',
+      );
+    }
 
-    // Pipeline: accepted -> contratado, rejected -> rechazado.
-    await this.applicationService.updateApplicationStatus(
-      offer.applicationId,
-      response === 'accepted'
-        ? ApplicationStatus.CONTRATADO
-        : ApplicationStatus.RECHAZADO,
-      requesterId,
-    );
+    if (committed.recipientId) {
+      await this.notifyRecruiter(committed.recipientId, offer, response);
+    }
 
-    await this.notifyRecruiter(offer, response);
+    return { ...offer, status: nextStatus, respondedAt: new Date() };
+  }
 
-    return updated ?? offer;
+  @Cron(CronExpression.EVERY_MINUTE, { disabled: process.env.VERCEL === '1' })
+  async expireDueOffers(): Promise<void> {
+    await this.dataSource.transaction(async manager => {
+      await manager.query(
+        `WITH due AS (
+           SELECT id
+           FROM offer_letter
+           WHERE status = 'sent' AND expires_at <= now()
+           ORDER BY expires_at, id
+           FOR UPDATE SKIP LOCKED
+           LIMIT 100
+         ), expired AS (
+           UPDATE offer_letter offer
+           SET status = 'expired', updated_at = now()
+           FROM due
+           WHERE offer.id = due.id
+           RETURNING offer.id, offer.message_id
+         ), message_updates AS (
+           UPDATE message
+           SET content_type = jsonb_set(content_type, '{status}', '"expired"')
+           FROM expired
+           WHERE message.id = expired.message_id
+         )
+         INSERT INTO offer_letter_action_audit (offer_id, action)
+         SELECT id, 'expired' FROM expired`,
+      );
+    });
   }
 
   private async notifyRecruiter(
+    recruiterId: string,
     offer: OfferLetter,
     response: 'accepted' | 'rejected',
   ): Promise<void> {
-    try {
-      const data = offer.letterData;
-      const candidateName = data.candidateName || 'El candidato';
-      const jobTitle = data.jobTitle || 'la vacante';
-      const accepted = response === 'accepted';
-
-      let chat: { recruiterId: string } | undefined;
-      if (offer.chatId) {
-        const rows = await this.dataSource.query<
-          Array<{ recruiterId: string }>
-        >(`SELECT "recruiterId" FROM chat WHERE id = $1 LIMIT 1`, [
-          offer.chatId,
-        ]);
-        chat = rows[0];
-      }
-      if (!chat) {
-        const rows = await this.dataSource.query<
-          Array<{ recruiterId: string }>
-        >(
-          `SELECT r."id" AS "recruiterId"
-           FROM "user" r
-           WHERE r."organizationId" = $1 AND r.type = 'organization'
-           ORDER BY r."createdAt" ASC LIMIT 1`,
-          [offer.organizationId],
+    const data = offer.letterData;
+    const candidateName = data.candidateName || 'El candidato';
+    const jobTitle = data.jobTitle || 'la vacante';
+    const accepted = response === 'accepted';
+    const notification = this.notificationService.create({
+      userId: recruiterId,
+      type: NotificationType.APPLICATION,
+      title: accepted ? 'Oferta aceptada' : 'Oferta rechazada',
+      body: `${candidateName} ${accepted ? 'acepto' : 'rechazo'} tu oferta para ${jobTitle}.`,
+      link: `/dashboard/offers/${offer.jobId}/applications/${offer.applicationId}`,
+      data: {
+        offerLetterId: offer.id,
+        applicationId: offer.applicationId,
+        jobId: offer.jobId,
+        response,
+      },
+      dedupKey: `offer:${offer.id}:${response}`,
+    });
+    await notification.then(
+      () => undefined,
+      error => {
+        console.error(
+          '[OfferLetterService] recruiter notification failed:',
+          error,
         );
-        chat = rows[0];
-      }
-
-      if (chat?.recruiterId) {
-        await this.notificationService.create({
-          userId: chat.recruiterId,
-          type: NotificationType.APPLICATION,
-          title: accepted ? 'Oferta aceptada' : 'Oferta rechazada',
-          body: `${candidateName} ${accepted ? 'acepto' : 'rechazo'} tu oferta para ${jobTitle}.`,
-          link: `/dashboard/offers/${offer.jobId}/applications/${offer.applicationId}`,
-          data: {
-            offerLetterId: offer.id,
-            applicationId: offer.applicationId,
-            jobId: offer.jobId,
-            response,
-          },
-          dedupKey: `offer:${offer.id}:${response}`,
-        });
-
-        const recruiter = await this.findUserById(chat.recruiterId);
-        if (recruiter) {
-          await this.emailService.send(
-            recruiter.email,
-            accepted
-              ? `${candidateName} acepto tu oferta | Biovity`
-              : `${candidateName} rechazo tu oferta | Biovity`,
-            this.recruiterResponseEmailHtml({
-              recruiterName: recruiter.name ?? '',
-              candidateName,
-              jobTitle,
-              accepted,
-            }),
-          );
-        }
-      }
-    } catch (error) {
-      // Best-effort: the offer response itself is already committed.
-      console.error(
-        '[OfferLetterService] recruiter notification failed:',
-        error,
-      );
-    }
-  }
-
-  private async findUserById(id: string): Promise<UserRow | null> {
-    const rows = await this.dataSource.query<UserRow[]>(
-      `SELECT id, name, email FROM "user" WHERE id = $1 LIMIT 1`,
-      [id],
+      },
     );
-    return rows[0] ?? null;
-  }
-
-  private recruiterResponseEmailHtml(input: {
-    recruiterName: string;
-    candidateName: string;
-    jobTitle: string;
-    accepted: boolean;
-  }): string {
-    const { recruiterName, candidateName, jobTitle, accepted } = input;
-    const headline = accepted
-      ? `${candidateName} acepto tu oferta`
-      : `${candidateName} rechazo tu oferta`;
-    const detail = accepted
-      ? `La postulacion a <strong>${jobTitle}</strong> paso a <strong>Contratado</strong>.`
-      : `La postulacion a <strong>${jobTitle}</strong> paso a <strong>Rechazado</strong>.`;
-    return `
-      <div style="font-family: Arial, sans-serif; max-width: 520px; margin: 0 auto;">
-        <h2 style="color: #0d3d3d;">${headline}</h2>
-        <p>Hola ${recruiterName},</p>
-        <p>${detail}</p>
-        <p>Revisa el detalle de la postulacion en tu dashboard de Biovity.</p>
-      </div>
-    `;
   }
 }

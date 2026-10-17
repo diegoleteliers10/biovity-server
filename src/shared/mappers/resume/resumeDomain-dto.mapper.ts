@@ -14,6 +14,7 @@ export class ResumeDomainDtoMapper {
     dto.languages = domain.languages || [];
     dto.links = domain.links || [];
     dto.cvFile = domain.cvFile;
+    dto.cvVersion = domain.cvVersion;
     dto.createdAt = domain.createdAt;
     dto.updatedAt = domain.updatedAt;
 

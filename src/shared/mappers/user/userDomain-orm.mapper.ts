@@ -15,6 +15,8 @@ export class UserDomainOrmMapper {
     userOrm.organizationId = domain.organizationId;
     userOrm.avatar = domain.avatar;
     userOrm.profession = domain.profession;
+    userOrm.experienceLevel = domain.experienceLevel;
+    userOrm.availability = domain.availability;
     userOrm.birthday = domain.birthday;
     userOrm.phone = domain.phone;
     userOrm.location = domain.location;
@@ -76,6 +78,8 @@ export class UserDomainOrmMapper {
       entity.notificationPreferences,
       skills,
       cvUpdatedAt,
+      entity.experienceLevel,
+      entity.availability,
     );
   }
 }

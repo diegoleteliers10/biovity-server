@@ -10,4 +10,5 @@ export interface CreateNotificationInput {
   readonly link?: string;
   readonly data?: NotificationData;
   readonly dedupKey?: string;
+  readonly dedupWindow?: '1 hour' | '25 hours';
 }

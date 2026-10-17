@@ -51,19 +51,21 @@ describe('RolesGuard', () => {
   it('passes when the route has no @Roles metadata', () => {
     metadata(undefined);
 
-    expect(guard.canActivate(contextOf())).toBe(true);
+    expect(guard.canActivate(contextOf(userOf()))).toBe(true);
   });
 
   it('passes for empty @Roles metadata', () => {
     metadata([]);
 
-    expect(guard.canActivate(contextOf())).toBe(true);
+    expect(guard.canActivate(contextOf(userOf()))).toBe(true);
   });
 
-  it('passes when there is no request.user (internal-key server-to-server)', () => {
+  it('rejects when there is no authenticated user', () => {
     metadata(['admin']);
 
-    expect(guard.canActivate(contextOf(undefined))).toBe(true);
+    expect(() => guard.canActivate(contextOf(undefined))).toThrow(
+      ForbiddenException,
+    );
   });
 
   it('passes for an admin regardless of the required roles', () => {

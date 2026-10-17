@@ -18,13 +18,22 @@ interface CandidateRelation {
 export class ApplicationDomainDtoMapper {
   static toDto(
     domain: Application,
-    visibility: 'full' | 'directory' = 'full',
+    visibility: 'full' | 'directory' | 'recruiter' = 'full',
   ): ApplicationResponseDto {
     const dto = new ApplicationResponseDto();
     dto.id = domain.id;
     dto.jobId = domain.jobId;
     dto.candidateId = domain.candidateId;
     dto.status = domain.status;
+    if (visibility === 'recruiter' && domain.pipelineStageId) {
+      dto.pipelineStageId = domain.pipelineStageId;
+    }
+    if (visibility === 'recruiter') {
+      if (domain.assigneeId) dto.assigneeId = domain.assigneeId;
+      if (domain.nextAction) dto.nextAction = domain.nextAction;
+      if (domain.targetDate) dto.targetDate = domain.targetDate;
+      dto.stageChangedAt = domain.stageChangedAt;
+    }
     dto.createdAt = domain.createdAt;
     dto.updatedAt = domain.updatedAt;
     dto.coverLetter = domain.coverLetter;

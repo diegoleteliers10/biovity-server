@@ -25,12 +25,19 @@ export class ApplicationDomainOrmMapper {
     appOrm.createdAt = domain.createdAt;
     appOrm.updatedAt = domain.updatedAt;
     appOrm.stageChangedAt = domain.stageChangedAt;
+    appOrm.pipelineStageId = domain.pipelineStageId;
+    appOrm.assigneeId = domain.assigneeId;
+    appOrm.nextAction = domain.nextAction;
+    appOrm.targetDate = domain.targetDate;
     appOrm.coverLetter = domain.coverLetter;
     appOrm.salaryMin = domain.salaryMin;
     appOrm.salaryMax = domain.salaryMax;
     appOrm.salaryCurrency = domain.salaryCurrency ?? 'USD';
     appOrm.availabilityDate = domain.availabilityDate;
     appOrm.resumeUrl = domain.resumeUrl;
+    appOrm.sourceChannel = domain.sourceChannel;
+    appOrm.sourceMethod = domain.sourceMethod;
+    appOrm.distributionSourceId = domain.distributionSourceId;
 
     return appOrm;
   }
@@ -50,6 +57,14 @@ export class ApplicationDomainOrmMapper {
       entity.salaryCurrency,
       entity.availabilityDate,
       entity.resumeUrl,
+      undefined,
+      entity.pipelineStageId,
+      entity.assigneeId,
+      entity.nextAction,
+      entity.targetDate,
+      entity.sourceChannel,
+      entity.sourceMethod,
+      entity.distributionSourceId,
     );
 
     // Map job relation if exists

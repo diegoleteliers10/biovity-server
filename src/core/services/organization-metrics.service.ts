@@ -26,6 +26,11 @@ export interface DashboardMetrics {
 
 export interface PipelineMetrics {
   totalApplications: number;
+  reachedCounts: {
+    entrevista: number;
+    oferta: number;
+    contratado: number;
+  };
   byStatus: {
     pendiente: number;
     oferta: number;
@@ -34,12 +39,194 @@ export interface PipelineMetrics {
     contratado: number;
   };
   conversionRate: number; // entrevistas / total * 100
-  avgTimeInStages: {
-    entrevista: number;
-    oferta: number;
-    contratado: number;
-  };
+  customStageConversions: {
+    jobId: string;
+    jobTitle: string;
+    stageId: string;
+    stageName: string;
+    enteredApplications: number;
+    advancedApplications: number;
+    conversionRate: number;
+  }[];
+  stageDurations: {
+    jobId: string;
+    jobTitle: string;
+    stageId: string;
+    stageName: string;
+    averageCompletedDays: number;
+    completedVisitCount: number;
+  }[];
 }
+
+export interface StageDurationVisitPage {
+  rows: {
+    visitId: string;
+    applicationId: string;
+    applicantName: string;
+    enteredAt: string;
+    exitedAt: string;
+    durationDays: number;
+  }[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export interface CustomStageApplicationPage {
+  rows: {
+    applicationId: string;
+    applicantName: string;
+    stageNameAtEntry: string | null;
+    firstEnteredAt: string;
+    advanced: boolean;
+    currentStatus: string;
+  }[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export type ResponseTimeBucket =
+  | 'lessThan24h'
+  | 'oneToThreeDays'
+  | 'threeToSevenDays'
+  | 'moreThanSevenDays'
+  | 'unanswered';
+
+export interface ResponseTimeVisitPage {
+  rows: {
+    applicationId: string;
+    jobId: string;
+    applicantName: string;
+    jobTitle: string;
+    submittedAt: string;
+    respondedAt: string | null;
+    responseDays: number | null;
+    currentStatus: string;
+  }[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+const COMPLETED_STAGE_VISITS_CTE = `WITH application_cohort AS (
+  SELECT application.id, application."jobId" AS job_id, job.title AS job_title
+  FROM application
+  INNER JOIN job ON job.id = application."jobId"
+  WHERE job."organizationId" = $1
+    AND ($2::date IS NULL OR ((application."createdAt" AT TIME ZONE 'UTC') AT TIME ZONE 'America/Santiago')::date >= $2::date)
+    AND ($3::date IS NULL OR ((application."createdAt" AT TIME ZONE 'UTC') AT TIME ZONE 'America/Santiago')::date <= $3::date)
+), ordered_history AS (
+  SELECT history.application_id, history.id, history.changed_at,
+    history.previous_status, history.new_stage_id, history.new_stage_name,
+    history.transition_kind,
+    LEAD(history.changed_at) OVER history_order AS next_changed_at,
+    LEAD(history.previous_stage_id) OVER history_order AS next_previous_stage_id,
+    LEAD(history.previous_stage_name) OVER history_order AS next_previous_stage_name
+  FROM application_status_history history
+  INNER JOIN application_cohort cohort ON cohort.id = history.application_id
+  WINDOW history_order AS (
+    PARTITION BY history.application_id ORDER BY history.changed_at, history.id
+  )
+), completed_visits AS (
+  SELECT history.id AS visit_id, history.application_id,
+    cohort.job_id, cohort.job_title, history.changed_at AS entered_at,
+    history.next_changed_at AS exited_at,
+    COALESCE(history.new_stage_id,
+      CASE WHEN history.previous_status IS NULL THEN history.next_previous_stage_id END
+    ) AS stage_id,
+    COALESCE(history.new_stage_name,
+      CASE WHEN history.previous_status IS NULL THEN history.next_previous_stage_name END,
+      stage.name
+    ) AS stage_name,
+    EXTRACT(EPOCH FROM (history.next_changed_at - history.changed_at)) / 86400.0 AS duration_days
+  FROM ordered_history history
+  INNER JOIN application_cohort cohort ON cohort.id = history.application_id
+  LEFT JOIN pipeline_stage stage ON stage.id = COALESCE(history.new_stage_id,
+    CASE WHEN history.previous_status IS NULL THEN history.next_previous_stage_id END
+  )
+  WHERE history.next_changed_at IS NOT NULL
+    AND history.transition_kind IN ('stage', 'reopen')
+    AND COALESCE(history.new_stage_id,
+      CASE WHEN history.previous_status IS NULL THEN history.next_previous_stage_id END
+    ) IS NOT NULL
+)`;
+
+const CUSTOM_STAGE_ENTRIES_CTE = `WITH first_entries AS (
+  SELECT DISTINCT ON (history.application_id, history.new_stage_id)
+    history.application_id,
+    history.id AS first_entry_id,
+    job.id AS job_id,
+    job.title AS job_title,
+    stage.id AS stage_id,
+    stage.name AS stage_name,
+    history.new_stage_name AS stage_name_snapshot,
+    history.changed_at AS first_entered_at,
+    application.status AS current_status,
+    EXISTS (
+      SELECT 1
+      FROM application_status_history exit_history
+      WHERE exit_history.application_id = history.application_id
+        AND exit_history.previous_stage_id = history.new_stage_id
+        AND exit_history.transition_kind = 'stage'
+        AND (exit_history.changed_at, exit_history.id) > (history.changed_at, history.id)
+        AND exit_history.new_stage_id IS DISTINCT FROM history.new_stage_id
+        AND exit_history.new_status NOT IN ('rechazado', 'desistido')
+    ) AS advanced
+  FROM application_status_history history
+  INNER JOIN application ON application.id = history.application_id
+  INNER JOIN job ON job.id = application."jobId"
+  INNER JOIN pipeline_stage stage ON stage.id = history.new_stage_id
+  WHERE job."organizationId" = $1
+    AND stage.system_key IS NULL
+    AND history.transition_kind = 'stage'
+  ORDER BY history.application_id, history.new_stage_id, history.changed_at, history.id
+), stage_cohort AS (
+  SELECT first_entries.*
+  FROM first_entries
+  WHERE ($2::date IS NULL OR ((first_entries.first_entered_at AT TIME ZONE 'UTC') AT TIME ZONE 'America/Santiago')::date >= $2::date)
+    AND ($3::date IS NULL OR ((first_entries.first_entered_at AT TIME ZONE 'UTC') AT TIME ZONE 'America/Santiago')::date < $3::date)
+)`;
+
+const RESPONSE_TIME_CTE = `WITH application_cohort AS (
+  SELECT application.id, application."candidateId", application."createdAt",
+    application."jobId" AS job_id, job.title AS job_title,
+    COALESCE(stage.status_projection, application.status::text) AS current_status
+  FROM application
+  INNER JOIN job ON job.id = application."jobId"
+  LEFT JOIN pipeline_stage stage
+    ON stage.id = application.pipeline_stage_id
+    AND stage.job_id = application."jobId"
+  WHERE job."organizationId" = $1
+    AND ((application."createdAt" AT TIME ZONE 'UTC') AT TIME ZONE 'America/Santiago')::date >= $2::date
+    AND ((application."createdAt" AT TIME ZONE 'UTC') AT TIME ZONE 'America/Santiago')::date < $3::date
+), ranked_responses AS (
+  SELECT history.application_id, history.changed_at,
+    ROW_NUMBER() OVER (
+      PARTITION BY history.application_id
+      ORDER BY history.changed_at, history.id
+    ) AS response_rank
+  FROM application_status_history history
+  INNER JOIN application_cohort cohort ON cohort.id = history.application_id
+  WHERE history.transition_kind = 'stage'
+    AND history.previous_stage_id IS NOT NULL
+    AND history.new_stage_id IS NOT NULL
+    AND history.previous_stage_id <> history.new_stage_id
+    AND history.changed_by_id IS NOT NULL
+    AND history.changed_by_id <> cohort."candidateId"
+    AND history.changed_at >= cohort."createdAt"
+), first_responses AS (
+  SELECT application_id, changed_at
+  FROM ranked_responses
+  WHERE response_rank = 1
+), response_durations AS (
+  SELECT cohort.id, cohort."candidateId", cohort."createdAt", cohort.job_id,
+    cohort.job_title,
+    cohort.current_status, response.changed_at AS responded_at,
+    response.changed_at - cohort."createdAt" AS duration
+  FROM application_cohort cohort
+  LEFT JOIN first_responses response ON response.application_id = cohort.id
+)`;
 
 export interface JobPerformanceMetrics {
   jobId: string;
@@ -85,6 +272,31 @@ export interface OrganizationMetrics {
   recruiterProductivity: RecruiterProductivity[];
   responseTimeDistribution: ResponseTimeDistribution;
   unansweredCount: number;
+  sourceAttribution: ApplicationSourceAttribution[];
+}
+
+export interface ApplicationSourceAttribution {
+  sourceChannel: string;
+  sourceMethod: string;
+  applications: number;
+  reachedInterview: number;
+  hired: number;
+}
+
+export interface SourceApplication {
+  applicationId: string;
+  jobId: string;
+  jobTitle: string;
+  candidateName: string;
+  status: string;
+  appliedAt: string;
+}
+
+export interface SourceApplicationsPage {
+  rows: SourceApplication[];
+  total: number;
+  page: number;
+  pageSize: number;
 }
 
 export interface OrganizationMetricsFilters {
@@ -135,13 +347,14 @@ export class OrganizationMetricsService {
       avgHiringTimeDays,
       recruiterProductivity,
       responseTime,
+      sourceAttribution,
     ] = await Promise.all([
       this.getDashboardMetrics(organizationId, period, startDate, endDate),
-      this.getPipelineMetrics(organizationId, startDate, endDate),
+      this.getPipelineMetrics(organizationId, startDate, endDate, period),
       this.getTopJobsMetrics(organizationId),
       this.getRecentTrend(organizationId, period, startDate, endDate),
       this.getGeographicDistribution(organizationId),
-      this.getAvgHiringTimeDays(organizationId),
+      this.getAvgHiringTimeDays(organizationId, period, startDate, endDate),
       this.getRecruiterProductivity(organizationId, startDate, endDate),
       this.getResponseTimeDistribution(
         organizationId,
@@ -149,6 +362,7 @@ export class OrganizationMetricsService {
         startDate,
         endDate,
       ),
+      this.getSourceAttribution(organizationId, period, startDate, endDate),
     ]);
 
     return {
@@ -161,6 +375,114 @@ export class OrganizationMetricsService {
       recruiterProductivity,
       responseTimeDistribution: responseTime.distribution,
       unansweredCount: responseTime.unansweredCount,
+      sourceAttribution,
+    };
+  }
+
+  async getSourceAttribution(
+    organizationId: string,
+    period: string,
+    customStart?: string,
+    customEnd?: string,
+  ): Promise<ApplicationSourceAttribution[]> {
+    const { startOfPeriod, endOfPeriod } = this.getPeriodDates(
+      new Date(),
+      period,
+      customStart,
+      customEnd,
+    );
+    const rows: ApplicationSourceAttribution[] =
+      await this.applicationRepository.query(
+        `SELECT application.source_channel AS "sourceChannel",
+          application.source_method AS "sourceMethod",
+          COUNT(DISTINCT application.id)::int AS applications,
+          COUNT(DISTINCT application.id) FILTER (
+            WHERE history.new_status IN ('entrevista', 'oferta', 'contratado')
+          )::int AS "reachedInterview",
+          COUNT(DISTINCT application.id) FILTER (
+            WHERE history.new_status = 'contratado'
+          )::int AS hired
+        FROM application
+        INNER JOIN job ON job.id = application."jobId"
+        LEFT JOIN application_status_history history
+          ON history.application_id = application.id
+         AND history.transition_kind = 'stage'
+         AND history.previous_status IS NOT NULL
+        WHERE job."organizationId" = $1
+          AND ((application."createdAt" AT TIME ZONE 'UTC') AT TIME ZONE 'America/Santiago')::date >= $2::date
+          AND ((application."createdAt" AT TIME ZONE 'UTC') AT TIME ZONE 'America/Santiago')::date < $3::date
+        GROUP BY application.source_channel, application.source_method
+        ORDER BY applications DESC, application.source_channel, application.source_method`,
+        [organizationId, startOfPeriod, endOfPeriod],
+      );
+    return rows.map(row => ({
+      ...row,
+      applications: Number(row.applications),
+      reachedInterview: Number(row.reachedInterview),
+      hired: Number(row.hired),
+    }));
+  }
+
+  async getSourceApplications(
+    organizationId: string,
+    sourceChannel: string,
+    sourceMethod: string,
+    period: string,
+    customStart: string | undefined,
+    customEnd: string | undefined,
+    page: number,
+    pageSize: number,
+  ): Promise<SourceApplicationsPage> {
+    const range = this.getPeriodDates(
+      new Date(),
+      period,
+      customStart,
+      customEnd,
+    );
+    const params = [
+      organizationId,
+      range.startOfPeriod,
+      range.endOfPeriod,
+      sourceChannel,
+      sourceMethod,
+    ];
+    const [countRows, rows] = await Promise.all([
+      this.applicationRepository.query<Array<{ total: number }>>(
+        `SELECT COUNT(*)::int AS total
+         FROM application
+         INNER JOIN job ON job.id = application."jobId"
+         WHERE job."organizationId" = $1
+           AND ((application."createdAt" AT TIME ZONE 'UTC') AT TIME ZONE 'America/Santiago')::date >= $2::date
+           AND ((application."createdAt" AT TIME ZONE 'UTC') AT TIME ZONE 'America/Santiago')::date < $3::date
+           AND application.source_channel = $4
+           AND application.source_method = $5`,
+        params,
+      ),
+      this.applicationRepository.query<SourceApplication[]>(
+        `SELECT application.id AS "applicationId",
+                job.id AS "jobId",
+                job.title AS "jobTitle",
+                candidate.name AS "candidateName",
+                application.status AS status,
+                application."createdAt" AS "appliedAt"
+         FROM application
+         INNER JOIN job ON job.id = application."jobId"
+         INNER JOIN "user" AS candidate ON candidate.id = application."candidateId"
+         WHERE job."organizationId" = $1
+           AND ((application."createdAt" AT TIME ZONE 'UTC') AT TIME ZONE 'America/Santiago')::date >= $2::date
+           AND ((application."createdAt" AT TIME ZONE 'UTC') AT TIME ZONE 'America/Santiago')::date < $3::date
+           AND application.source_channel = $4
+           AND application.source_method = $5
+         ORDER BY application."createdAt" DESC, application.id DESC
+         LIMIT $6 OFFSET $7`,
+        [...params, pageSize, (page - 1) * pageSize],
+      ),
+    ]);
+    return {
+      rows,
+      total: Number(countRows[0]?.total ?? 0),
+      page,
+      pageSize,
     };
   }
 
@@ -287,7 +609,14 @@ export class OrganizationMetricsService {
     organizationId: string,
     customStart?: string,
     customEnd?: string,
+    period = customStart && customEnd ? 'custom' : 'month',
   ): Promise<PipelineMetrics> {
+    const stageDateRange = this.getPeriodDates(
+      new Date(),
+      period,
+      customStart,
+      customEnd,
+    );
     // Total applications
     let queryTotal = this.applicationRepository
       .createQueryBuilder('application')
@@ -303,52 +632,107 @@ export class OrganizationMetricsService {
       .addSelect('COUNT(*)', 'count')
       .groupBy('application.status');
 
-    // Avg days spent to reach each stage
-    let queryAvgDays = this.applicationRepository
-      .createQueryBuilder('application')
-      .leftJoin('application.job', 'job')
-      .where('job.organizationId = :organizationId', { organizationId })
-      .andWhere("application.status != 'pendiente'")
-      .select('application.status', 'status')
-      .addSelect(
-        'AVG(EXTRACT(EPOCH FROM (application.stageChangedAt - application.createdAt)) / 86400)',
-        'avgDays',
-      )
-      .groupBy('application.status');
-
     if (customStart) {
       queryTotal = queryTotal.andWhere(
-        "TO_CHAR(application.createdAt AT TIME ZONE 'America/Santiago', 'YYYY-MM-DD') >= :customStart",
+        "TO_CHAR((application.createdAt AT TIME ZONE 'UTC') AT TIME ZONE 'America/Santiago', 'YYYY-MM-DD') >= :customStart",
         { customStart },
       );
       queryStatus = queryStatus.andWhere(
-        "TO_CHAR(application.createdAt AT TIME ZONE 'America/Santiago', 'YYYY-MM-DD') >= :customStart",
-        { customStart },
-      );
-      queryAvgDays = queryAvgDays.andWhere(
-        "TO_CHAR(application.createdAt AT TIME ZONE 'America/Santiago', 'YYYY-MM-DD') >= :customStart",
+        "TO_CHAR((application.createdAt AT TIME ZONE 'UTC') AT TIME ZONE 'America/Santiago', 'YYYY-MM-DD') >= :customStart",
         { customStart },
       );
     }
     if (customEnd) {
       queryTotal = queryTotal.andWhere(
-        "TO_CHAR(application.createdAt AT TIME ZONE 'America/Santiago', 'YYYY-MM-DD') <= :customEnd",
+        "TO_CHAR((application.createdAt AT TIME ZONE 'UTC') AT TIME ZONE 'America/Santiago', 'YYYY-MM-DD') <= :customEnd",
         { customEnd },
       );
       queryStatus = queryStatus.andWhere(
-        "TO_CHAR(application.createdAt AT TIME ZONE 'America/Santiago', 'YYYY-MM-DD') <= :customEnd",
-        { customEnd },
-      );
-      queryAvgDays = queryAvgDays.andWhere(
-        "TO_CHAR(application.createdAt AT TIME ZONE 'America/Santiago', 'YYYY-MM-DD') <= :customEnd",
+        "TO_CHAR((application.createdAt AT TIME ZONE 'UTC') AT TIME ZONE 'America/Santiago', 'YYYY-MM-DD') <= :customEnd",
         { customEnd },
       );
     }
 
-    const [totalApplications, statusCounts, avgDaysRaw] = await Promise.all([
+    const [
+      totalApplications,
+      statusCounts,
+      reachedCountsRaw,
+      stageDurationsRaw,
+      customStageConversionsRaw,
+    ] = await Promise.all([
       queryTotal.getCount(),
       queryStatus.getRawMany(),
-      queryAvgDays.getRawMany(),
+      this.statusHistoryRepository.query<
+        {
+          entrevista: number | string;
+          oferta: number | string;
+          contratado: number | string;
+        }[]
+      >(
+        `SELECT
+            COUNT(DISTINCT history.application_id) FILTER (
+              WHERE history.new_status IN ('entrevista', 'oferta', 'contratado')
+            )::int AS entrevista,
+            COUNT(DISTINCT history.application_id) FILTER (
+              WHERE history.new_status IN ('oferta', 'contratado')
+            )::int AS oferta,
+            COUNT(DISTINCT history.application_id) FILTER (
+              WHERE history.new_status = 'contratado'
+            )::int AS contratado
+          FROM application_status_history history
+          INNER JOIN application ON application.id = history.application_id
+          INNER JOIN job ON job.id = application."jobId"
+          WHERE job."organizationId" = $1
+            AND ($2::date IS NULL OR ((application."createdAt" AT TIME ZONE 'UTC') AT TIME ZONE 'America/Santiago')::date >= $2::date)
+            AND ($3::date IS NULL OR ((application."createdAt" AT TIME ZONE 'UTC') AT TIME ZONE 'America/Santiago')::date <= $3::date)
+            AND history.transition_kind = 'stage'
+            AND history.previous_status IS NOT NULL`,
+        [organizationId, customStart ?? null, customEnd ?? null],
+      ),
+      this.statusHistoryRepository.query<
+        {
+          jobId: string;
+          jobTitle: string;
+          stageId: string;
+          stageName: string | null;
+          averageCompletedDays: number | string;
+          completedVisitCount: number | string;
+        }[]
+      >(
+        `${COMPLETED_STAGE_VISITS_CTE}
+        SELECT job_id AS "jobId", job_title AS "jobTitle", stage_id AS "stageId",
+          (ARRAY_AGG(stage_name ORDER BY entered_at DESC))[1] AS "stageName",
+          AVG(duration_days)::double precision AS "averageCompletedDays",
+          COUNT(*)::int AS "completedVisitCount"
+        FROM completed_visits
+        GROUP BY job_id, job_title, stage_id
+        ORDER BY job_title, stage_name, stage_id`,
+        [organizationId, customStart ?? null, customEnd ?? null],
+      ),
+      this.statusHistoryRepository.query<
+        {
+          jobId: string;
+          jobTitle: string;
+          stageId: string;
+          stageName: string;
+          enteredApplications: number | string;
+          advancedApplications: number | string;
+        }[]
+      >(
+        `${CUSTOM_STAGE_ENTRIES_CTE}
+        SELECT job_id AS "jobId", job_title AS "jobTitle", stage_id AS "stageId",
+          stage_name AS "stageName",
+          COUNT(*)::int AS "enteredApplications",
+          COUNT(*) FILTER (WHERE advanced)::int AS "advancedApplications"
+        FROM stage_cohort
+        GROUP BY job_id, job_title, stage_id, stage_name
+        ORDER BY job_title, stage_name, stage_id`,
+        [
+          organizationId,
+          stageDateRange.startOfPeriod,
+          stageDateRange.endOfPeriod,
+        ],
+      ),
     ]);
 
     const byStatus = {
@@ -365,31 +749,258 @@ export class OrganizationMetricsService {
       }
     });
 
-    // Conversion rate: entrevistas / total * 100
-    const conversionRate =
-      totalApplications > 0
-        ? Math.round((byStatus.entrevista / totalApplications) * 100)
-        : 0;
-
-    const avgTimeInStages = {
-      entrevista: 0,
-      oferta: 0,
-      contratado: 0,
+    const reachedCounts = {
+      entrevista: Number(reachedCountsRaw[0]?.entrevista ?? 0),
+      oferta: Number(reachedCountsRaw[0]?.oferta ?? 0),
+      contratado: Number(reachedCountsRaw[0]?.contratado ?? 0),
     };
 
-    avgDaysRaw.forEach((row: { status: string; avgDays: string }) => {
-      const status = row.status;
-      if (status in avgTimeInStages) {
-        avgTimeInStages[status as keyof typeof avgTimeInStages] =
-          Math.round((parseFloat(row.avgDays) || 0) * 10) / 10;
-      }
+    // Conversion rate: applications that reached an interview / total * 100
+    const conversionRate =
+      totalApplications > 0
+        ? Math.round((reachedCounts.entrevista / totalApplications) * 100)
+        : 0;
+
+    const stageDurations = stageDurationsRaw.map(
+      (row: {
+        jobId: string;
+        jobTitle: string;
+        stageId: string;
+        stageName: string | null;
+        averageCompletedDays: number | string;
+        completedVisitCount: number | string;
+      }) => ({
+        jobId: row.jobId,
+        jobTitle: row.jobTitle,
+        stageId: row.stageId,
+        stageName: row.stageName ?? 'Etapa sin nombre',
+        averageCompletedDays:
+          Math.round(Number(row.averageCompletedDays) * 10) / 10,
+        completedVisitCount: Number(row.completedVisitCount),
+      }),
+    );
+    const customStageConversions = customStageConversionsRaw.map(row => {
+      const enteredApplications = Number(row.enteredApplications);
+      const advancedApplications = Number(row.advancedApplications);
+      return {
+        ...row,
+        enteredApplications,
+        advancedApplications,
+        conversionRate:
+          enteredApplications > 0
+            ? Math.round((advancedApplications / enteredApplications) * 100)
+            : 0,
+      };
     });
 
     return {
       totalApplications,
+      reachedCounts,
       byStatus,
       conversionRate,
-      avgTimeInStages,
+      customStageConversions,
+      stageDurations,
+    };
+  }
+
+  async getStageDurationVisits(
+    organizationId: string,
+    jobId: string,
+    stageId: string,
+    customStart: string | undefined,
+    customEnd: string | undefined,
+    page: number,
+    pageSize: number,
+  ): Promise<StageDurationVisitPage> {
+    const params = [
+      organizationId,
+      customStart ?? null,
+      customEnd ?? null,
+      jobId,
+      stageId,
+    ];
+    const [countRows, visitRows] = await Promise.all([
+      this.statusHistoryRepository.query<{ total: number }[]>(
+        `${COMPLETED_STAGE_VISITS_CTE}
+         SELECT COUNT(*)::int AS total
+         FROM completed_visits
+         WHERE job_id = $4 AND stage_id = $5`,
+        params,
+      ),
+      this.statusHistoryRepository.query<
+        {
+          visitId: string;
+          applicationId: string;
+          jobId: string;
+          applicantName: string;
+          enteredAt: string;
+          exitedAt: string;
+          durationDays: number | string;
+        }[]
+      >(
+        `${COMPLETED_STAGE_VISITS_CTE}
+         SELECT visit.visit_id AS "visitId",
+           visit.application_id AS "applicationId",
+           candidate.name AS "applicantName",
+           TO_CHAR(visit.entered_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS "enteredAt",
+           TO_CHAR(visit.exited_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS "exitedAt",
+           visit.duration_days AS "durationDays"
+         FROM completed_visits visit
+         INNER JOIN application ON application.id = visit.application_id
+         INNER JOIN "user" candidate ON candidate.id = application."candidateId"
+         WHERE visit.job_id = $4 AND visit.stage_id = $5
+         ORDER BY visit.entered_at DESC, visit.visit_id DESC
+         LIMIT $6 OFFSET $7`,
+        [...params, pageSize, (page - 1) * pageSize],
+      ),
+    ]);
+
+    return {
+      rows: visitRows.map(row => ({
+        ...row,
+        durationDays: Number(row.durationDays),
+      })),
+      total: Number(countRows[0]?.total ?? 0),
+      page,
+      pageSize,
+    };
+  }
+
+  async getCustomStageApplications(
+    organizationId: string,
+    jobId: string,
+    stageId: string,
+    customStart: string | undefined,
+    customEnd: string | undefined,
+    page: number,
+    pageSize: number,
+    period = customStart && customEnd ? 'custom' : 'month',
+  ): Promise<CustomStageApplicationPage> {
+    const stageDateRange = this.getPeriodDates(
+      new Date(),
+      period,
+      customStart,
+      customEnd,
+    );
+    const params = [
+      organizationId,
+      stageDateRange.startOfPeriod,
+      stageDateRange.endOfPeriod,
+      jobId,
+      stageId,
+    ];
+    const cohort = `${CUSTOM_STAGE_ENTRIES_CTE}, selected_stage AS (
+      SELECT * FROM stage_cohort
+      WHERE job_id = $4 AND stage_id = $5
+    )`;
+    const [countRows, applicationRows] = await Promise.all([
+      this.statusHistoryRepository.query<{ total: number }[]>(
+        `${cohort} SELECT COUNT(*)::int AS total FROM selected_stage`,
+        params,
+      ),
+      this.statusHistoryRepository.query<
+        {
+          applicationId: string;
+          applicantName: string;
+          stageNameAtEntry: string | null;
+          firstEnteredAt: string;
+          advanced: boolean;
+          currentStatus: string;
+        }[]
+      >(
+        `${cohort}
+        SELECT selected_stage.application_id AS "applicationId",
+          candidate.name AS "applicantName",
+          selected_stage.stage_name_snapshot AS "stageNameAtEntry",
+          TO_CHAR(selected_stage.first_entered_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS "firstEnteredAt",
+          selected_stage.advanced,
+          selected_stage.current_status AS "currentStatus"
+        FROM selected_stage
+        INNER JOIN application ON application.id = selected_stage.application_id
+        INNER JOIN "user" candidate ON candidate.id = application."candidateId"
+        ORDER BY selected_stage.first_entered_at DESC, selected_stage.application_id DESC
+        LIMIT $6 OFFSET $7`,
+        [...params, pageSize, (page - 1) * pageSize],
+      ),
+    ]);
+
+    return {
+      rows: applicationRows,
+      total: Number(countRows[0]?.total ?? 0),
+      page,
+      pageSize,
+    };
+  }
+
+  async getResponseTimeVisits(
+    organizationId: string,
+    bucket: ResponseTimeBucket,
+    period: string,
+    customStart: string | undefined,
+    customEnd: string | undefined,
+    page: number,
+    pageSize: number,
+  ): Promise<ResponseTimeVisitPage> {
+    const now = new Date();
+    const { startOfPeriod, endOfPeriod } = this.getPeriodDates(
+      now,
+      period,
+      customStart,
+      customEnd,
+    );
+    const params = [organizationId, startOfPeriod, endOfPeriod, bucket];
+    const bucketFilter = `(
+      ($4 = 'lessThan24h' AND duration < INTERVAL '24 hours') OR
+      ($4 = 'oneToThreeDays' AND duration >= INTERVAL '24 hours' AND duration < INTERVAL '3 days') OR
+      ($4 = 'threeToSevenDays' AND duration >= INTERVAL '3 days' AND duration < INTERVAL '7 days') OR
+      ($4 = 'moreThanSevenDays' AND duration >= INTERVAL '7 days') OR
+      ($4 = 'unanswered' AND duration IS NULL AND current_status NOT IN ('contratado', 'rechazado', 'desistido'))
+    )`;
+    const [countRows, visitRows] = await Promise.all([
+      this.statusHistoryRepository.query<{ total: number }[]>(
+        `${RESPONSE_TIME_CTE} SELECT COUNT(*)::int AS total
+         FROM response_durations WHERE ${bucketFilter}`,
+        params,
+      ),
+      this.statusHistoryRepository.query<
+        {
+          applicationId: string;
+          jobId: string;
+          applicantName: string;
+          jobTitle: string;
+          submittedAt: string;
+          respondedAt: string | null;
+          responseDays: number | string | null;
+          currentStatus: string;
+        }[]
+      >(
+        `${RESPONSE_TIME_CTE}
+         SELECT response.id AS "applicationId", response.job_id AS "jobId",
+           candidate.name AS "applicantName",
+           response.job_title AS "jobTitle",
+           TO_CHAR(response."createdAt", 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS "submittedAt",
+           CASE WHEN response.responded_at IS NULL THEN NULL
+             ELSE TO_CHAR(response.responded_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') END AS "respondedAt",
+           EXTRACT(EPOCH FROM response.duration) / 86400.0 AS "responseDays",
+           response.current_status AS "currentStatus"
+         FROM response_durations response
+         INNER JOIN "user" candidate ON candidate.id = response."candidateId"
+         WHERE ${bucketFilter}
+         ORDER BY response."createdAt" DESC, response.id DESC
+         LIMIT $5 OFFSET $6`,
+        [...params, pageSize, (page - 1) * pageSize],
+      ),
+    ]);
+
+    return {
+      rows: visitRows.map(row => ({
+        ...row,
+        responseDays:
+          row.responseDays === null ? null : Number(row.responseDays),
+      })),
+      total: Number(countRows[0]?.total ?? 0),
+      page,
+      pageSize,
     };
   }
 
@@ -559,20 +1170,48 @@ export class OrganizationMetricsService {
     }));
   }
 
-  async getAvgHiringTimeDays(organizationId: string): Promise<number> {
-    const result = await this.applicationRepository
-      .createQueryBuilder('application')
-      .leftJoin('application.job', 'job')
-      .where('job.organizationId = :organizationId', { organizationId })
-      .andWhere('application.status = :status', { status: 'contratado' })
-      .andWhere('application.stageChangedAt > application.createdAt')
-      .select(
-        'AVG(EXTRACT(EPOCH FROM (application."stageChangedAt" - application."createdAt")) / 86400)',
-        'avg_days',
+  async getAvgHiringTimeDays(
+    organizationId: string,
+    period = 'month',
+    customStart?: string,
+    customEnd?: string,
+  ): Promise<number> {
+    const { startOfPeriod, endOfPeriod } = this.getPeriodDates(
+      new Date(),
+      period,
+      customStart,
+      customEnd,
+    );
+    const [result] = await this.statusHistoryRepository.query<
+      { avgDays: number | string | null }[]
+    >(
+      `WITH application_cohort AS (
+        SELECT application.id, application."createdAt" AS created_at
+        FROM application
+        INNER JOIN job ON job.id = application."jobId"
+        WHERE job."organizationId" = $1
+          AND ((application."createdAt" AT TIME ZONE 'UTC') AT TIME ZONE 'America/Santiago')::date >= $2::date
+          AND ((application."createdAt" AT TIME ZONE 'UTC') AT TIME ZONE 'America/Santiago')::date < $3::date
+      ), first_hire AS (
+        SELECT cohort.id, cohort.created_at,
+          MIN(history.changed_at AT TIME ZONE 'UTC') AS hired_at
+        FROM application_cohort cohort
+        INNER JOIN application_status_history history
+          ON history.application_id = cohort.id
+        WHERE history.new_status = 'contratado'
+          AND history.transition_kind = 'stage'
+          AND history.previous_status IS NOT NULL
+        GROUP BY cohort.id, cohort.created_at
       )
-      .getRawOne<{ avg_days: string | null }>();
+      SELECT AVG(
+        EXTRACT(EPOCH FROM (first_hire.hired_at - (first_hire.created_at AT TIME ZONE 'UTC'))) / 86400.0
+      )::double precision AS "avgDays"
+      FROM first_hire
+      WHERE first_hire.hired_at > (first_hire.created_at AT TIME ZONE 'UTC')`,
+      [organizationId, startOfPeriod, endOfPeriod],
+    );
 
-    const avgDays = result?.avg_days ? parseFloat(result.avg_days) : 0;
+    const avgDays = Number(result?.avgDays ?? 0);
     return Math.round(avgDays * 10) / 10;
   }
 
@@ -588,72 +1227,125 @@ export class OrganizationMetricsService {
 
     if (members.length === 0) return [];
 
+    let firstResponseQuery = this.statusHistoryRepository
+      .createQueryBuilder('history')
+      .innerJoin('history.application', 'application')
+      .innerJoin('application.job', 'job')
+      .where('job.organizationId = :organizationId', { organizationId })
+      .andWhere('history.changedById IS NOT NULL')
+      .andWhere('history.transitionKind = :stageTransition', {
+        stageTransition: 'stage',
+      })
+      .andWhere('history.previousStageId IS NOT NULL')
+      .andWhere('history.newStageId IS NOT NULL')
+      .andWhere('history.previousStageId <> history.newStageId')
+      .andWhere('history.changedById <> application.candidateId')
+      .andWhere('history.changedAt >= application.createdAt')
+      .select('application.id', 'applicationId')
+      .addSelect('history.changedById', 'changedById')
+      .addSelect(
+        'EXTRACT(EPOCH FROM (history.changedAt - application.createdAt)) / 86400',
+        'responseDays',
+      )
+      .distinctOn(['application.id'])
+      .orderBy('application.id', 'ASC')
+      .addOrderBy('history.changedAt', 'ASC')
+      .addOrderBy('history.id', 'ASC');
+
+    if (customStart) {
+      firstResponseQuery = firstResponseQuery.andWhere(
+        "((application.createdAt AT TIME ZONE 'UTC') AT TIME ZONE 'America/Santiago')::date >= CAST(:customStart AS date)",
+        { customStart },
+      );
+    }
+    if (customEnd) {
+      firstResponseQuery = firstResponseQuery.andWhere(
+        "((application.createdAt AT TIME ZONE 'UTC') AT TIME ZONE 'America/Santiago')::date < (CAST(:customEnd AS date) + INTERVAL '1 day')",
+        { customEnd },
+      );
+    }
+
+    const firstResponses = await firstResponseQuery.getRawMany<{
+      changedById: string;
+      responseDays: string;
+    }>();
+    const responseTimeTotalsByRecruiter = new Map<
+      string,
+      { totalDays: number; count: number }
+    >();
+
+    for (const row of firstResponses) {
+      const aggregate = responseTimeTotalsByRecruiter.get(row.changedById) ?? {
+        totalDays: 0,
+        count: 0,
+      };
+      responseTimeTotalsByRecruiter.set(row.changedById, {
+        totalDays: aggregate.totalDays + Number(row.responseDays),
+        count: aggregate.count + 1,
+      });
+    }
+
     const results = await Promise.all(
       members.map(async member => {
         const userId = member.userId;
 
-        let appQuery = this.applicationRepository
-          .createQueryBuilder('app')
-          .leftJoin('app.job', 'job')
-          .where('job.organizationId = :orgId', { orgId: organizationId });
+        let processedApplicationsQuery = this.statusHistoryRepository
+          .createQueryBuilder('history')
+          .innerJoin('history.application', 'application')
+          .innerJoin('application.job', 'job')
+          .where('job.organizationId = :organizationId', { organizationId })
+          .andWhere('history.changedById = :userId', { userId })
+          .andWhere('history.newStatus != :pending', {
+            pending: ApplicationStatus.PENDIENTE,
+          })
+          .select('COUNT(DISTINCT application.id)', 'count');
 
         let interviewQuery = this.eventRepository
           .createQueryBuilder('event')
-          .where('event.organizationId = :orgId', { orgId: organizationId })
-          .andWhere('event.type = :type', { type: EventType.INTERVIEW });
+          .where('event.organizationId = :organizationId', { organizationId })
+          .andWhere('event.type = :type', { type: EventType.INTERVIEW })
+          .andWhere('event.organizerId = :userId', { userId })
+          .andWhere('event.status = :status', {
+            status: EventStatus.COMPLETED,
+          });
 
         if (customStart) {
-          appQuery = appQuery.andWhere('app.createdAt >= :customStart', {
-            customStart,
-          });
+          processedApplicationsQuery = processedApplicationsQuery.andWhere(
+            "((history.changedAt AT TIME ZONE 'UTC') AT TIME ZONE 'America/Santiago')::date >= CAST(:customStart AS date)",
+            { customStart },
+          );
           interviewQuery = interviewQuery.andWhere(
-            'event.createdAt >= :customStart',
+            "event.startAt >= (CAST(:customStart AS date)::timestamp AT TIME ZONE 'America/Santiago')",
             { customStart },
           );
         }
         if (customEnd) {
-          appQuery = appQuery.andWhere('app.createdAt <= :customEnd', {
-            customEnd,
-          });
+          processedApplicationsQuery = processedApplicationsQuery.andWhere(
+            "((history.changedAt AT TIME ZONE 'UTC') AT TIME ZONE 'America/Santiago')::date < (CAST(:customEnd AS date) + INTERVAL '1 day')",
+            { customEnd },
+          );
           interviewQuery = interviewQuery.andWhere(
-            'event.createdAt <= :customEnd',
+            "event.startAt < ((CAST(:customEnd AS date) + INTERVAL '1 day')::timestamp AT TIME ZONE 'America/Santiago')",
             { customEnd },
           );
         }
 
-        const [appsProcessed, interviews, avgDaysRaw] = await Promise.all([
-          appQuery
-            .andWhere('app.status != :status', {
-              status: ApplicationStatus.PENDIENTE,
-            })
-            .getCount(),
+        const [processedApplications, interviews] = await Promise.all([
+          processedApplicationsQuery.getRawOne<{ count: string }>(),
           interviewQuery.getCount(),
-          this.applicationRepository
-            .createQueryBuilder('app')
-            .leftJoin('app.job', 'job')
-            .where('job.organizationId = :orgId', { orgId: organizationId })
-            .andWhere('app.stageChangedAt > app.createdAt')
-            .andWhere('app.status != :pending', {
-              pending: ApplicationStatus.PENDIENTE,
-            })
-            .select(
-              'AVG(EXTRACT(EPOCH FROM (app."stageChangedAt" - app."createdAt")) / 86400)',
-              'avgDays',
-            )
-            .getRawOne<{ avgDays: string | null }>(),
         ]);
-
-        const avgDays = avgDaysRaw?.avgDays
-          ? parseFloat(avgDaysRaw.avgDays)
+        const responseTimeAggregate = responseTimeTotalsByRecruiter.get(userId);
+        const avgResponseTimeDays = responseTimeAggregate?.count
+          ? responseTimeAggregate.totalDays / responseTimeAggregate.count
           : 0;
 
         return {
           userId,
           userName: member.user?.name ?? 'Unknown',
           userEmail: member.user?.email ?? '',
-          applicationsProcessed: appsProcessed,
+          applicationsProcessed: Number(processedApplications?.count ?? 0),
           interviewsConducted: interviews,
-          avgResponseTimeDays: Math.round(avgDays * 10) / 10,
+          avgResponseTimeDays: Math.round(avgResponseTimeDays * 10) / 10,
         };
       }),
     );
@@ -678,68 +1370,39 @@ export class OrganizationMetricsService {
       customEnd,
     );
 
-    const firstResponseRows = await this.statusHistoryRepository
-      .createQueryBuilder('history')
-      .innerJoin('history.application', 'application')
-      .innerJoin('application.job', 'job')
-      .where('job.organizationId = :organizationId', { organizationId })
-      .andWhere('history.new_status IN (:...statuses)', {
-        statuses: ['entrevista', 'oferta', 'contratado', 'rechazado'],
-      })
-      .andWhere(
-        "TO_CHAR(application.createdAt AT TIME ZONE 'America/Santiago', 'YYYY-MM-DD') >= :startOfPeriod",
-        { startOfPeriod },
-      )
-      .andWhere(
-        "TO_CHAR(application.createdAt AT TIME ZONE 'America/Santiago', 'YYYY-MM-DD') < :endOfPeriod",
-        { endOfPeriod },
-      )
-      .select('application.id', 'applicationId')
-      .addSelect('MIN(history.changed_at)', 'firstResponseAt')
-      .addSelect('MIN(application.createdAt)', 'createdAt')
-      .groupBy('application.id')
-      .getRawMany<{
-        applicationId: string;
-        firstResponseAt: Date;
-        createdAt: Date;
-      }>();
+    const [row] = await this.statusHistoryRepository.query<
+      {
+        lessThan24h: number | string;
+        oneToThreeDays: number | string;
+        threeToSevenDays: number | string;
+        moreThanSevenDays: number | string;
+        unansweredCount: number | string;
+      }[]
+    >(
+      `${RESPONSE_TIME_CTE}
+      SELECT
+        COUNT(*) FILTER (WHERE duration < INTERVAL '24 hours')::int AS "lessThan24h",
+        COUNT(*) FILTER (WHERE duration >= INTERVAL '24 hours' AND duration < INTERVAL '3 days')::int AS "oneToThreeDays",
+        COUNT(*) FILTER (WHERE duration >= INTERVAL '3 days' AND duration < INTERVAL '7 days')::int AS "threeToSevenDays",
+        COUNT(*) FILTER (WHERE duration >= INTERVAL '7 days')::int AS "moreThanSevenDays",
+        COUNT(*) FILTER (
+          WHERE duration IS NULL
+            AND current_status NOT IN ('contratado', 'rechazado', 'desistido')
+        )::int AS "unansweredCount"
+      FROM response_durations`,
+      [organizationId, startOfPeriod, endOfPeriod],
+    );
 
     const distribution: ResponseTimeDistribution = {
-      lessThan24h: 0,
-      oneToThreeDays: 0,
-      threeToSevenDays: 0,
-      moreThanSevenDays: 0,
+      lessThan24h: Number(row?.lessThan24h ?? 0),
+      oneToThreeDays: Number(row?.oneToThreeDays ?? 0),
+      threeToSevenDays: Number(row?.threeToSevenDays ?? 0),
+      moreThanSevenDays: Number(row?.moreThanSevenDays ?? 0),
     };
-
-    for (const row of firstResponseRows) {
-      const days =
-        (new Date(row.firstResponseAt).getTime() -
-          new Date(row.createdAt).getTime()) /
-        86_400_000;
-      if (days < 1) distribution.lessThan24h += 1;
-      else if (days < 3) distribution.oneToThreeDays += 1;
-      else if (days < 7) distribution.threeToSevenDays += 1;
-      else distribution.moreThanSevenDays += 1;
-    }
-
-    const unansweredCount = await this.applicationRepository
-      .createQueryBuilder('application')
-      .leftJoin('application.job', 'job')
-      .where('job.organizationId = :organizationId', { organizationId })
-      .andWhere('application.status = :status', { status: 'pendiente' })
-      .andWhere(
-        "TO_CHAR(application.createdAt AT TIME ZONE 'America/Santiago', 'YYYY-MM-DD') >= :startOfPeriod",
-        { startOfPeriod },
-      )
-      .andWhere(
-        "TO_CHAR(application.createdAt AT TIME ZONE 'America/Santiago', 'YYYY-MM-DD') < :endOfPeriod",
-        { endOfPeriod },
-      )
-      .getCount();
 
     return {
       distribution,
-      unansweredCount,
+      unansweredCount: Number(row?.unansweredCount ?? 0),
     };
   }
 
@@ -750,8 +1413,9 @@ export class OrganizationMetricsService {
     customEnd?: string,
   ): { startOfPeriod: string; endOfPeriod: string; startOfLastPeriod: string } {
     if (period === 'custom' && customStart && customEnd) {
-      const startOfPeriod = new Date(customStart);
-      const endOfPeriod = new Date(customEnd);
+      const startOfPeriod = new Date(`${customStart}T00:00:00.000Z`);
+      const endOfPeriod = new Date(`${customEnd}T00:00:00.000Z`);
+      endOfPeriod.setUTCDate(endOfPeriod.getUTCDate() + 1);
       const durationMs = endOfPeriod.getTime() - startOfPeriod.getTime();
       const startOfLastPeriod = new Date(startOfPeriod.getTime() - durationMs);
 
@@ -762,7 +1426,15 @@ export class OrganizationMetricsService {
       };
     }
 
-    const now = new Date(date);
+    const [month, day, year] = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/Santiago',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    })
+      .format(date)
+      .split('/');
+    const now = new Date(`${year}-${month}-${day}T00:00:00.000Z`);
 
     let startOfPeriod: Date;
     let endOfPeriod: Date;
@@ -770,37 +1442,41 @@ export class OrganizationMetricsService {
 
     if (period === 'week') {
       // Current week starting Monday
-      const day = now.getDay();
-      const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+      const daysSinceMonday = (now.getUTCDay() + 6) % 7;
       startOfPeriod = new Date(now);
-      startOfPeriod.setDate(diff);
-      startOfPeriod.setHours(0, 0, 0, 0);
+      startOfPeriod.setUTCDate(now.getUTCDate() - daysSinceMonday);
 
       // End of current week (next Monday)
       endOfPeriod = new Date(startOfPeriod);
-      endOfPeriod.setDate(startOfPeriod.getDate() + 7);
+      endOfPeriod.setUTCDate(startOfPeriod.getUTCDate() + 7);
 
       // Last week
       startOfLastPeriod = new Date(startOfPeriod);
-      startOfLastPeriod.setDate(startOfPeriod.getDate() - 7);
+      startOfLastPeriod.setUTCDate(startOfPeriod.getUTCDate() - 7);
     } else if (period === 'month') {
       // First day of current month
-      startOfPeriod = new Date(now.getFullYear(), now.getMonth(), 1);
+      startOfPeriod = new Date(
+        Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1),
+      );
 
       // First day of next month (for upper bound)
-      endOfPeriod = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+      endOfPeriod = new Date(
+        Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1),
+      );
 
       // First day of last month
-      startOfLastPeriod = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      startOfLastPeriod = new Date(
+        Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1),
+      );
     } else {
       // First day of current year
-      startOfPeriod = new Date(now.getFullYear(), 0, 1);
+      startOfPeriod = new Date(Date.UTC(now.getUTCFullYear(), 0, 1));
 
       // First day of next year
-      endOfPeriod = new Date(now.getFullYear() + 1, 0, 1);
+      endOfPeriod = new Date(Date.UTC(now.getUTCFullYear() + 1, 0, 1));
 
       // First day of last year
-      startOfLastPeriod = new Date(now.getFullYear() - 1, 0, 1);
+      startOfLastPeriod = new Date(Date.UTC(now.getUTCFullYear() - 1, 0, 1));
     }
 
     // Format as YYYY-MM-DD

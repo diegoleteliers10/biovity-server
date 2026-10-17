@@ -23,6 +23,21 @@ describe('validateEnv', () => {
     expect(env['DB_PORT']).toBe(5432);
   });
 
+  it('accepts an optional web app URL', () => {
+    const env = validateEnv({
+      ...validEnv,
+      WEB_APP_URL: 'https://preview.biovity.cl',
+    });
+
+    expect(env['WEB_APP_URL']).toBe('https://preview.biovity.cl');
+  });
+
+  it('rejects an invalid web app URL', () => {
+    expect(() =>
+      validateEnv({ ...validEnv, WEB_APP_URL: 'not-a-url' }),
+    ).toThrow(/WEB_APP_URL/);
+  });
+
   it('throws and names every missing required variable', () => {
     expect(() => validateEnv({})).toThrow(
       /DB_HOST[\s\S]*DB_PORT[\s\S]*RESEND_API_KEY/s,

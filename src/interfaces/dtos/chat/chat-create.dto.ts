@@ -7,6 +7,9 @@ export class ChatCreateDto {
   @IsUUID()
   professionalId: string;
 
+  @IsUUID()
+  organizationId: string;
+
   @IsOptional()
   @IsString()
   lastMessage?: string;

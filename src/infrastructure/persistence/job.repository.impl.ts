@@ -16,6 +16,9 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Job } from '../../core/domain/entities/job.entity';
 import { JobDomainOrmMapper } from '../../shared/mappers/job/jobDomain-orm.mapper';
+import { PipelineStageEntity } from '../database/orm/pipeline-stage.entity';
+import { ApplicationStatus } from '../../core/domain/enums';
+import * as crypto from 'crypto';
 
 @Injectable()
 export class JobRepositoryImpl implements IJobRepository {
@@ -28,7 +31,33 @@ export class JobRepositoryImpl implements IJobRepository {
 
   async create(entity: Job): Promise<Job> {
     const jobOrm = JobDomainOrmMapper.toOrm(entity);
-    const savedJob = await this.jobRepository.save(jobOrm);
+    const savedJob = await this.jobRepository.manager.transaction(
+      async manager => {
+        const saved = await manager.save(JobEntity, jobOrm);
+        const stages: Array<[ApplicationStatus, string, string]> = [
+          [ApplicationStatus.PENDIENTE, 'Pendiente', '#6366f1'],
+          [ApplicationStatus.ENTREVISTA, 'Entrevista', '#0ea5e9'],
+          [ApplicationStatus.OFERTA, 'Oferta', '#8b5cf6'],
+          [ApplicationStatus.CONTRATADO, 'Contratado', '#22c55e'],
+          [ApplicationStatus.RECHAZADO, 'Rechazado', '#ef4444'],
+          [ApplicationStatus.DESISTIDO, 'Desistido', '#64748b'],
+        ];
+        await manager.insert(
+          PipelineStageEntity,
+          stages.map(([status, name, color], order) => ({
+            id: crypto.randomUUID(),
+            jobId: saved.id,
+            name,
+            order,
+            color,
+            statusProjection: status,
+            systemKey: status,
+            isArchived: false,
+          })),
+        );
+        return saved;
+      },
+    );
     return JobDomainOrmMapper.toDomain(savedJob);
   }
 
@@ -60,6 +89,10 @@ export class JobRepositoryImpl implements IJobRepository {
           { activeAt: new Date() },
         );
       }
+    }
+
+    if (filters?.publicOnly) {
+      queryBuilder.andWhere(`organization.verification_status = 'verified'`);
     }
 
     if (filters?.organizationId) {

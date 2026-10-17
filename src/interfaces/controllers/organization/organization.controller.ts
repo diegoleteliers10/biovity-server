@@ -12,6 +12,7 @@ import {
   NotFoundException,
   BadRequestException,
   ForbiddenException,
+  UseGuards,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { Roles } from '../../../shared/decorators/roles.decorator';
@@ -37,6 +38,8 @@ import { Public } from '../../../shared/decorators/public.decorator';
 import type { AuthenticatedUser } from '../../../shared/auth/better-auth-session.service';
 import { OrganizationAccessService } from '../../../shared/auth/organization-access.service';
 import { isAdminUser } from '../../../shared/auth/better-auth-session.service';
+import { InternalSecretGuard } from '../../../shared/guards/internal-secret.guard';
+import { OrganizationInternalRegisterDto } from '../../dtos/organization/organization-internal-register.dto';
 
 @ApiTags('organizations')
 @Controller('organizations')
@@ -46,6 +49,21 @@ export class OrganizationController {
     private readonly organizationAccess: OrganizationAccessService,
     private readonly organizationPublic: OrganizationPublicService,
   ) {}
+
+  @Post('internal/register')
+  @Public()
+  @UseGuards(InternalSecretGuard)
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Register an organization for a new auth user' })
+  async registerOrganizationInternally(
+    @Body() dto: OrganizationInternalRegisterDto,
+  ): Promise<OrganizationResponseDto> {
+    const organization = await this.organizationService.createOrganization(
+      { name: dto.name, website: dto.website },
+      dto.ownerUserId,
+    );
+    return OrganizationDomainDtoMapper.toDto(organization);
+  }
 
   // No @Roles: the caller is the org-typed user that still has no
   // organization (resolveUserRole → 'none') and needs this to onboard.

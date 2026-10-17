@@ -7,6 +7,7 @@ export class ChatDomainOrmMapper {
     chatOrm.id = domain.id;
     chatOrm.recruiterId = domain.recruiterId;
     chatOrm.professionalId = domain.professionalId;
+    chatOrm.organizationId = domain.organizationId;
     chatOrm.lastMessage = domain.lastMessage;
     chatOrm.unreadCountRecruiter = domain.unreadCountRecruiter;
     chatOrm.unreadCountProfessional = domain.unreadCountProfessional;
@@ -26,6 +27,8 @@ export class ChatDomainOrmMapper {
       partial.recruiterId = domain.recruiterId;
     if (domain.professionalId !== undefined)
       partial.professionalId = domain.professionalId;
+    if (domain.organizationId !== undefined)
+      partial.organizationId = domain.organizationId;
     if (domain.lastMessage !== undefined)
       partial.lastMessage = domain.lastMessage;
     if (domain.unreadCountRecruiter !== undefined)
@@ -59,6 +62,7 @@ export class ChatDomainOrmMapper {
       entity.isPinnedByProfessional,
       entity.isArchivedByRecruiter,
       entity.isArchivedByProfessional,
+      entity.organizationId ?? null,
     );
   }
 }

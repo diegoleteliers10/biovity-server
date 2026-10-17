@@ -18,8 +18,7 @@ import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
  * and compares it against the resolved platform role of the authenticated
  * user. Rules:
  * - No @Roles metadata: any authenticated caller passes.
- * - No request.user: the caller authenticated with the shared internal key
- *   (server-to-server from the Next.js backend) and passes by design.
+ * - A private route without a user fails closed.
  * - Admins always pass.
  * - Role not listed: 403.
  */
@@ -36,17 +35,19 @@ export class RolesGuard implements CanActivate {
     ]);
     if (isPublic) return true;
 
+    const request = context.switchToHttp().getRequest<{
+      user?: AuthenticatedUser;
+    }>();
+    const user = request.user;
+    if (!user) {
+      throw new ForbiddenException('Se requiere una sesión válida.');
+    }
+
     const requiredRoles = this.reflector.getAllAndOverride<UserRole[]>(
       ROLES_KEY,
       [context.getHandler(), context.getClass()],
     );
     if (!requiredRoles || requiredRoles.length === 0) return true;
-
-    const request = context.switchToHttp().getRequest<{
-      user?: AuthenticatedUser;
-    }>();
-    const user = request.user;
-    if (!user) return true;
 
     const role = resolveUserRole(user);
     if (role === 'admin' || requiredRoles.includes(role)) return true;

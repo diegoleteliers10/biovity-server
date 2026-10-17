@@ -5,9 +5,12 @@ import {
   Param,
   ParseUUIDPipe,
   Post,
+  Delete,
   NotFoundException,
   ForbiddenException,
+  Res,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import { ApiTags } from '@nestjs/swagger';
 import { Roles } from '../../../shared/decorators/roles.decorator';
 import { CurrentUser } from '../../../shared/decorators/current-user.decorator';
@@ -16,6 +19,7 @@ import { OrganizationAccessService } from '../../../shared/auth/organization-acc
 import { OfferLetterService } from '../../../core/services/offer-letter.service';
 import {
   CreateOfferLetterDto,
+  ResendOfferLetterDto,
   RespondOfferLetterDto,
 } from '../../dtos/offer-letter/offer-letter.dto';
 
@@ -32,6 +36,7 @@ export class OfferLetterController {
   async create(
     @Body() dto: CreateOfferLetterDto,
     @CurrentUser() requester: AuthenticatedUser,
+    @Res() response: Response,
   ) {
     await this.organizationAccess.assertApplicationAccess(
       dto.applicationId,
@@ -45,10 +50,16 @@ export class OfferLetterController {
         letterData: dto.letterData,
         pdfPath: dto.pdfPath,
         chatId: dto.chatId,
+        expiresOn: dto.expiresOn,
       },
       requester.id,
     );
-    return result.offerLetter;
+    if ('kind' in result) {
+      return response
+        .status(400)
+        .json({ message: 'La fecha de vencimiento debe ser hoy o posterior.' });
+    }
+    return response.json(result.offerLetter);
   }
 
   @Get('application/:applicationId')
@@ -94,5 +105,66 @@ export class OfferLetterController {
   ) {
     if (!requester) throw new ForbiddenException('No autorizado');
     return this.offerLetterService.respond(id, dto.response, requester.id);
+  }
+
+  @Post(':id/resend')
+  @Roles('organization')
+  async resend(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: ResendOfferLetterDto,
+    @CurrentUser() requester: AuthenticatedUser,
+    @Res() response: Response,
+  ) {
+    const offer = await this.offerLetterService.findById(id);
+    if (!offer)
+      return response.status(404).json({ message: 'Offer letter not found' });
+    await this.organizationAccess.assertApplicationAccess(
+      offer.applicationId,
+      requester,
+      'recruit',
+    );
+    const expiresOn = body.expiresOn;
+    const updated = await this.offerLetterService.resend(
+      id,
+      requester.id,
+      expiresOn,
+      body.pdfPath,
+    );
+    if (updated === 'invalid_expiry') {
+      return response
+        .status(400)
+        .json({ message: 'La fecha de vencimiento debe ser hoy o posterior.' });
+    }
+    if (updated === 'invalid_pdf_path') {
+      return response.status(400).json({ message: 'Invalid offer PDF path' });
+    }
+    if (!updated)
+      return response
+        .status(409)
+        .json({ message: 'La oferta ya no está disponible.' });
+    return response.json({ status: 'sent', expiresOn });
+  }
+
+  @Delete(':id')
+  @Roles('organization')
+  async cancel(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() requester: AuthenticatedUser,
+    @Res() response: Response,
+  ) {
+    const offer = await this.offerLetterService.findById(id);
+    if (!offer)
+      return response.status(404).json({ message: 'Offer letter not found' });
+    await this.organizationAccess.assertApplicationAccess(
+      offer.applicationId,
+      requester,
+      'recruit',
+    );
+    const cancelled = await this.offerLetterService.cancel(id, requester.id);
+    if (!cancelled)
+      return response
+        .status(409)
+        .json({ message: 'La oferta ya no se puede cancelar.' });
+    return response.json({ status: 'cancelled' });
   }
 }

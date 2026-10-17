@@ -67,14 +67,17 @@ export class ActivityLogController {
       requester,
       'manage',
     );
-    if (requester?.type !== 'admin' && dto.userId !== requester?.id) {
+    if (!requester) {
+      throw new BadRequestException('Se requiere una sesión válida.');
+    }
+    if (dto.userId !== requester.id) {
       throw new BadRequestException(
         'userId debe corresponder a la sesión actual.',
       );
     }
     return this.service.log({
       organizationId,
-      userId: dto.userId,
+      userId: requester.id,
       action: dto.action,
       description: dto.description,
       metadata: dto.metadata,

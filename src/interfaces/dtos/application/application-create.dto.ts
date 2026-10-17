@@ -1,6 +1,7 @@
 import {
   IsUUID,
   IsString,
+  IsIn,
   IsOptional,
   IsNumber,
   IsDateString,
@@ -11,6 +12,8 @@ import {
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { APPLICATION_SOURCE_CHANNELS } from '../../../core/domain/application-source';
+import type { ApplicationSourceChannel } from '../../../core/domain/application-source';
 
 export class ApplicationAnswerDto {
   @ApiProperty({ format: 'uuid', description: 'ID de la pregunta' })
@@ -33,6 +36,23 @@ export class ApplicationCreateDto {
   @ApiProperty({ format: 'uuid', description: 'ID del candidato' })
   @IsUUID()
   candidateId: string;
+
+  @ApiPropertyOptional({
+    enum: APPLICATION_SOURCE_CHANNELS.filter(channel => channel !== 'unknown'),
+    description: 'Canal por el que el candidato conoció la oferta',
+  })
+  @IsOptional()
+  @IsString()
+  @IsIn(APPLICATION_SOURCE_CHANNELS.filter(channel => channel !== 'unknown'))
+  sourceChannel?: Exclude<ApplicationSourceChannel, 'unknown'>;
+
+  @ApiPropertyOptional({
+    format: 'uuid',
+    description: 'Código de atribución de un enlace de difusión',
+  })
+  @IsOptional()
+  @IsUUID()
+  distributionSourceId?: string;
 
   @ApiPropertyOptional({
     example: 'Estimado equipo de selección...',

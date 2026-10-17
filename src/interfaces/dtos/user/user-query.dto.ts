@@ -9,7 +9,11 @@ import {
   Matches,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { UserType } from '../../../core/domain/enums';
+import {
+  CandidateAvailability,
+  CandidateSeniority,
+  UserType,
+} from '../../../core/domain/enums';
 
 export class UserQueryDto {
   @IsOptional()
@@ -44,8 +48,8 @@ export class UserQueryDto {
   profession?: string;
 
   @IsOptional()
-  @IsString()
-  experienceLevel?: string;
+  @IsEnum(CandidateSeniority)
+  experienceLevel?: CandidateSeniority;
 
   @IsOptional()
   @IsString()
@@ -56,8 +60,8 @@ export class UserQueryDto {
   country?: string;
 
   @IsOptional()
-  @IsString()
-  availability?: string;
+  @IsEnum(CandidateAvailability)
+  availability?: CandidateAvailability;
 
   /** Comma-separated list of skills */
   @IsOptional()

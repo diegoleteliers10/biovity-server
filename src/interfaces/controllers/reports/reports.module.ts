@@ -9,6 +9,7 @@ import {
   OrganizationMemberEntity,
 } from '../../../infrastructure/database/orm';
 import { MetricsReportService } from '../../../core/services/metrics-report.service';
+import { EmailOutboxDispatcherService } from '../../../core/services/email-outbox-dispatcher.service';
 
 @Module({
   imports: [
@@ -21,7 +22,7 @@ import { MetricsReportService } from '../../../core/services/metrics-report.serv
       OrganizationMemberEntity,
     ]),
   ],
-  providers: [MetricsReportService],
-  exports: [MetricsReportService],
+  providers: [MetricsReportService, EmailOutboxDispatcherService],
+  exports: [MetricsReportService, EmailOutboxDispatcherService],
 })
 export class ReportsModule {}

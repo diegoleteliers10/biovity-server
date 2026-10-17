@@ -1,3 +1,5 @@
+import { ApplicationStatus } from '../enums';
+
 export class PipelineStage {
   constructor(
     public id: string,
@@ -5,5 +7,8 @@ export class PipelineStage {
     public name: string,
     public order: number = 0,
     public color: string = '#6366f1',
+    public statusProjection: ApplicationStatus = ApplicationStatus.PENDIENTE,
+    public systemKey: string | null = null,
+    public isArchived: boolean = false,
   ) {}
 }

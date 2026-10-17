@@ -9,6 +9,9 @@ export class PipelineStageDomainDtoMapper {
       name: domain.name,
       order: domain.order,
       color: domain.color,
+      statusProjection: domain.statusProjection,
+      systemKey: domain.systemKey,
+      isArchived: domain.isArchived,
     };
   }
 }

@@ -32,8 +32,9 @@ describe('ApplicationRepositoryImpl create', () => {
     };
     const dataSource = {
       transaction: jest.fn(
-        async (operation: (value: typeof manager) => unknown) =>
-          operation(manager),
+        async (operation: (value: typeof manager) => unknown) => {
+          return await operation(manager);
+        },
       ),
     };
     const repository = new ApplicationRepositoryImpl(
@@ -68,8 +69,9 @@ describe('ApplicationRepositoryImpl create', () => {
     };
     const dataSource = {
       transaction: jest.fn(
-        async (operation: (value: typeof manager) => unknown) =>
-          operation(manager),
+        async (operation: (value: typeof manager) => unknown) => {
+          return await operation(manager);
+        },
       ),
     };
     const repository = new ApplicationRepositoryImpl(
@@ -92,13 +94,14 @@ describe('ApplicationRepositoryImpl create', () => {
 });
 
 describe('ApplicationRepositoryImpl status history', () => {
-  it('stores the rejection note with the status transition in one transaction', async () => {
+  it('stores the reason snapshot and note with the status transition in one transaction', async () => {
     const transactionManager = {
       findOne: jest
         .fn()
         .mockResolvedValueOnce({
           id: 'application-id',
           jobId: 'job-id',
+          candidateId: 'candidate-id',
           status: ApplicationStatus.PENDIENTE,
           pipelineStageId: 'pending-stage',
           pipelineStage: { id: 'pending-stage', name: 'Pendiente' },
@@ -118,15 +121,28 @@ describe('ApplicationRepositoryImpl status history', () => {
           statusProjection: ApplicationStatus.PENDIENTE,
           systemKey: ApplicationStatus.PENDIENTE,
           isArchived: false,
-        }),
+        })
+        .mockResolvedValueOnce({
+          id: 'job-id',
+          organizationId: 'organization-id',
+        })
+        .mockResolvedValueOnce({
+          id: 'reason-id',
+          label: 'Experiencia insuficiente',
+          organizationId: 'organization-id',
+          active: true,
+        })
+        .mockResolvedValueOnce({ id: 'job-id', title: 'Lab role' }),
       update: jest.fn().mockResolvedValue(undefined),
       insert: jest.fn().mockResolvedValue(undefined),
+      query: jest.fn().mockResolvedValue(undefined),
     };
     type TransactionManager = typeof transactionManager;
     const dataSource = {
       transaction: jest.fn(
-        async (operation: (manager: TransactionManager) => unknown) =>
-          operation(transactionManager),
+        async (operation: (manager: TransactionManager) => unknown) => {
+          return await operation(transactionManager);
+        },
       ),
     };
     const applicationRepository = {
@@ -150,6 +166,7 @@ describe('ApplicationRepositoryImpl status history', () => {
       status: ApplicationStatus.RECHAZADO,
       changedById: 'recruiter-id',
       rejectionNote: 'Experiencia insuficiente para este cargo',
+      rejectionReasonId: 'reason-id',
     });
 
     expect(transactionManager.update).toHaveBeenCalledWith(
@@ -165,9 +182,389 @@ describe('ApplicationRepositoryImpl status history', () => {
         newStatus: ApplicationStatus.RECHAZADO,
         changedById: 'recruiter-id',
         rejectionNote: 'Experiencia insuficiente para este cargo',
+        rejectionReasonId: 'reason-id',
+        rejectionReasonSnapshot: 'Experiencia insuficiente',
       }),
     );
+    expect(transactionManager.query).toHaveBeenCalledWith(
+      expect.stringContaining(
+        'INSERT INTO application_status_notification_intent',
+      ),
+      expect.arrayContaining([
+        expect.any(String),
+        'application-id',
+        'candidate-id',
+        'job-id',
+        ApplicationStatus.RECHAZADO,
+        'Lab role',
+        'Rechazado',
+      ]),
+    );
+    expect(transactionManager.insert.mock.invocationCallOrder[0]).toBeLessThan(
+      transactionManager.query.mock.invocationCallOrder[0],
+    );
     expect(dataSource.transaction).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects a rejected status without a structured reason before writing', async () => {
+    const manager = {
+      findOne: jest
+        .fn()
+        .mockResolvedValueOnce({
+          id: 'application-id',
+          jobId: 'job-id',
+          status: ApplicationStatus.PENDIENTE,
+          pipelineStageId: 'pending-stage',
+        })
+        .mockResolvedValueOnce({
+          id: 'rejected-stage',
+          jobId: 'job-id',
+          statusProjection: ApplicationStatus.RECHAZADO,
+          isArchived: false,
+        })
+        .mockResolvedValueOnce({ id: 'pending-stage', name: 'Pendiente' }),
+      update: jest.fn(),
+      insert: jest.fn(),
+    };
+    const dataSource = {
+      transaction: jest.fn(
+        async (operation: (value: typeof manager) => unknown) => {
+          return await operation(manager);
+        },
+      ),
+    };
+    const repository = new ApplicationRepositoryImpl(
+      { findOne: jest.fn() } as never,
+      dataSource as never,
+    );
+
+    await expect(
+      repository.update({
+        id: 'application-id',
+        status: ApplicationStatus.RECHAZADO,
+        changedById: 'recruiter-id',
+        rejectionNote: null,
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(manager.update).not.toHaveBeenCalled();
+    expect(manager.insert).not.toHaveBeenCalled();
+  });
+
+  it('rejects the transaction when a status notification intent cannot be saved', async () => {
+    const manager = {
+      findOne: jest
+        .fn()
+        .mockResolvedValueOnce({
+          id: 'application-id',
+          jobId: 'job-id',
+          candidateId: 'candidate-id',
+          status: ApplicationStatus.PENDIENTE,
+          pipelineStageId: 'pending-stage',
+        })
+        .mockResolvedValueOnce({
+          id: 'interview-stage',
+          jobId: 'job-id',
+          name: 'Entrevista',
+          statusProjection: ApplicationStatus.ENTREVISTA,
+          isArchived: false,
+        })
+        .mockResolvedValueOnce({
+          id: 'pending-stage',
+          name: 'Pendiente',
+        })
+        .mockResolvedValueOnce({ id: 'job-id', title: 'Lab role' }),
+      update: jest.fn().mockResolvedValue(undefined),
+      insert: jest.fn().mockResolvedValue(undefined),
+      query: jest.fn().mockRejectedValue(new Error('intent insert failed')),
+    };
+    const dataSource = {
+      transaction: jest.fn((operation: (value: typeof manager) => unknown) =>
+        operation(manager),
+      ),
+    };
+    const repository = new ApplicationRepositoryImpl(
+      { findOne: jest.fn() } as never,
+      dataSource as never,
+    );
+
+    await expect(
+      repository.update({
+        id: 'application-id',
+        status: ApplicationStatus.ENTREVISTA,
+        changedById: 'recruiter-id',
+        rejectionNote: null,
+      }),
+    ).rejects.toThrow('intent insert failed');
+
+    expect(manager.update).toHaveBeenCalledTimes(1);
+    expect(manager.insert).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        applicationId: 'application-id',
+        newStatus: ApplicationStatus.ENTREVISTA,
+      }),
+    );
+    expect(manager.query).toHaveBeenCalledWith(
+      expect.stringContaining(
+        'INSERT INTO application_status_notification_intent',
+      ),
+      expect.any(Array),
+    );
+    expect(dataSource.transaction).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    { organizationId: 'other-organization-id', active: true },
+    { organizationId: 'organization-id', active: false },
+  ])(
+    'rejects an inactive or cross-organization reason before writing',
+    async ({ organizationId, active }) => {
+      const manager = {
+        findOne: jest
+          .fn()
+          .mockResolvedValueOnce({
+            id: 'application-id',
+            jobId: 'job-id',
+            status: ApplicationStatus.PENDIENTE,
+            pipelineStageId: 'pending-stage',
+          })
+          .mockResolvedValueOnce({
+            id: 'rejected-stage',
+            jobId: 'job-id',
+            statusProjection: ApplicationStatus.RECHAZADO,
+            isArchived: false,
+          })
+          .mockResolvedValueOnce({ id: 'pending-stage', name: 'Pendiente' })
+          .mockResolvedValueOnce({
+            id: 'job-id',
+            organizationId: 'organization-id',
+          })
+          .mockResolvedValueOnce(
+            organizationId === 'organization-id' && active
+              ? {
+                  id: 'reason-id',
+                  organizationId,
+                  active,
+                  label: 'Experiencia',
+                }
+              : null,
+          ),
+        update: jest.fn(),
+        insert: jest.fn(),
+      };
+      const dataSource = {
+        transaction: jest.fn(
+          async (operation: (value: typeof manager) => unknown) => {
+            return await operation(manager);
+          },
+        ),
+      };
+      const repository = new ApplicationRepositoryImpl(
+        { findOne: jest.fn() } as never,
+        dataSource as never,
+      );
+
+      await expect(
+        repository.update({
+          id: 'application-id',
+          status: ApplicationStatus.RECHAZADO,
+          changedById: 'recruiter-id',
+          rejectionNote: null,
+          rejectionReasonId: 'reason-id',
+        }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(manager.findOne).toHaveBeenLastCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          where: {
+            id: 'reason-id',
+            organizationId: 'organization-id',
+            active: true,
+          },
+        }),
+      );
+      expect(manager.update).not.toHaveBeenCalled();
+      expect(manager.insert).not.toHaveBeenCalled();
+    },
+  );
+});
+
+describe('ApplicationRepositoryImpl terminal transitions', () => {
+  it('requires the explicit reopen operation to leave a closed application', async () => {
+    const manager = {
+      findOne: jest
+        .fn()
+        .mockResolvedValueOnce({
+          id: 'application-id',
+          jobId: 'job-id',
+          candidateId: 'candidate-id',
+          status: ApplicationStatus.RECHAZADO,
+          pipelineStageId: 'rejected-stage',
+        })
+        .mockResolvedValueOnce({
+          id: 'interview-stage',
+          jobId: 'job-id',
+          name: 'Entrevista técnica',
+          statusProjection: ApplicationStatus.ENTREVISTA,
+          isArchived: false,
+        })
+        .mockResolvedValueOnce({
+          id: 'rejected-stage',
+          jobId: 'job-id',
+          name: 'Rechazada',
+        }),
+      update: jest.fn(),
+      insert: jest.fn(),
+      query: jest.fn(),
+    };
+    const dataSource = {
+      transaction: jest.fn(
+        async (operation: (value: typeof manager) => unknown) =>
+          operation(manager),
+      ),
+    };
+    const repository = new ApplicationRepositoryImpl(
+      { findOne: jest.fn() } as never,
+      dataSource as never,
+    );
+
+    await expect(
+      repository.transitionStage({
+        id: 'application-id',
+        stageId: 'interview-stage',
+        changedById: 'recruiter-id',
+        rejectionNote: null,
+      }),
+    ).rejects.toThrow('A closed application must be reopened with a reason');
+    expect(manager.update).not.toHaveBeenCalled();
+    expect(manager.insert).not.toHaveBeenCalled();
+  });
+
+  it('reopens into an active stage and stores the actor and reason in history', async () => {
+    const manager = {
+      findOne: jest
+        .fn()
+        .mockResolvedValueOnce({
+          id: 'application-id',
+          jobId: 'job-id',
+          candidateId: 'candidate-id',
+          status: ApplicationStatus.RECHAZADO,
+          pipelineStageId: 'rejected-stage',
+        })
+        .mockResolvedValueOnce({
+          id: 'interview-stage',
+          jobId: 'job-id',
+          name: 'Entrevista técnica',
+          statusProjection: ApplicationStatus.ENTREVISTA,
+          isArchived: false,
+        })
+        .mockResolvedValueOnce({
+          id: 'rejected-stage',
+          jobId: 'job-id',
+          name: 'Rechazada',
+        })
+        .mockResolvedValueOnce({ id: 'job-id', title: 'Researcher' }),
+      update: jest.fn(),
+      insert: jest.fn(),
+      query: jest.fn(),
+    };
+    const dataSource = {
+      transaction: jest.fn(
+        async (operation: (value: typeof manager) => unknown) =>
+          operation(manager),
+      ),
+    };
+    const applicationRepository = {
+      findOne: jest.fn().mockResolvedValue({
+        id: 'application-id',
+        jobId: 'job-id',
+        candidateId: 'candidate-id',
+        status: ApplicationStatus.ENTREVISTA,
+      }),
+    };
+    const repository = new ApplicationRepositoryImpl(
+      applicationRepository as never,
+      dataSource as never,
+    );
+
+    await repository.reopen({
+      id: 'application-id',
+      stageId: 'interview-stage',
+      changedById: 'recruiter-id',
+      reason: 'La persona envió la certificación que faltaba',
+    });
+
+    expect(manager.update).toHaveBeenCalledWith(
+      expect.anything(),
+      'application-id',
+      expect.objectContaining({ status: ApplicationStatus.ENTREVISTA }),
+    );
+    expect(manager.insert).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        previousStatus: ApplicationStatus.RECHAZADO,
+        newStatus: ApplicationStatus.ENTREVISTA,
+        changedById: 'recruiter-id',
+        transitionKind: 'reopen',
+        transitionNote: 'La persona envió la certificación que faltaba',
+      }),
+    );
+    expect(manager.query).toHaveBeenCalledWith(
+      expect.stringContaining(
+        'INSERT INTO application_status_notification_intent',
+      ),
+      expect.any(Array),
+    );
+    expect(dataSource.transaction).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects reopening into the same terminal stage', async () => {
+    const manager = {
+      findOne: jest
+        .fn()
+        .mockResolvedValueOnce({
+          id: 'application-id',
+          jobId: 'job-id',
+          candidateId: 'candidate-id',
+          status: ApplicationStatus.RECHAZADO,
+          pipelineStageId: 'rejected-stage',
+        })
+        .mockResolvedValueOnce({
+          id: 'rejected-stage',
+          jobId: 'job-id',
+          name: 'Rechazada',
+          statusProjection: ApplicationStatus.RECHAZADO,
+          isArchived: false,
+        })
+        .mockResolvedValueOnce({
+          id: 'rejected-stage',
+          jobId: 'job-id',
+          name: 'Rechazada',
+        }),
+      update: jest.fn(),
+      insert: jest.fn(),
+    };
+    const dataSource = {
+      transaction: jest.fn(
+        async (operation: (value: typeof manager) => unknown) =>
+          operation(manager),
+      ),
+    };
+    const repository = new ApplicationRepositoryImpl(
+      { findOne: jest.fn() } as never,
+      dataSource as never,
+    );
+
+    await expect(
+      repository.reopen({
+        id: 'application-id',
+        stageId: 'rejected-stage',
+        changedById: 'recruiter-id',
+        reason: 'Se revisará de nuevo',
+      }),
+    ).rejects.toThrow('Reopen the application into an active stage');
+    expect(manager.update).not.toHaveBeenCalled();
+    expect(manager.insert).not.toHaveBeenCalled();
   });
 });
 
@@ -194,8 +591,9 @@ describe('ApplicationRepositoryImpl pipeline transitions', () => {
     };
     const dataSource = {
       transaction: jest.fn(
-        async (operation: (value: typeof manager) => unknown) =>
-          operation(manager),
+        async (operation: (value: typeof manager) => unknown) => {
+          return await operation(manager);
+        },
       ),
     };
     const repository = new ApplicationRepositoryImpl(
@@ -240,8 +638,9 @@ describe('ApplicationRepositoryImpl hiring plan', () => {
     };
     const dataSource = {
       transaction: jest.fn(
-        async (operation: (value: typeof manager) => unknown) =>
-          operation(manager),
+        async (operation: (value: typeof manager) => unknown) => {
+          return await operation(manager);
+        },
       ),
     };
     const repository = new ApplicationRepositoryImpl(
@@ -280,8 +679,9 @@ describe('ApplicationRepositoryImpl hiring plan', () => {
     };
     const dataSource = {
       transaction: jest.fn(
-        async (operation: (value: typeof manager) => unknown) =>
-          operation(manager),
+        async (operation: (value: typeof manager) => unknown) => {
+          return await operation(manager);
+        },
       ),
     };
     const repository = new ApplicationRepositoryImpl(

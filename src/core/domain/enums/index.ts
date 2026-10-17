@@ -41,6 +41,22 @@ export enum ApplicationStatus {
 export enum UserType {
   PROFESSIONAL = 'professional',
   ORGANIZATION = 'organization',
+  ADMIN = 'admin',
+}
+
+export enum CandidateSeniority {
+  JUNIOR = 'junior',
+  MID = 'mid',
+  SENIOR = 'senior',
+  LEAD = 'lead',
+  MANAGER = 'manager',
+}
+
+export enum CandidateAvailability {
+  IMMEDIATE = 'immediate',
+  TWO_WEEKS = '2weeks',
+  ONE_MONTH = '1month',
+  OPEN = 'open',
 }
 
 export enum SubscriptionPlan {

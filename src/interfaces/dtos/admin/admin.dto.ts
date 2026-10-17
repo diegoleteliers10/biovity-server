@@ -1,6 +1,15 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsInt, IsOptional, IsString, IsUUID, Max, Min } from 'class-validator';
+import {
+  IsInt,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Matches,
+  Max,
+  MaxLength,
+  Min,
+} from 'class-validator';
 
 export class AdminStatsResponseDto {
   @ApiProperty({ example: 1240 })
@@ -154,9 +163,17 @@ export class SystemBroadcastDto {
 
   @ApiProperty({ example: 'Mantenimiento programado' })
   @IsString()
+  @Matches(/\S/)
+  @MaxLength(160)
   title: string;
 
   @ApiProperty({ example: 'El sistema estara en mantenimiento...' })
   @IsString()
+  @Matches(/\S/)
+  @MaxLength(2000)
   body: string;
+
+  @ApiProperty({ example: '3b22b2ac-2229-43cc-a3c1-914718736b75' })
+  @IsUUID()
+  requestId: string;
 }

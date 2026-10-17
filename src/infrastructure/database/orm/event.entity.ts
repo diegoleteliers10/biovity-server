@@ -33,6 +33,9 @@ export class EventEntity {
   @Column({ type: 'text' })
   public type: EventType;
 
+  @Column({ type: 'text', default: 'America/Santiago' })
+  public timeZone: string;
+
   @Column({ type: 'timestamptz' })
   public startAt: Date;
 
@@ -48,6 +51,9 @@ export class EventEntity {
   @Column({ type: 'text', default: EventStatus.SCHEDULED })
   public status: EventStatus;
 
+  @Column({ name: 'calendar_provider', type: 'text', default: 'biovity' })
+  public calendarProvider: 'biovity' | 'google';
+
   @Column({ type: 'uuid' })
   public organizerId: string;
 
@@ -59,6 +65,19 @@ export class EventEntity {
 
   @Column({ type: 'uuid', nullable: true })
   public applicationId: string | null;
+
+  @Column({ name: 'pipeline_stage_id', type: 'uuid', nullable: true })
+  public pipelineStageId: string | null;
+
+  @Column({
+    name: 'pipeline_stage_name_snapshot',
+    type: 'text',
+    nullable: true,
+  })
+  public pipelineStageNameSnapshot: string | null;
+
+  @Column({ name: 'rubric_version_id', type: 'uuid', nullable: true })
+  public rubricVersionId: string | null;
 
   @ManyToOne(() => UserEntity)
   @JoinColumn({ name: 'organizerId' })

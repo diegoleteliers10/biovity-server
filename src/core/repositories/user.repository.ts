@@ -1,5 +1,9 @@
 import { User } from '../domain/entities/index';
-import { UserType } from '../domain/enums';
+import {
+  CandidateAvailability,
+  CandidateSeniority,
+  UserType,
+} from '../domain/enums';
 
 export interface UserFilters {
   type?: 'professional' | 'organization';
@@ -7,10 +11,10 @@ export interface UserFilters {
   search?: string; // searches in name or email
   // F8.1 — Filtros faceted
   profession?: string;
-  experienceLevel?: string;
+  experienceLevel?: CandidateSeniority;
   city?: string;
   country?: string;
-  availability?: string;
+  availability?: CandidateAvailability;
   skills?: string[]; // skills array — match any
   minExperience?: number;
   maxExperience?: number;

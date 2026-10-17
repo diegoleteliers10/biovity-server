@@ -9,6 +9,7 @@ import { JobController } from './job.controller';
 import { JobService } from '../../../core/services/job.service';
 import { JobRepositoryImpl } from '../../../infrastructure/persistence/job.repository.impl';
 import { OrganizationRepositoryImpl } from '../../../infrastructure/persistence/organization.repository.impl';
+import { JobDistributionSourceService } from '../../../core/services/job-distribution-source.service';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { OrganizationRepositoryImpl } from '../../../infrastructure/persistence/
   controllers: [JobController],
   providers: [
     JobService,
+    JobDistributionSourceService,
     {
       provide: 'IJobRepository',
       useClass: JobRepositoryImpl,

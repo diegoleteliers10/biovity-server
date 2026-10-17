@@ -148,6 +148,31 @@ export class ApplicationResponseDto {
     | 'contratado'
     | 'desistido';
 
+  @ApiPropertyOptional({ format: 'uuid' })
+  @IsOptional()
+  @IsUUID()
+  pipelineStageId?: string;
+
+  @ApiPropertyOptional({ format: 'uuid' })
+  @IsOptional()
+  @IsUUID()
+  assigneeId?: string;
+
+  @ApiPropertyOptional({ maxLength: 500 })
+  @IsOptional()
+  @IsString()
+  nextAction?: string;
+
+  @ApiPropertyOptional({ example: '2026-11-30' })
+  @IsOptional()
+  @IsDateString()
+  targetDate?: string;
+
+  @ApiPropertyOptional({ example: '2026-10-01T12:00:00.000Z' })
+  @IsOptional()
+  @IsDateString()
+  stageChangedAt?: Date;
+
   @ApiPropertyOptional({ type: [AnswerSummaryDto] })
   @IsOptional()
   @ValidateNested({ each: true })

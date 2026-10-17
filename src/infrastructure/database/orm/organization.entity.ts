@@ -24,6 +24,14 @@ export class OrganizationEntity {
   @Column({ nullable: false })
   public website: string;
 
+  @Column({
+    name: 'verification_status',
+    type: 'varchar',
+    default: 'unverified',
+  })
+  public verificationStatus:
+    'unverified' | 'pending' | 'verified' | 'rejected' | 'suspended';
+
   @Column({ nullable: true })
   public phone?: string;
 

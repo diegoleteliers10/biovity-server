@@ -1,9 +1,13 @@
-import { Injectable, NotFoundException, Inject } from '@nestjs/common';
+import {
+  Inject,
+  Injectable,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import * as crypto from 'crypto';
 import { DataSource } from 'typeorm';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { IMessageRepository } from '../repositories/message.repository';
-import { IChatRepository } from '../repositories/chat.repository';
 import {
   IMessageUseCase,
   CreateMessageInput,
@@ -12,19 +16,14 @@ import { Message, MessageContent } from '../domain/entities/message.entity';
 import { MessageType } from '../domain/enums';
 import { MessageEntity } from '../../infrastructure/database/orm/message.entity';
 import { ChatEntity } from '../../infrastructure/database/orm/chat.entity';
-import { NotificationService } from '../../shared/notification/notification.service';
-import { NotificationType } from '../domain/enums';
 
 @Injectable()
 export class MessageService implements IMessageUseCase {
   constructor(
     @Inject('IMessageRepository')
     private readonly messageRepository: IMessageRepository,
-    @Inject('IChatRepository')
-    private readonly chatRepository: IChatRepository,
     @InjectDataSource()
     private readonly dataSource: DataSource,
-    private readonly notificationService: NotificationService,
   ) {}
 
   private generateId(): string {
@@ -32,11 +31,6 @@ export class MessageService implements IMessageUseCase {
   }
 
   async createMessage(data: CreateMessageInput): Promise<Message> {
-    const chat = await this.chatRepository.findById(data.chatId);
-    if (!chat) {
-      throw new NotFoundException(`Chat with id ${data.chatId} not found`);
-    }
-
     const message = new Message(
       this.generateId(),
       data.chatId,
@@ -51,8 +45,29 @@ export class MessageService implements IMessageUseCase {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
+    let savedEntity: MessageEntity;
     try {
       const messageEntity = new MessageEntity();
+      const chats = await queryRunner.manager.query<
+        Array<{ recruiterId: string; professionalId: string }>
+      >(
+        `SELECT "recruiterId", "professionalId" FROM chat
+         WHERE id = $1::uuid FOR UPDATE`,
+        [data.chatId],
+      );
+      const chat = chats[0];
+      if (!chat) {
+        throw new NotFoundException(`Chat with id ${data.chatId} not found`);
+      }
+      const recipientId =
+        data.senderId === chat.recruiterId
+          ? chat.professionalId
+          : data.senderId === chat.professionalId
+            ? chat.recruiterId
+            : null;
+      if (!recipientId)
+        throw new ForbiddenException('Sender is not a chat participant');
+
       Object.assign(messageEntity, {
         id: message.id,
         chatId: message.chatId,
@@ -63,7 +78,7 @@ export class MessageService implements IMessageUseCase {
         isRead: message.isRead,
         createdAt: message.createdAt,
       });
-      const savedEntity = await queryRunner.manager.save(
+      savedEntity = await queryRunner.manager.save(
         MessageEntity,
         messageEntity,
       );
@@ -73,73 +88,31 @@ export class MessageService implements IMessageUseCase {
         updatedAt: new Date(),
       });
 
-      await queryRunner.commitTransaction();
-
-      const recipientId =
-        data.senderId === chat.recruiterId
-          ? chat.professionalId
-          : data.senderId === chat.professionalId
-            ? chat.recruiterId
-            : null;
-      if (recipientId) {
-        const sender = await this.findSenderProfile(data.senderId);
-        await this.notificationService.create({
-          userId: recipientId,
-          type: NotificationType.MESSAGE,
-          title: 'Nuevo mensaje',
-          body: 'Tienes un nuevo mensaje.',
-          link: `/dashboard/messages?chat=${data.chatId}`,
-          data: {
-            chatId: data.chatId,
-            messageId: message.id,
-            // The client renders the toast from these. They stay optional so a
-            // notification written before this change still shows its fallback.
-            ...(sender
-              ? { senderName: sender.name, senderAvatar: sender.avatar }
-              : {}),
-            preview: this.buildPreview(data.content),
-          },
-          dedupKey: `message:${message.id}`,
-        });
-      }
-
-      return new Message(
-        savedEntity.id,
-        savedEntity.chatId,
-        savedEntity.senderId,
-        savedEntity.content,
-        savedEntity.type,
-        savedEntity.contentType,
-        savedEntity.isRead,
-        savedEntity.createdAt,
+      await queryRunner.manager.query(
+        `INSERT INTO message_notification_intent (message_id, chat_id, recipient_id)
+         VALUES ($1::uuid, $2::uuid, $3::uuid)
+         ON CONFLICT (message_id, recipient_id) DO NOTHING`,
+        [message.id, data.chatId, recipientId],
       );
+
+      await queryRunner.commitTransaction();
     } catch (error) {
       await queryRunner.rollbackTransaction();
       throw error;
     } finally {
       await queryRunner.release();
     }
-  }
 
-  private buildPreview(content: string): string {
-    const flat = content.replace(/\s+/g, ' ').trim();
-    return flat.length > 90 ? `${flat.slice(0, 90)}…` : flat;
-  }
-
-  /**
-   * Best-effort lookup for the toast. A missing profile only costs the toast
-   * its avatar and name, so it never blocks the notification.
-   */
-  private async findSenderProfile(
-    senderId: string,
-  ): Promise<{ name: string; avatar: string | null } | null> {
-    const rows = await this.dataSource.query<
-      Array<{ name: string; avatar: string | null }>
-    >(`SELECT name, avatar FROM "user" WHERE id = $1::uuid LIMIT 1`, [
-      senderId,
-    ]);
-    const row = rows[0];
-    return row ? { name: row.name, avatar: row.avatar } : null;
+    return new Message(
+      savedEntity.id,
+      savedEntity.chatId,
+      savedEntity.senderId,
+      savedEntity.content,
+      savedEntity.type,
+      savedEntity.contentType,
+      savedEntity.isRead,
+      savedEntity.createdAt,
+    );
   }
 
   async getMessageById(id: string): Promise<Message | null> {

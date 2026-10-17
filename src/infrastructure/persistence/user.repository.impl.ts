@@ -7,10 +7,71 @@ import { User } from '../../core/domain/entities/user.entity';
 import { UserType } from '../../core/domain/enums';
 import { UserDomainOrmMapper } from '../../shared/mappers/user/userDomain-orm.mapper';
 import {
+  candidateSearchProfileChanged,
+  recordCandidateProfileChange,
+} from './candidate-profile-change';
+import {
   UserFilters,
   PaginationOptions,
   PaginatedResult,
 } from '../../core/repositories/user.repository';
+
+const CURRENT_RESUME_ID = `(
+  SELECT candidate_resume.id
+  FROM resume candidate_resume
+  WHERE candidate_resume."userId" = user.id
+  ORDER BY candidate_resume."updatedAt" DESC,
+           candidate_resume."createdAt" DESC,
+           candidate_resume.id DESC
+  LIMIT 1
+)`;
+
+const CANDIDATE_EXPERIENCE_YEARS = `(
+  SELECT COUNT(DISTINCT work_year)::int
+  FROM (
+    SELECT generate_series(years.start_year, years.end_year - 1) AS work_year
+    FROM resume experience_resume
+    CROSS JOIN LATERAL json_array_elements(
+      CASE
+        WHEN json_typeof(COALESCE(experience_resume.experiences, '[]'::json)) = 'array'
+          THEN COALESCE(experience_resume.experiences, '[]'::json)
+        ELSE '[]'::json
+      END
+    ) AS experience(value)
+    CROSS JOIN LATERAL (
+      SELECT
+        CASE
+          WHEN raw.start_value ~ '^[0-9]{4}(-[0-9]{2}(-[0-9]{2})?)?$'
+            THEN LEFT(raw.start_value, 4)::int
+          ELSE NULL
+        END AS start_year,
+        CASE
+          WHEN LOWER(COALESCE(experience.value->>'stillWorking', experience.value->>'current', 'false')) = 'true'
+            THEN EXTRACT(YEAR FROM now() AT TIME ZONE 'UTC')::int
+          WHEN raw.end_value ~ '^[0-9]{4}(-[0-9]{2}(-[0-9]{2})?)?$'
+            THEN LEFT(raw.end_value, 4)::int
+          ELSE NULL
+        END AS end_year
+      FROM (
+        SELECT
+          COALESCE(
+            CASE WHEN experience.value->>'startDate' ~ '^[0-9]{4}(-[0-9]{2}(-[0-9]{2})?)?$' THEN experience.value->>'startDate' END,
+            CASE WHEN experience.value->>'startYear' ~ '^[0-9]{4}(-[0-9]{2}(-[0-9]{2})?)?$' THEN experience.value->>'startYear' END
+          ) AS start_value,
+          COALESCE(
+            CASE WHEN experience.value->>'endDate' ~ '^[0-9]{4}(-[0-9]{2}(-[0-9]{2})?)?$' THEN experience.value->>'endDate' END,
+            CASE WHEN experience.value->>'endYear' ~ '^[0-9]{4}(-[0-9]{2}(-[0-9]{2})?)?$' THEN experience.value->>'endYear' END
+          ) AS end_value
+      ) raw
+    ) years
+    WHERE experience_resume.id = ${CURRENT_RESUME_ID}
+      AND years.start_year BETWEEN 1900 AND EXTRACT(YEAR FROM now() AT TIME ZONE 'UTC')::int
+      AND years.end_year BETWEEN years.start_year AND EXTRACT(YEAR FROM now() AT TIME ZONE 'UTC')::int
+  ) experience_years
+)`;
+
+const normalizeSkillFilter = (value: string): string =>
+  value.normalize('NFKC').trim().replace(/\s+/g, ' ').toLowerCase();
 
 @Injectable()
 export class UserRepositoryImpl implements IUserRepository {
@@ -20,9 +81,15 @@ export class UserRepositoryImpl implements IUserRepository {
   ) {}
 
   async create(entity: User): Promise<User> {
-    const userOrm = UserDomainOrmMapper.toOrm(entity);
-    const savedUser = await this.userRepository.save(userOrm);
-    return UserDomainOrmMapper.toDomain(savedUser);
+    return this.userRepository.manager.transaction(async manager => {
+      const savedUser = await manager
+        .getRepository(UserEntity)
+        .save(UserDomainOrmMapper.toOrm(entity));
+      if (savedUser.type === UserType.PROFESSIONAL) {
+        await recordCandidateProfileChange(manager, savedUser.id);
+      }
+      return UserDomainOrmMapper.toDomain(savedUser);
+    });
   }
 
   async findById(id: string): Promise<User | null> {
@@ -96,6 +163,12 @@ export class UserRepositoryImpl implements IUserRepository {
       });
     }
 
+    if (filters?.experienceLevel) {
+      queryBuilder.andWhere('user.experienceLevel = :experienceLevel', {
+        experienceLevel: filters.experienceLevel,
+      });
+    }
+
     if (filters?.city) {
       queryBuilder.andWhere("user.location->>'city' ILIKE :city", {
         city: `%${filters.city}%`,
@@ -105,6 +178,50 @@ export class UserRepositoryImpl implements IUserRepository {
     if (filters?.country) {
       queryBuilder.andWhere("user.location->>'country' ILIKE :country", {
         country: `%${filters.country}%`,
+      });
+    }
+
+    if (filters?.availability) {
+      queryBuilder.andWhere('user.availability = :availability', {
+        availability: filters.availability,
+      });
+    }
+
+    const skills = filters?.skills?.map(normalizeSkillFilter).filter(Boolean);
+    if (skills?.length) {
+      queryBuilder.andWhere(
+        `EXISTS (
+          SELECT 1
+          FROM resume skill_resume
+          CROSS JOIN LATERAL json_array_elements(
+            CASE
+              WHEN json_typeof(COALESCE(skill_resume.skills, '[]'::json)) = 'array'
+                THEN COALESCE(skill_resume.skills, '[]'::json)
+              ELSE '[]'::json
+            END
+          ) AS skill(value)
+          WHERE skill_resume.id = ${CURRENT_RESUME_ID}
+            AND LOWER(BTRIM(REGEXP_REPLACE(NORMALIZE(
+              CASE
+                WHEN json_typeof(skill.value) = 'string' THEN skill.value #>> '{}'
+                ELSE skill.value->>'name'
+              END,
+              NFKC
+            ), '[[:space:]]+', ' ', 'g'))) IN (:...skills)
+        )`,
+        { skills },
+      );
+    }
+
+    if (filters?.minExperience != null) {
+      queryBuilder.andWhere(`${CANDIDATE_EXPERIENCE_YEARS} >= :minExperience`, {
+        minExperience: filters.minExperience,
+      });
+    }
+
+    if (filters?.maxExperience != null) {
+      queryBuilder.andWhere(`${CANDIDATE_EXPERIENCE_YEARS} <= :maxExperience`, {
+        maxExperience: filters.maxExperience,
       });
     }
 
@@ -118,6 +235,10 @@ export class UserRepositoryImpl implements IUserRepository {
       .skip(skip)
       .take(limit)
       .orderBy(`user.${sortField}`, sortDirection);
+    queryBuilder
+      .addOrderBy('resumes.updatedAt', 'DESC')
+      .addOrderBy('resumes.createdAt', 'DESC')
+      .addOrderBy('resumes.id', 'DESC');
 
     const usersOrm = await queryBuilder.getMany();
     const data = usersOrm.map(userOrm => UserDomainOrmMapper.toDomain(userOrm));
@@ -132,15 +253,31 @@ export class UserRepositoryImpl implements IUserRepository {
   }
 
   async update(id: string, entity: Partial<User>): Promise<User | null> {
-    const existingUser = await this.userRepository.findOne({ where: { id } });
-    if (!existingUser) return null;
+    return this.userRepository.manager.transaction(async manager => {
+      const repository = manager.getRepository(UserEntity);
+      const existingUser = await repository.findOne({
+        where: { id },
+        lock: { mode: 'pessimistic_write' },
+      });
+      if (!existingUser) return null;
+      if (
+        existingUser.type === UserType.PROFESSIONAL &&
+        !existingUser.isActive &&
+        entity.isActive !== true
+      ) {
+        return null;
+      }
 
-    const updatedUserOrm = {
-      ...existingUser,
-      ...UserDomainOrmMapper.toOrm(entity as User),
-    };
-    const savedUser = await this.userRepository.save(updatedUserOrm);
-    return UserDomainOrmMapper.toDomain(savedUser);
+      const updatedUserOrm = {
+        ...existingUser,
+        ...UserDomainOrmMapper.toOrm(entity as User),
+      };
+      const savedUser = await repository.save(updatedUserOrm);
+      if (candidateSearchProfileChanged(existingUser, savedUser)) {
+        await recordCandidateProfileChange(manager, id);
+      }
+      return UserDomainOrmMapper.toDomain(savedUser);
+    });
   }
 
   async incrementViews(id: string): Promise<User | null> {

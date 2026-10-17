@@ -8,7 +8,11 @@ import {
   IsObject,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { UserType } from '../../../core/domain/enums';
+import {
+  CandidateAvailability,
+  CandidateSeniority,
+  UserType,
+} from '../../../core/domain/enums';
 
 export class UserLocationDto {
   @IsOptional()
@@ -102,6 +106,14 @@ export class UserUpdateDto {
   @IsOptional()
   @IsString()
   profession?: string;
+
+  @IsOptional()
+  @IsEnum(CandidateSeniority)
+  experienceLevel?: CandidateSeniority | null;
+
+  @IsOptional()
+  @IsEnum(CandidateAvailability)
+  availability?: CandidateAvailability | null;
 
   @IsOptional()
   @IsString()

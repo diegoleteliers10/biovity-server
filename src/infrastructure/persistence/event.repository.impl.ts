@@ -1,9 +1,20 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { EventEntity, EventNoteEntity } from '../database/orm';
-import { Event, EventNote } from '../../core/domain/entities/event.entity';
+import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
+import { DataSource, Repository } from 'typeorm';
 import {
+  EventChangeHistoryEntity,
+  EventEntity,
+  EventNoteEntity,
+} from '../database/orm';
+import { Event, EventNote } from '../../core/domain/entities/event.entity';
+import type {
+  EventChangeField,
+  EventChangeHistory,
+  EventChangeSet,
+} from '../../core/domain/entities/event-change-history';
+import { EventStatus, EventType } from '../../core/domain/enums';
+import type {
+  EventChangeResult,
   IEventRepository,
   EventFilters,
   PaginationOptions,
@@ -18,7 +29,148 @@ export class EventRepositoryImpl implements IEventRepository {
     private readonly eventRepository: Repository<EventEntity>,
     @InjectRepository(EventNoteEntity)
     private readonly noteRepository: Repository<EventNoteEntity>,
+    @InjectRepository(EventChangeHistoryEntity)
+    private readonly historyRepository: Repository<EventChangeHistoryEntity>,
+    @InjectDataSource()
+    private readonly dataSource: DataSource,
   ) {}
+
+  private normalizeChangeValue(value: string | Date | null): string | null {
+    return value instanceof Date ? value.toISOString() : value;
+  }
+
+  private buildChangeSet(
+    current: EventEntity,
+    patch: Partial<Event>,
+  ): EventChangeSet {
+    const changes: EventChangeSet = {};
+    const record = (
+      field: EventChangeField,
+      from: string | Date | null,
+      to: string | Date | null | undefined,
+    ): void => {
+      if (to === undefined) return;
+      const fromValue = this.normalizeChangeValue(from);
+      const toValue = this.normalizeChangeValue(to);
+      if (fromValue === toValue) return;
+      changes[field] = { from: fromValue, to: toValue };
+    };
+
+    record('title', current.title, patch.title);
+    record('description', current.description, patch.description);
+    record('type', current.type, patch.type);
+    record('timeZone', current.timeZone, patch.timeZone);
+    record('startAt', current.startAt, patch.startAt);
+    record('endAt', current.endAt, patch.endAt);
+    record('location', current.location, patch.location);
+    record('meetingUrl', current.meetingUrl, patch.meetingUrl);
+    record('status', current.status, patch.status);
+    record(
+      'calendarProvider',
+      current.calendarProvider,
+      patch.calendarProvider,
+    );
+    return changes;
+  }
+
+  private async persistChange(
+    id: string,
+    patch: Partial<Event>,
+    actorUserId: string,
+  ): Promise<EventChangeResult> {
+    return this.dataSource.transaction(async manager => {
+      const eventRepository = manager.getRepository(EventEntity);
+      const current = await eventRepository.findOne({
+        where: { id },
+        lock: { mode: 'pessimistic_write' },
+      });
+      if (!current) return { kind: 'not_found' };
+
+      const changes = this.buildChangeSet(current, patch);
+      if (Object.keys(changes).length === 0) {
+        return {
+          kind: 'unchanged',
+          event: EventDomainOrmMapper.toDomain(current),
+        };
+      }
+      if (current.status !== EventStatus.SCHEDULED) return { kind: 'closed' };
+
+      const action =
+        changes.status?.to === EventStatus.CANCELLED ? 'cancelled' : 'updated';
+      const saved = await eventRepository.save({
+        ...current,
+        ...patch,
+        updatedAt: new Date(),
+      });
+      const history = await manager
+        .getRepository(EventChangeHistoryEntity)
+        .save({
+          eventId: id,
+          actorUserId,
+          action,
+          changes,
+        });
+      await manager.query(
+        `INSERT INTO event_change_notification_intent
+          (change_history_id, event_id, recipient_id, action, event_title)
+         SELECT $1::uuid, event.id, participant.user_id, $2, $3
+         FROM event_participant participant
+         JOIN event ON event.id = participant.event_id
+         WHERE participant.event_id = $4::uuid
+           AND participant.user_id <> $5::uuid
+           AND ($2 = 'cancelled' OR participant.status <> 'declined')
+         ON CONFLICT (change_history_id, recipient_id) DO NOTHING`,
+        [history.id, action, saved.title, id, saved.organizerId],
+      );
+      if (
+        saved.status !== EventStatus.SCHEDULED ||
+        (saved.type !== EventType.INTERVIEW &&
+          (current.type === EventType.INTERVIEW ||
+            changes.status?.to === EventStatus.CANCELLED))
+      ) {
+        await manager.query(
+          `UPDATE interview_reminder_notification_intent
+           SET status = 'cancelled', locked_at = NULL, updated_at = now()
+           WHERE event_id = $1::uuid AND status IN ('pending', 'retry')`,
+          [id],
+        );
+      } else if (
+        saved.type === EventType.INTERVIEW &&
+        saved.status === EventStatus.SCHEDULED &&
+        (changes.startAt || changes.type?.to === EventType.INTERVIEW)
+      ) {
+        await manager.query(
+          `UPDATE interview_reminder_notification_intent
+           SET status = 'cancelled', locked_at = NULL, updated_at = now()
+           WHERE event_id = $1::uuid AND scheduled_start_at <> $2
+             AND status IN ('pending', 'retry')`,
+          [id, saved.startAt],
+        );
+        if (
+          saved.type === EventType.INTERVIEW &&
+          saved.status === EventStatus.SCHEDULED
+        ) {
+          await manager.query(
+            `INSERT INTO interview_reminder_notification_intent
+              (event_id, participant_id, scheduled_start_at, available_at)
+             SELECT event.id, participant.id, event."startAt",
+                    event."startAt" - interval '24 hours'
+             FROM event
+             JOIN event_participant participant ON participant.event_id = event.id
+             WHERE event.id = $1::uuid AND event."startAt" > now()
+             ON CONFLICT (event_id, participant_id, scheduled_start_at) DO NOTHING`,
+            [id],
+          );
+        }
+      }
+
+      return {
+        kind: 'changed',
+        event: EventDomainOrmMapper.toDomain(saved),
+        action,
+      };
+    });
+  }
 
   async create(entity: Event): Promise<Event> {
     const eventOrm = EventDomainOrmMapper.toOrm(entity);
@@ -70,6 +222,18 @@ export class EventRepositoryImpl implements IEventRepository {
       });
     }
 
+    if (filters?.applicationId) {
+      queryBuilder.andWhere(
+        `event.applicationId = :applicationId AND EXISTS (
+          SELECT 1 FROM application AS application
+          JOIN job AS job ON job.id = application."jobId"
+          WHERE application.id = event.applicationId
+            AND job."organizationId" = event.organizationId
+        )`,
+        { applicationId: filters.applicationId },
+      );
+    }
+
     if (filters?.userId) {
       queryBuilder.andWhere(
         `(event.organizerId = :userId OR EXISTS (SELECT 1 FROM event_participant ep WHERE ep.event_id = event.id AND ep.user_id = :userId))`,
@@ -118,12 +282,15 @@ export class EventRepositoryImpl implements IEventRepository {
     if (entity.description !== undefined)
       updateData.description = entity.description;
     if (entity.type !== undefined) updateData.type = entity.type;
+    if (entity.timeZone !== undefined) updateData.timeZone = entity.timeZone;
     if (entity.startAt !== undefined) updateData.startAt = entity.startAt;
     if (entity.endAt !== undefined) updateData.endAt = entity.endAt;
     if (entity.location !== undefined) updateData.location = entity.location;
     if (entity.meetingUrl !== undefined)
       updateData.meetingUrl = entity.meetingUrl;
     if (entity.status !== undefined) updateData.status = entity.status;
+    if (entity.calendarProvider !== undefined)
+      updateData.calendarProvider = entity.calendarProvider;
 
     if (Object.keys(updateData).length === 0) {
       return this.findById(id);
@@ -135,6 +302,32 @@ export class EventRepositoryImpl implements IEventRepository {
     if (result.affected === 0) return null;
 
     return this.findById(id);
+  }
+
+  async updateWithHistory(
+    id: string,
+    entity: Partial<Event>,
+    actorUserId: string,
+  ): Promise<EventChangeResult> {
+    return this.persistChange(id, entity, actorUserId);
+  }
+
+  async cancelWithHistory(
+    id: string,
+    actorUserId: string,
+  ): Promise<EventChangeResult> {
+    return this.persistChange(
+      id,
+      { status: EventStatus.CANCELLED },
+      actorUserId,
+    );
+  }
+
+  async findChangeHistory(id: string): Promise<EventChangeHistory[]> {
+    return this.historyRepository.find({
+      where: { eventId: id },
+      order: { createdAt: 'ASC', id: 'ASC' },
+    });
   }
 
   async delete(id: string): Promise<boolean> {

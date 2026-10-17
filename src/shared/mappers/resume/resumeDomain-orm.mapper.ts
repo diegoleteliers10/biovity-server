@@ -14,6 +14,7 @@ export class ResumeDomainOrmMapper {
     resumeOrm.languages = domain.languages || [];
     resumeOrm.links = domain.links || [];
     resumeOrm.cvFile = domain.cvFile;
+    resumeOrm.cvVersion = domain.cvVersion;
     resumeOrm.createdAt = domain.createdAt;
     resumeOrm.updatedAt = domain.updatedAt;
 
@@ -39,6 +40,7 @@ export class ResumeDomainOrmMapper {
       entity.cvFile,
       entity.createdAt,
       entity.updatedAt,
+      entity.cvVersion,
     );
   }
 }

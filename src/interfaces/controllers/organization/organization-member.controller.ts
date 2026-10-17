@@ -59,6 +59,20 @@ export class OrganizationMemberController {
     };
   }
 
+  @Get('owner')
+  @ApiOperation({ summary: 'Consultar propietario de la organización' })
+  async getOwner(
+    @Param('organizationId', ParseUUIDPipe) organizationId: string,
+    @CurrentUser() requester: AuthenticatedUser | undefined,
+  ): Promise<{ id: string; name: string; email: string } | null> {
+    await this.organizationAccess.assertAccess(
+      organizationId,
+      requester,
+      'read',
+    );
+    return this.organizationAccess.getOrganizationOwner(organizationId);
+  }
+
   @Post()
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Agregar miembro a la organización' })

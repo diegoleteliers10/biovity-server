@@ -14,7 +14,11 @@ import { SavedCandidateService } from '../../../core/services/saved-candidate.se
 import { Roles } from '../../../shared/decorators/roles.decorator';
 import { CurrentUser } from '../../../shared/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../../../shared/auth/better-auth-session.service';
+import { isAdminUser } from '../../../shared/auth/better-auth-session.service';
 import { OrganizationAccessService } from '../../../shared/auth/organization-access.service';
+import { AccessLevel } from '../../../shared/auth/user-access.policy';
+import { UserAccessMapper } from '../../../shared/mappers/user/userAccess-dto.mapper';
+import { UserDomainOrmMapper } from '../../../shared/mappers/user/userDomain-orm.mapper';
 import {
   PaginatedResponse,
   parsePagination,
@@ -44,7 +48,7 @@ export class SavedCandidateController {
     @Query('organizationId') organizationId: string,
     @Query() query: Record<string, string>,
     @CurrentUser() requester: AuthenticatedUser | undefined,
-  ): Promise<PaginatedResponse<unknown>> {
+  ): Promise<PaginatedResponse<Record<string, unknown>>> {
     if (!organizationId) {
       throw new BadRequestException('organizationId es requerido');
     }
@@ -53,10 +57,36 @@ export class SavedCandidateController {
       requester,
       'read',
     );
-    return this.service.findByOrganization(
+    const result = await this.service.findByOrganization(
       organizationId,
       parsePagination(query),
     );
+    const accessLevel =
+      requester?.type === 'admin' || (requester && isAdminUser(requester))
+        ? AccessLevel.BASIC
+        : requester &&
+            (await this.organizationAccess.hasAccess(
+              organizationId,
+              requester,
+              'recruit',
+            ))
+          ? AccessLevel.RECRUITER_CONTACT
+          : AccessLevel.DIRECTORY;
+
+    return {
+      ...result,
+      data: result.data.map(saved => ({
+        id: saved.id,
+        organizationId: saved.organizationId,
+        candidateId: saved.candidateId,
+        note: saved.note,
+        createdAt: saved.createdAt,
+        candidate: UserAccessMapper.toDto(
+          UserDomainOrmMapper.toDomain(saved.candidate),
+          accessLevel,
+        ),
+      })),
+    };
   }
 
   @Post()
