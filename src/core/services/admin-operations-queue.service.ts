@@ -279,7 +279,7 @@ export class AdminOperationsQueueService {
         intent.action::text AS status_label, intent.attempt_count AS attempt_count
       FROM event_change_notification_intent intent
       INNER JOIN event event ON event.id = intent.event_id
-      LEFT JOIN organization organization ON organization.id = event.organization_id
+      LEFT JOIN organization organization ON organization.id = event."organizationId"
       INNER JOIN "user" recipient ON recipient.id = intent.recipient_id
       WHERE intent.status = 'dead'
       UNION ALL
