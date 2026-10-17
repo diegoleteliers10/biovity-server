@@ -3,6 +3,7 @@ import {
   ForbiddenException,
   Injectable,
 } from '@nestjs/common';
+import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import type { AuthenticatedUser } from './better-auth-session.service';
 import { isAdminUser } from './better-auth-session.service';
@@ -23,7 +24,7 @@ const ROLE_PERMISSIONS: Record<
 
 @Injectable()
 export class OrganizationAccessService {
-  constructor(private readonly dataSource: DataSource) {}
+  constructor(@InjectDataSource() private readonly dataSource: DataSource) {}
 
   async getOrganizationOwner(
     organizationId: string,

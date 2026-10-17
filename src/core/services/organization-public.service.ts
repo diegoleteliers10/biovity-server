@@ -1,4 +1,5 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import { parsePagination, paginated } from '../../shared/pagination/pagination';
 import type {
@@ -57,7 +58,7 @@ const SELECT_COLUMNS = `
 @Injectable()
 export class OrganizationPublicService {
   constructor(
-    @Inject(DataSource)
+    @InjectDataSource()
     private readonly dataSource: DataSource,
   ) {}
 

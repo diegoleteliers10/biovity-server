@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource, EntityManager } from 'typeorm';
 
 type CandidateRow = {
@@ -90,7 +91,7 @@ const ELIGIBLE_CANDIDATES = `
 
 @Injectable()
 export class CandidateDataLifecycleService {
-  constructor(private readonly dataSource: DataSource) {}
+  constructor(@InjectDataSource() private readonly dataSource: DataSource) {}
 
   async exportCandidateData(
     candidateId: string,

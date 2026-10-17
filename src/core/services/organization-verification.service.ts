@@ -3,6 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import { NotificationService } from '../../shared/notification/notification.service';
 import { NotificationType } from '../domain/enums';
@@ -101,7 +102,7 @@ const ORGANIZATION_READINESS_SELECT = `SELECT organization.name, organization.we
 @Injectable()
 export class OrganizationVerificationService {
   constructor(
-    private readonly dataSource: DataSource,
+    @InjectDataSource() private readonly dataSource: DataSource,
     private readonly notifications: NotificationService,
   ) {}
 

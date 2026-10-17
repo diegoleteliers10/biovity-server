@@ -3,6 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource, EntityManager } from 'typeorm';
 import {
   ContactInquiryQueryDto,
@@ -86,7 +87,7 @@ function hasChanges(before: InquiryValues, after: InquiryValues): boolean {
 
 @Injectable()
 export class AdminContactInquiriesService {
-  constructor(private readonly dataSource: DataSource) {}
+  constructor(@InjectDataSource() private readonly dataSource: DataSource) {}
 
   async list(query: ContactInquiryQueryDto) {
     const clauses: string[] = ['TRUE'];

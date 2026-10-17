@@ -3,6 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource, EntityManager } from 'typeorm';
 import * as crypto from 'crypto';
 import { Resume } from '../domain/entities/resume.entity';
@@ -51,7 +52,7 @@ const CV_STORAGE_BUCKET = process.env.SUPABASE_CV_BUCKET ?? 'biovity_cv';
 
 @Injectable()
 export class ResumeCvLifecycleService {
-  constructor(private readonly dataSource: DataSource) {}
+  constructor(@InjectDataSource() private readonly dataSource: DataSource) {}
 
   async reserve(
     resumeId: string,
