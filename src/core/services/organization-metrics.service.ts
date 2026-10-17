@@ -706,7 +706,7 @@ export class OrganizationMetricsService {
           COUNT(*)::int AS "completedVisitCount"
         FROM completed_visits
         GROUP BY job_id, job_title, stage_id
-        ORDER BY job_title, stage_name, stage_id`,
+        ORDER BY job_title, "stageName", stage_id`,
         [organizationId, customStart ?? null, customEnd ?? null],
       ),
       this.statusHistoryRepository.query<
@@ -1150,9 +1150,17 @@ export class OrganizationMetricsService {
         .leftJoin('application.candidate', 'candidate')
         .leftJoin('application.job', 'job')
         .where('job.organizationId = :organizationId', { organizationId })
-        .select("COALESCE(candidate.location->>'city', 'Unknown')", 'city')
+        .andWhere('job.status = :activeStatus', {
+          activeStatus: JobStatus.ACTIVE,
+        })
+        .andWhere(
+          '(job.expiresAt IS NULL OR job.expiresAt > CURRENT_TIMESTAMP)',
+        )
+        .andWhere("NULLIF(BTRIM(candidate.location->>'city'), '') IS NOT NULL")
+        .andWhere("LOWER(BTRIM(candidate.location->>'city')) <> 'unknown'")
+        .select("BTRIM(candidate.location->>'city')", 'city')
         .addSelect('COUNT(*)', 'count')
-        .groupBy("COALESCE(candidate.location->>'city', 'Unknown')")
+        .groupBy("BTRIM(candidate.location->>'city')")
         .orderBy('count', 'DESC')
         .limit(10)
         .getRawMany();
@@ -1163,7 +1171,7 @@ export class OrganizationMetricsService {
     );
 
     return results.map(row => ({
-      city: row.city || 'Unknown',
+      city: row.city,
       count: parseInt(row.count, 10),
       percentage:
         total > 0 ? Math.round((parseInt(row.count, 10) / total) * 100) : 0,
