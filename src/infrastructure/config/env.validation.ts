@@ -13,9 +13,18 @@ export const envSchema = z
     DB_PASSWORD: z.string(),
     DB_NAME: z.string().min(1),
     WEB_APP_URL: z.string().url().optional(),
-    GOOGLE_CALENDAR_CLIENT_ID: z.string().min(1).optional(),
-    GOOGLE_CALENDAR_CLIENT_SECRET: z.string().min(1).optional(),
-    GOOGLE_CALENDAR_REDIRECT_URI: z.string().url().optional(),
+    GOOGLE_CALENDAR_CLIENT_ID: z.preprocess(
+      value => (value === '' ? undefined : value),
+      z.string().min(1).optional(),
+    ),
+    GOOGLE_CALENDAR_CLIENT_SECRET: z.preprocess(
+      value => (value === '' ? undefined : value),
+      z.string().min(1).optional(),
+    ),
+    GOOGLE_CALENDAR_REDIRECT_URI: z.preprocess(
+      value => (value === '' ? undefined : value),
+      z.string().url().optional(),
+    ),
 
     BETTER_AUTH_SECRET: z.string().min(1),
     INTERNAL_API_KEY: z.string().min(1),
