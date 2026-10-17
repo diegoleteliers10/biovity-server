@@ -9,6 +9,10 @@ export class PipelineStageDomainOrmMapper {
     orm.name = domain.name;
     orm.order = domain.order;
     orm.color = domain.color;
+    orm.statusProjection = domain.statusProjection;
+    orm.systemKey = domain.systemKey;
+    orm.isArchived = domain.isArchived;
+    orm.currentRubricVersionId = null;
     return orm;
   }
 
@@ -19,6 +23,9 @@ export class PipelineStageDomainOrmMapper {
       entity.name,
       entity.order,
       entity.color,
+      entity.statusProjection,
+      entity.systemKey,
+      entity.isArchived,
     );
   }
 }

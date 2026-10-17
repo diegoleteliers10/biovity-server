@@ -11,7 +11,11 @@ import {
 import { OrganizationEntity } from './organization.entity';
 import { ResumeEntity } from './resume.entity';
 import { ApplicationEntity } from './application.entity';
-import { UserType } from '../../../core/domain/enums';
+import {
+  CandidateAvailability,
+  CandidateSeniority,
+  UserType,
+} from '../../../core/domain/enums';
 
 @Entity('user')
 export class UserEntity {
@@ -52,6 +56,12 @@ export class UserEntity {
 
   @Column({ nullable: true })
   public profession?: string;
+
+  @Column({ type: 'varchar', length: 16, nullable: true })
+  public experienceLevel?: CandidateSeniority | null;
+
+  @Column({ type: 'varchar', length: 16, nullable: true })
+  public availability?: CandidateAvailability | null;
 
   @Column({ type: 'varchar', length: 10, nullable: true })
   public birthday?: string;

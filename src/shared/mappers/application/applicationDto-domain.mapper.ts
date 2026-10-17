@@ -14,6 +14,8 @@ export class ApplicationDtoDomainMapper {
       salaryCurrency: dto.salaryCurrency,
       availabilityDate: dto.availabilityDate,
       resumeUrl: dto.resumeUrl,
+      sourceChannel: dto.sourceChannel,
+      distributionSourceId: dto.distributionSourceId,
       answers: dto.answers,
     };
   }

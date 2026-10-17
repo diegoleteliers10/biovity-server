@@ -43,23 +43,207 @@ export class PipelineByStatusDto {
   contratado: number;
 }
 
-export class PipelineAvgTimeDto {
-  @ApiProperty({ example: 4.5, description: 'Días promedio hasta entrevista' })
-  entrevista: number;
+export class PipelineStageDurationDto {
+  @ApiProperty({ example: 'uuid' })
+  jobId: string;
 
-  @ApiProperty({ example: 10.2, description: 'Días promedio hasta oferta' })
-  oferta: number;
+  @ApiProperty({ example: 'Analista de laboratorio' })
+  jobTitle: string;
+
+  @ApiProperty({ example: 'uuid' })
+  stageId: string;
+
+  @ApiProperty({ example: 'Entrevista técnica' })
+  stageName: string;
 
   @ApiProperty({
-    example: 14.1,
-    description: 'Días promedio hasta contratación',
+    example: 4.5,
+    description: 'Promedio de días por visita cerrada',
   })
-  contratado: number;
+  averageCompletedDays: number;
+
+  @ApiProperty({ example: 12, description: 'Cantidad de visitas cerradas' })
+  completedVisitCount: number;
+}
+
+export class StageDurationVisitDto {
+  @ApiProperty({ example: 'uuid', description: 'ID único de la visita' })
+  visitId: string;
+
+  @ApiProperty({ example: 'uuid', description: 'ID de la postulación' })
+  applicationId: string;
+
+  @ApiProperty({ example: 'Nombre del postulante' })
+  applicantName: string;
+
+  @ApiProperty({ example: '2026-01-05T15:00:00Z' })
+  enteredAt: string;
+
+  @ApiProperty({ example: '2026-01-06T15:00:00Z' })
+  exitedAt: string;
+
+  @ApiProperty({ example: 1.25, description: 'Duración en días' })
+  durationDays: number;
+}
+
+export class StageDurationVisitsPageDto {
+  @ApiProperty({ type: [StageDurationVisitDto] })
+  rows: StageDurationVisitDto[];
+
+  @ApiProperty({ example: 42 })
+  total: number;
+
+  @ApiProperty({ example: 1 })
+  page: number;
+
+  @ApiProperty({ example: 20 })
+  pageSize: number;
+}
+
+export class CustomStageConversionDto {
+  @ApiProperty({ example: 'uuid' })
+  jobId: string;
+
+  @ApiProperty({ example: 'Analista de laboratorio' })
+  jobTitle: string;
+
+  @ApiProperty({ example: 'uuid' })
+  stageId: string;
+
+  @ApiProperty({ example: 'Revisión técnica' })
+  stageName: string;
+
+  @ApiProperty({ example: 18 })
+  enteredApplications: number;
+
+  @ApiProperty({ example: 8 })
+  advancedApplications: number;
+
+  @ApiProperty({ example: 44 })
+  conversionRate: number;
+}
+
+export class CustomStageApplicationDto {
+  @ApiProperty({ example: 'uuid' })
+  applicationId: string;
+
+  @ApiProperty({ example: 'Nombre del postulante' })
+  applicantName: string;
+
+  @ApiProperty({ example: 'Revisión técnica' })
+  stageNameAtEntry: string | null;
+
+  @ApiProperty({ example: '2026-01-05T15:00:00Z' })
+  firstEnteredAt: string;
+
+  @ApiProperty({ example: true })
+  advanced: boolean;
+
+  @ApiProperty({ example: 'entrevista' })
+  currentStatus: string;
+}
+
+export class CustomStageApplicationsPageDto {
+  @ApiProperty({ type: [CustomStageApplicationDto] })
+  rows: CustomStageApplicationDto[];
+
+  @ApiProperty({ example: 42 })
+  total: number;
+
+  @ApiProperty({ example: 1 })
+  page: number;
+
+  @ApiProperty({ example: 20 })
+  pageSize: number;
+}
+
+export class SourceApplicationDto {
+  @ApiProperty({ example: 'uuid' })
+  applicationId: string;
+
+  @ApiProperty({ example: 'uuid' })
+  jobId: string;
+
+  @ApiProperty({ example: 'Analista de laboratorio' })
+  jobTitle: string;
+
+  @ApiProperty({ example: 'Nombre del postulante' })
+  candidateName: string;
+
+  @ApiProperty({ example: 'entrevista' })
+  status: string;
+
+  @ApiProperty({ example: '2026-01-05T15:00:00Z' })
+  appliedAt: string;
+}
+
+export class SourceApplicationsPageDto {
+  @ApiProperty({ type: [SourceApplicationDto] })
+  rows: SourceApplicationDto[];
+
+  @ApiProperty({ example: 42 })
+  total: number;
+
+  @ApiProperty({ example: 1 })
+  page: number;
+
+  @ApiProperty({ example: 20 })
+  pageSize: number;
+}
+
+export class ResponseTimeVisitDto {
+  @ApiProperty({ example: 'uuid' })
+  applicationId: string;
+
+  @ApiProperty({ example: 'uuid' })
+  jobId: string;
+
+  @ApiProperty({ example: 'Nombre del postulante' })
+  applicantName: string;
+
+  @ApiProperty({ example: 'Analista de laboratorio' })
+  jobTitle: string;
+
+  @ApiProperty({ example: '2026-01-05T15:00:00Z' })
+  submittedAt: string;
+
+  @ApiProperty({ example: '2026-01-06T15:00:00Z', nullable: true })
+  respondedAt: string | null;
+
+  @ApiProperty({ example: 1.25, nullable: true })
+  responseDays: number | null;
+
+  @ApiProperty({ example: 'entrevista' })
+  currentStatus: string;
+}
+
+export class ResponseTimeVisitsPageDto {
+  @ApiProperty({ type: [ResponseTimeVisitDto] })
+  rows: ResponseTimeVisitDto[];
+
+  @ApiProperty({ example: 42 })
+  total: number;
+
+  @ApiProperty({ example: 1 })
+  page: number;
+
+  @ApiProperty({ example: 20 })
+  pageSize: number;
 }
 
 export class PipelineMetricsDto {
   @ApiProperty({ example: 11, description: 'Total de postulaciones' })
   totalApplications: number;
+
+  @ApiProperty({
+    example: { entrevista: 5, oferta: 2, contratado: 1 },
+    description: 'Postulaciones distintas que llegaron alguna vez a cada etapa',
+  })
+  reachedCounts: {
+    entrevista: number;
+    oferta: number;
+    contratado: number;
+  };
 
   @ApiProperty({ type: PipelineByStatusDto })
   byStatus: PipelineByStatusDto;
@@ -70,8 +254,11 @@ export class PipelineMetricsDto {
   })
   conversionRate: number;
 
-  @ApiProperty({ type: PipelineAvgTimeDto })
-  avgTimeInStages: PipelineAvgTimeDto;
+  @ApiProperty({ type: [CustomStageConversionDto] })
+  customStageConversions: CustomStageConversionDto[];
+
+  @ApiProperty({ type: [PipelineStageDurationDto] })
+  stageDurations: PipelineStageDurationDto[];
 }
 
 export class JobPerformanceDto {
@@ -175,4 +362,24 @@ export class OrganizationMetricsDto {
     description: 'Postulaciones del período aún sin responder',
   })
   unansweredCount: number;
+
+  @ApiProperty({ type: () => [ApplicationSourceAttributionDto] })
+  sourceAttribution: ApplicationSourceAttributionDto[];
+}
+
+export class ApplicationSourceAttributionDto {
+  @ApiProperty({ example: 'linkedin' })
+  sourceChannel: string;
+
+  @ApiProperty({ example: 'self_reported' })
+  sourceMethod: string;
+
+  @ApiProperty({ example: 20 })
+  applications: number;
+
+  @ApiProperty({ example: 8 })
+  reachedInterview: number;
+
+  @ApiProperty({ example: 2 })
+  hired: number;
 }

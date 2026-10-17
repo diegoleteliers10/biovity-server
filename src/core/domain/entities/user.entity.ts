@@ -1,5 +1,9 @@
 import type { Organization } from './organization.entity';
-import { UserType } from '../enums';
+import {
+  CandidateAvailability,
+  CandidateSeniority,
+  UserType,
+} from '../enums';
 
 export class User {
   constructor(
@@ -40,5 +44,7 @@ export class User {
     },
     public skills?: string[],
     public cvUpdatedAt?: Date,
+    public experienceLevel?: CandidateSeniority | null,
+    public availability?: CandidateAvailability | null,
   ) {}
 }

@@ -5,7 +5,6 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { timingSafeEqual } from 'crypto';
 import {
   BetterAuthSessionService,
   AuthenticatedUser,
@@ -18,10 +17,8 @@ const SESSION_COOKIE_NAMES = [
 ];
 
 /**
- * Authenticates requests either with a Better Auth session cookie (browser,
- * same-origin through the Next.js /api/v1 rewrite) or with the shared
- * `x-internal-key` header (server-to-server calls from the Next.js backend).
- * Sets `request.user = { id, type, organizationId }` for session requests.
+ * Authenticates private routes with a Better Auth session cookie and sets
+ * `request.user = { id, type, organizationId }`.
  */
 @Injectable()
 export class SessionAuthGuard implements CanActivate {
@@ -38,7 +35,6 @@ export class SessionAuthGuard implements CanActivate {
     if (isPublic) return true;
 
     const request = context.switchToHttp().getRequest<{
-      headers: Record<string, unknown>;
       cookies?: Record<string, string>;
       user?: AuthenticatedUser;
     }>();
@@ -47,25 +43,11 @@ export class SessionAuthGuard implements CanActivate {
     const cookieValue = SESSION_COOKIE_NAMES.map(name => cookies[name]).find(
       Boolean,
     );
-    if (this.hasValidInternalKey(request) && !cookieValue) return true;
     const user = await this.sessionService.validateSessionCookie(cookieValue);
     if (!user) {
       throw new UnauthorizedException('Se requiere una sesión válida.');
     }
     request.user = user;
     return true;
-  }
-
-  private hasValidInternalKey(request: {
-    headers: Record<string, unknown>;
-  }): boolean {
-    const expected = process.env.INTERNAL_API_KEY;
-    const provided = request.headers['x-internal-key'];
-    if (!expected || typeof provided !== 'string' || provided.length === 0) {
-      return false;
-    }
-    const given = Buffer.from(provided);
-    const wanted = Buffer.from(expected);
-    return given.length === wanted.length && timingSafeEqual(given, wanted);
   }
 }

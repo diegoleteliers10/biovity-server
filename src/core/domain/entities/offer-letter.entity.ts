@@ -1,4 +1,5 @@
-export type OfferLetterStatus = 'sent' | 'accepted' | 'rejected';
+export type OfferLetterStatus =
+  'sent' | 'accepted' | 'rejected' | 'cancelled' | 'expired';
 
 export interface OfferLetterData {
   companyName: string;
@@ -37,5 +38,6 @@ export class OfferLetter {
     public respondedAt?: Date | null,
     public createdAt: Date = new Date(),
     public updatedAt: Date = new Date(),
+    public expiresAt?: Date | null,
   ) {}
 }

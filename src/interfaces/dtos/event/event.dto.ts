@@ -4,6 +4,13 @@ import {
   IsEnum,
   IsOptional,
   IsDateString,
+  IsTimeZone,
+  IsArray,
+  ArrayUnique,
+  ArrayMaxSize,
+  ValidateNested,
+  ValidateIf,
+  Matches,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import {
@@ -13,6 +20,11 @@ import {
 } from '../../../core/domain/enums';
 
 export class EventCreateDto {
+  @ValidateIf((_object, value: unknown) => value !== undefined)
+  @Matches(/^[A-Za-z]/)
+  @IsTimeZone()
+  timeZone?: string;
+
   @IsString()
   title: string;
 
@@ -23,10 +35,16 @@ export class EventCreateDto {
   @IsEnum(EventType)
   type: EventType;
 
+  @ValidateIf((_object, value: unknown) => value !== undefined)
+  @IsEnum({ BIOVITY: 'biovity', GOOGLE: 'google' })
+  calendarProvider?: 'biovity' | 'google';
+
+  @Matches(/(?:Z|[+-]\d{2}:\d{2})$/)
   @IsDateString()
   startAt: string;
 
   @IsOptional()
+  @Matches(/(?:Z|[+-]\d{2}:\d{2})$/)
   @IsDateString()
   endAt?: string;
 
@@ -52,9 +70,40 @@ export class EventCreateDto {
   @IsOptional()
   @IsUUID()
   applicationId?: string;
+
+  @IsOptional()
+  @IsArray()
+  @ArrayUnique()
+  @ArrayMaxSize(20)
+  @IsUUID('4', { each: true })
+  interviewerIds?: string[];
+
+  @IsOptional()
+  @IsArray()
+  @ArrayUnique((assignment: EventInterviewerAssignmentDto) => assignment.userId)
+  @ArrayMaxSize(20)
+  @ValidateNested({ each: true })
+  @Type(() => EventInterviewerAssignmentDto)
+  interviewerAssignments?: EventInterviewerAssignmentDto[];
+}
+
+export class EventInterviewerAssignmentDto {
+  @IsUUID()
+  userId: string;
+
+  @IsUUID()
+  roleId: string;
 }
 
 export class EventUpdateDto {
+  @ValidateIf((_object, value: unknown) => value !== undefined)
+  @IsEnum({ BIOVITY: 'biovity', GOOGLE: 'google' })
+  calendarProvider?: 'biovity' | 'google';
+  @ValidateIf((_object, value: unknown) => value !== undefined)
+  @Matches(/^[A-Za-z]/)
+  @IsTimeZone()
+  timeZone?: string;
+
   @IsOptional()
   @IsString()
   title?: string;
@@ -68,10 +117,12 @@ export class EventUpdateDto {
   type?: EventType;
 
   @IsOptional()
+  @Matches(/(?:Z|[+-]\d{2}:\d{2})$/)
   @IsDateString()
   startAt?: string;
 
   @IsOptional()
+  @Matches(/(?:Z|[+-]\d{2}:\d{2})$/)
   @IsDateString()
   endAt?: string;
 
@@ -135,6 +186,8 @@ export class EventQueryDto {
 }
 
 export class EventResponseDto {
+  calendarProvider: 'biovity' | 'google';
+  timeZone: string;
   id: string;
   title: string;
   description: string | null;

@@ -1,4 +1,8 @@
-import { ForbiddenException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+} from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import type { AuthenticatedUser } from './better-auth-session.service';
 import { isAdminUser } from './better-auth-session.service';
@@ -21,13 +25,59 @@ const ROLE_PERMISSIONS: Record<
 export class OrganizationAccessService {
   constructor(private readonly dataSource: DataSource) {}
 
+  async getOrganizationOwner(
+    organizationId: string,
+  ): Promise<{ id: string; name: string; email: string } | null> {
+    const rows = await this.dataSource.query<
+      Array<{ id: string; name: string; email: string }>
+    >(
+      `SELECT id, name, email FROM "user" WHERE "organizationId" = $1::uuid LIMIT 1`,
+      [organizationId],
+    );
+    return rows[0] ?? null;
+  }
+
   async assertAccess(
     organizationId: string,
     requester: AuthenticatedUser | undefined,
     permission: OrganizationPermission,
   ): Promise<void> {
-    if (await this.hasAccess(organizationId, requester, permission)) return;
-    throw new ForbiddenException('No tienes permisos para esta acción.');
+    if (!(await this.hasAccess(organizationId, requester, permission))) {
+      throw new ForbiddenException('No tienes permisos para esta acción.');
+    }
+    if (
+      permission === 'recruit' &&
+      requester?.type !== 'admin' &&
+      !(requester && isAdminUser(requester))
+    ) {
+      await this.assertRecruitingEnabled(organizationId);
+    }
+  }
+
+  async assertRecruitingEnabled(organizationId: string): Promise<void> {
+    const rows = await this.dataSource.query<
+      Array<{ verificationStatus: string }>
+    >(
+      `SELECT verification_status AS "verificationStatus"
+       FROM organization WHERE id = $1::uuid LIMIT 1`,
+      [organizationId],
+    );
+    const status = rows[0]?.verificationStatus;
+    if (status === 'verified') return;
+    throw new BadRequestException({
+      code: 'ORGANIZATION_VERIFICATION_REQUIRED',
+      message: 'Verify the company before you publish jobs or manage hiring.',
+      status: status ?? 'unverified',
+    });
+  }
+
+  async isOrganizationVerified(organizationId: string): Promise<boolean> {
+    const rows = await this.dataSource.query<Array<{ verified: boolean }>>(
+      `SELECT verification_status = 'verified' AS verified
+       FROM organization WHERE id = $1::uuid LIMIT 1`,
+      [organizationId],
+    );
+    return rows[0]?.verified === true;
   }
 
   async hasAccess(
@@ -85,6 +135,7 @@ export class OrganizationAccessService {
   async assertChatCreation(
     recruiterId: string,
     professionalId: string,
+    organizationId: string,
     requester: AuthenticatedUser | undefined,
   ): Promise<void> {
     if (!requester) {
@@ -111,12 +162,8 @@ export class OrganizationAccessService {
       );
     }
     if (isAdminUser(requester) || requester.type === 'admin') return;
-    if (
-      requester.id === recruiterId &&
-      requester.type === 'organization' &&
-      requester.organizationId
-    ) {
-      await this.assertAccess(requester.organizationId, requester, 'recruit');
+    if (requester.id === recruiterId && requester.type === 'organization') {
+      await this.assertAccess(organizationId, requester, 'recruit');
       return;
     }
     if (requester.id === professionalId && requester.type === 'professional') {
@@ -125,6 +172,27 @@ export class OrganizationAccessService {
       );
     }
     throw new ForbiddenException('Solo el reclutador puede iniciar este chat.');
+  }
+
+  async assertChatOrganizationSend(
+    chatId: string,
+    requester: AuthenticatedUser | undefined,
+  ): Promise<void> {
+    if (!requester) {
+      throw new ForbiddenException('Se requiere autorización de usuario.');
+    }
+    const rows = await this.dataSource.query<
+      Array<{ organizationId: string | null }>
+    >(`SELECT "organizationId" FROM chat WHERE id = $1::uuid LIMIT 1`, [
+      chatId,
+    ]);
+    const organizationId = rows[0]?.organizationId;
+    if (!organizationId) {
+      throw new ForbiddenException(
+        'Este chat no tiene una organización confirmada.',
+      );
+    }
+    await this.assertAccess(organizationId, requester, 'recruit');
   }
 
   async hasCandidateRelationship(
@@ -219,6 +287,109 @@ export class OrganizationAccessService {
       throw new ForbiddenException('No tienes acceso a este recurso.');
     }
     await this.assertAccess(organizationId, requester, permission);
+  }
+
+  async assertApplicationOrganizationAccess(
+    applicationId: string,
+    organizationId: string,
+    requester: AuthenticatedUser | undefined,
+    permission: OrganizationPermission,
+  ): Promise<void> {
+    const rows = await this.dataSource.query<Array<{ id: string }>>(
+      `SELECT application.id
+       FROM application
+       JOIN job ON job.id = application."jobId"
+       WHERE application.id = $1::uuid
+         AND job."organizationId" = $2::uuid
+       LIMIT 1`,
+      [applicationId, organizationId],
+    );
+    if (!rows[0]) {
+      throw new ForbiddenException(
+        'La postulación no pertenece a esta organización.',
+      );
+    }
+    await this.assertAccess(organizationId, requester, permission);
+  }
+
+  async assertCompletedInterviewAccess(
+    eventId: string,
+    requester: AuthenticatedUser | undefined,
+    requireInterviewer: boolean,
+    permission: OrganizationPermission = 'recruit',
+  ): Promise<{
+    organizationId: string;
+    isInterviewer: boolean;
+    interviewerRoleId: string | null;
+    interviewerRoleLabel: string | null;
+    canViewHiringRecords: boolean;
+  }> {
+    if (!requester) {
+      throw new ForbiddenException('Se requiere autorización de usuario.');
+    }
+    const rows = await this.dataSource.query<
+      Array<{
+        type: string;
+        status: string;
+        organizationId: string | null;
+        applicationOrganizationId: string | null;
+        isInterviewer: boolean;
+        interviewerRoleId: string | null;
+        interviewerRoleLabel: string | null;
+      }>
+    >(
+      `SELECT event.type,
+              event.status,
+              event."organizationId",
+              job."organizationId" AS "applicationOrganizationId",
+              EXISTS (
+                SELECT 1 FROM event_interviewer interviewer
+                WHERE interviewer.event_id = event.id
+                  AND interviewer.user_id = $2::uuid
+              ) AS "isInterviewer",
+              interviewer.role_id AS "interviewerRoleId",
+              interviewer.role_label_snapshot AS "interviewerRoleLabel"
+       FROM event
+       LEFT JOIN application ON application.id = event."applicationId"
+       LEFT JOIN job ON job.id = application."jobId"
+       LEFT JOIN event_interviewer interviewer
+         ON interviewer.event_id = event.id
+        AND interviewer.user_id = $2::uuid
+       WHERE event.id = $1::uuid
+       LIMIT 1`,
+      [eventId, requester.id],
+    );
+    const event = rows[0];
+    if (
+      !event ||
+      event.type !== 'interview' ||
+      event.status !== 'completed' ||
+      !event.organizationId ||
+      event.organizationId !== event.applicationOrganizationId
+    ) {
+      throw new BadRequestException(
+        'La entrevista debe estar completada y vinculada a una postulación de la misma empresa.',
+      );
+    }
+    await this.assertAccess(event.organizationId, requester, permission);
+    if (requireInterviewer && !event.isInterviewer) {
+      throw new ForbiddenException(
+        'Solo un entrevistador asignado puede guardar su evaluación.',
+      );
+    }
+    const canViewHiringRecords =
+      permission === 'recruit' ||
+      requester.type === 'admin' ||
+      isAdminUser(requester) ||
+      ((await this.hasAccess(event.organizationId, requester, 'recruit')) &&
+        (await this.isOrganizationVerified(event.organizationId)));
+    return {
+      organizationId: event.organizationId,
+      isInterviewer: event.isInterviewer,
+      interviewerRoleId: event.interviewerRoleId,
+      interviewerRoleLabel: event.interviewerRoleLabel,
+      canViewHiringRecords,
+    };
   }
 
   async assertChatParticipant(
@@ -372,10 +543,12 @@ export class OrganizationAccessService {
         organizerId: string;
         candidateId: string | null;
         organizationId: string | null;
+        eventType: string;
         isParticipant: boolean;
       }>
     >(
       `SELECT event."organizerId", event."candidateId", event."organizationId",
+              event.type AS "eventType",
               EXISTS (
                 SELECT 1 FROM event_participant participant
                 WHERE participant.event_id = event.id AND participant.user_id = $2::uuid
@@ -393,19 +566,39 @@ export class OrganizationAccessService {
 
     const ownsEvent = event.organizerId === requester.id;
     const isCandidate = event.candidateId === requester.id;
+    const isInternalInterviewer =
+      event.eventType === 'interview' &&
+      event.isParticipant &&
+      !ownsEvent &&
+      !isCandidate;
     if (permission === 'rsvp') {
-      if (event.isParticipant && !ownsEvent) return event;
+      if (event.isParticipant && !ownsEvent) {
+        if (isInternalInterviewer) {
+          if (!event.organizationId) {
+            throw new ForbiddenException('No tienes acceso a esta entrevista.');
+          }
+          await this.assertAccess(event.organizationId, requester, 'recruit');
+        }
+        return event;
+      }
       throw new ForbiddenException('No puedes responder por otra persona.');
     }
     if (permission === 'manage') {
-      if (ownsEvent) return event;
       if (event.organizationId) {
         await this.assertAccess(event.organizationId, requester, 'recruit');
         return event;
       }
+      if (ownsEvent) return event;
       throw new ForbiddenException(
         'No tienes permisos para cambiar este evento.',
       );
+    }
+    if (isInternalInterviewer) {
+      if (!event.organizationId) {
+        throw new ForbiddenException('No tienes acceso a esta entrevista.');
+      }
+      await this.assertAccess(event.organizationId, requester, 'recruit');
+      return event;
     }
     if (ownsEvent || isCandidate || event.isParticipant) return event;
     if (event.organizationId) {
@@ -418,26 +611,77 @@ export class OrganizationAccessService {
   async assertEventCreation(
     requester: AuthenticatedUser | undefined,
     input: {
+      type?: string;
       organizerId: string;
       organizationId?: string;
       candidateId?: string;
       applicationId?: string;
+      interviewerIds?: string[];
     },
   ): Promise<void> {
     if (!requester)
       throw new ForbiddenException('Se requiere una sesión de usuario.');
-    if (requester.type === 'admin' || isAdminUser(requester)) return;
-    if (
-      requester.type !== 'organization' ||
-      input.organizerId !== requester.id
-    ) {
-      throw new ForbiddenException(
-        'Solo puedes crear eventos desde tu cuenta de organización.',
-      );
+    const isAdmin = requester.type === 'admin' || isAdminUser(requester);
+    if (!isAdmin) {
+      if (
+        requester.type !== 'organization' ||
+        input.organizerId !== requester.id
+      ) {
+        throw new ForbiddenException(
+          'Solo puedes crear eventos desde tu cuenta de organización.',
+        );
+      }
+      if (!input.organizationId)
+        throw new ForbiddenException('organizationId es requerido.');
+      await this.assertAccess(input.organizationId, requester, 'recruit');
     }
-    if (!input.organizationId)
-      throw new ForbiddenException('organizationId es requerido.');
-    await this.assertAccess(input.organizationId, requester, 'recruit');
+
+    const interviewerIds = input.interviewerIds ?? [];
+    if (interviewerIds.length > 0) {
+      if (input.type !== 'interview') {
+        throw new BadRequestException(
+          'Solo las entrevistas pueden tener entrevistadores.',
+        );
+      }
+      if (!input.organizationId) {
+        throw new BadRequestException(
+          'Se requiere una organización para asignar entrevistadores.',
+        );
+      }
+      if (
+        new Set(interviewerIds).size !== interviewerIds.length ||
+        interviewerIds.includes(input.organizerId) ||
+        (input.candidateId && interviewerIds.includes(input.candidateId))
+      ) {
+        throw new BadRequestException(
+          'La lista de entrevistadores contiene personas repetidas o no válidas.',
+        );
+      }
+      const eligible = await this.dataSource.query<Array<{ id: string }>>(
+        `SELECT attendee.id
+         FROM "user" attendee
+         WHERE attendee.id = ANY($2::uuid[])
+           AND attendee."isActive" = true
+           AND (
+             (attendee."organizationId" = $1::uuid AND attendee.type = 'organization')
+             OR EXISTS (
+               SELECT 1
+               FROM organization_member member
+               WHERE member.organization_id = $1::uuid
+                 AND member.user_id = attendee.id
+                 AND member.role IN ('admin', 'recruiter')
+             )
+           )`,
+        [input.organizationId, interviewerIds],
+      );
+      if (eligible.length !== interviewerIds.length) {
+        throw new ForbiddenException(
+          'Todos los entrevistadores deben tener acceso activo de reclutamiento a la organización.',
+        );
+      }
+    }
+
+    if (isAdmin && !input.organizationId) return;
     if (input.applicationId) {
       const rows = await this.dataSource.query<
         Array<{ organizationId: string; candidateId: string }>

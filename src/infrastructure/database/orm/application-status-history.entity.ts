@@ -36,6 +36,38 @@ export class ApplicationStatusHistoryEntity {
   @Column({ name: 'changed_by_id', type: 'uuid', nullable: true })
   public changedById: string | null;
 
+  @Column({ name: 'rejection_note', type: 'text', nullable: true })
+  public rejectionNote: string | null;
+
+  @Column({ name: 'rejection_reason_id', type: 'uuid', nullable: true })
+  public rejectionReasonId: string | null;
+
+  @Column({
+    name: 'rejection_reason_snapshot',
+    type: 'varchar',
+    length: 120,
+    nullable: true,
+  })
+  public rejectionReasonSnapshot: string | null;
+
+  @Column({ name: 'previous_stage_id', type: 'uuid', nullable: true })
+  public previousStageId: string | null;
+
+  @Column({ name: 'new_stage_id', type: 'uuid', nullable: true })
+  public newStageId: string | null;
+
+  @Column({ name: 'previous_stage_name', type: 'varchar', nullable: true })
+  public previousStageName: string | null;
+
+  @Column({ name: 'new_stage_name', type: 'varchar', nullable: true })
+  public newStageName: string | null;
+
+  @Column({ name: 'transition_kind', type: 'varchar', default: 'stage' })
+  public transitionKind: 'stage' | 'reopen';
+
+  @Column({ name: 'transition_note', type: 'text', nullable: true })
+  public transitionNote: string | null;
+
   @ManyToOne(() => UserEntity, { onDelete: 'SET NULL' })
   @JoinColumn({ name: 'changed_by_id' })
   public changedBy: UserEntity | null;

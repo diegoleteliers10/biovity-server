@@ -2,11 +2,14 @@ import {
   Injectable,
   ConflictException,
   NotFoundException,
+  BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { CandidateTagEntity } from '../../infrastructure/database/orm/candidate-tag.entity';
 import { CandidateTagAssignmentEntity } from '../../infrastructure/database/orm/candidate-tag-assignment.entity';
+import { UserEntity } from '../../infrastructure/database/orm/user.entity';
+import { UserType } from '../domain/enums';
 
 @Injectable()
 export class CandidateTagService {
@@ -15,6 +18,7 @@ export class CandidateTagService {
     private readonly tagRepo: Repository<CandidateTagEntity>,
     @InjectRepository(CandidateTagAssignmentEntity)
     private readonly assignmentRepo: Repository<CandidateTagAssignmentEntity>,
+    private readonly dataSource: DataSource,
   ) {}
 
   async findByOrganization(
@@ -67,29 +71,35 @@ export class CandidateTagService {
     tagId: string,
     candidateId: string,
   ): Promise<CandidateTagAssignmentEntity> {
-    const tag = await this.tagRepo.findOne({ where: { id: tagId } });
-    if (!tag) {
-      throw new NotFoundException('Etiqueta no encontrada');
-    }
+    return this.dataSource.transaction(async manager => {
+      const tag = await manager.getRepository(CandidateTagEntity).findOne({
+        where: { id: tagId },
+      });
+      if (!tag) {
+        throw new NotFoundException('Etiqueta no encontrada');
+      }
 
-    const existing = await this.assignmentRepo.findOne({
-      where: { tagId, candidateId },
+      const candidate = await manager.getRepository(UserEntity).findOne({
+        where: { id: candidateId },
+        lock: { mode: 'pessimistic_write' },
+      });
+      if (!candidate) {
+        throw new NotFoundException('Candidato no encontrado');
+      }
+      if (candidate.type !== UserType.PROFESSIONAL || !candidate.isActive) {
+        throw new BadRequestException(
+          'La etiqueta solo se puede asignar a un profesional activo.',
+        );
+      }
+
+      const assignments = manager.getRepository(CandidateTagAssignmentEntity);
+      const existing = await assignments.findOne({
+        where: { tagId, candidateId },
+      });
+      if (existing) return existing;
+
+      return assignments.save(assignments.create({ tagId, candidateId }));
     });
-
-    if (existing) return existing;
-
-    const assignment = this.assignmentRepo.create({
-      tagId,
-      candidateId,
-    });
-
-    try {
-      return await this.assignmentRepo.save(assignment);
-    } catch {
-      throw new ConflictException(
-        'Esta etiqueta ya está asignada a este candidato.',
-      );
-    }
   }
 
   async unassign(tagId: string, candidateId: string): Promise<boolean> {

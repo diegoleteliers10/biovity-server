@@ -4,7 +4,6 @@ import {
   IsArray,
   IsUUID,
   ValidateNested,
-  IsObject,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
@@ -14,7 +13,6 @@ import {
   ResumeSkillDto,
   ResumeLanguageDto,
   ResumeCertificationDto,
-  CvFileDto,
   ResumeLinkDto,
 } from './resume-create.dto';
 
@@ -70,11 +68,4 @@ export class ResumeUpdateDto {
   @ValidateNested({ each: true })
   @Type(() => ResumeLinkDto)
   links?: ResumeLinkDto[];
-
-  @ApiPropertyOptional({ type: CvFileDto })
-  @IsOptional()
-  @IsObject()
-  @ValidateNested()
-  @Type(() => CvFileDto)
-  cvFile?: CvFileDto | null;
 }

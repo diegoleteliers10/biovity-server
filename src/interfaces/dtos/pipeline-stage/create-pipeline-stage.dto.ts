@@ -1,4 +1,5 @@
-import { IsUUID, IsString, IsInt, IsOptional, Min } from 'class-validator';
+import { IsUUID, IsString, IsInt, IsOptional, Min, IsIn } from 'class-validator';
+import { ApplicationStatus } from '../../../core/domain/enums';
 
 export class CreatePipelineStageDto {
   @IsUUID()
@@ -15,4 +16,8 @@ export class CreatePipelineStageDto {
   @IsOptional()
   @IsString()
   color?: string;
+
+  @IsOptional()
+  @IsIn(Object.values(ApplicationStatus))
+  statusProjection?: ApplicationStatus;
 }

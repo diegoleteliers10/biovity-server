@@ -65,5 +65,6 @@ export class Resume {
     } | null,
     public createdAt: Date = new Date(),
     public updatedAt: Date = new Date(),
+    public cvVersion = 0,
   ) {}
 }

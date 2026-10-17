@@ -10,6 +10,7 @@ export class ChatDomainDtoMapper {
     dto.id = domain.id;
     dto.recruiterId = domain.recruiterId;
     dto.professionalId = domain.professionalId;
+    dto.organizationId = domain.organizationId;
     dto.lastMessage = domain.lastMessage;
     dto.unreadCountRecruiter = domain.unreadCountRecruiter;
     dto.unreadCountProfessional = domain.unreadCountProfessional;

@@ -5,6 +5,8 @@ import {
   ApplicationStatusHistoryEntity,
   OfferLetterEntity,
   ApplicationAnswerEntity,
+  ApplicationEvaluationEntity,
+  ApplicationNoteEntity,
   OrganizationEntity,
   SubscriptionEntity,
   JobEntity,
@@ -17,6 +19,8 @@ import {
   EventEntity,
   EventNoteEntity,
   EventParticipantEntity,
+  EventParticipantStatusHistoryEntity,
+  EventChangeHistoryEntity,
   ApiKeyEntity,
   AiCredentialEntity,
   OrganizationMemberEntity,
@@ -26,6 +30,7 @@ import {
   MessageTemplateEntity,
   ActivityLogEntity,
   SalarySubmissionEntity,
+  OrganizationRejectionReasonEntity,
 } from '../database/orm';
 import { JobTemplateEntity } from '../database/orm/job-template.entity';
 import { PipelineStageEntity } from '../database/orm/pipeline-stage.entity';
@@ -60,6 +65,8 @@ export const DatabaseConfig = TypeOrmModule.forRootAsync({
         ApplicationStatusHistoryEntity,
         OfferLetterEntity,
         ApplicationAnswerEntity,
+        ApplicationEvaluationEntity,
+        ApplicationNoteEntity,
         SubscriptionEntity,
         JobEntity,
         JobQuestionEntity,
@@ -71,6 +78,8 @@ export const DatabaseConfig = TypeOrmModule.forRootAsync({
         EventEntity,
         EventNoteEntity,
         EventParticipantEntity,
+        EventParticipantStatusHistoryEntity,
+        EventChangeHistoryEntity,
         ApiKeyEntity,
         AiCredentialEntity,
         OrganizationMemberEntity,
@@ -84,6 +93,7 @@ export const DatabaseConfig = TypeOrmModule.forRootAsync({
         SavedSearchEntity,
         JobAlertEntity,
         SalarySubmissionEntity,
+        OrganizationRejectionReasonEntity,
       ],
       synchronize: false,
       // Query logging runs on the request path. In production it formats and

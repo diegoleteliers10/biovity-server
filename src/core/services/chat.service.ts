@@ -31,6 +31,7 @@ export class ChatService implements IChatUseCase {
       await this.chatRepository.findByRecruiterAndProfessional(
         data.recruiterId,
         data.professionalId,
+        data.organizationId,
       );
 
     if (existingChat) {
@@ -45,6 +46,12 @@ export class ChatService implements IChatUseCase {
       0,
       0,
       new Date(),
+      undefined,
+      false,
+      false,
+      false,
+      false,
+      data.organizationId,
     );
 
     return this.chatRepository.create(chat);
@@ -84,10 +91,12 @@ export class ChatService implements IChatUseCase {
   async getChatByParticipants(
     recruiterId: string,
     professionalId: string,
+    organizationId?: string,
   ): Promise<Chat | null> {
     return this.chatRepository.findByRecruiterAndProfessional(
       recruiterId,
       professionalId,
+      organizationId,
     );
   }
 

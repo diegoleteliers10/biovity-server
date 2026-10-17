@@ -13,7 +13,9 @@ export class EventDomainDtoMapper {
     dto.title = domain.title;
     dto.description = domain.description;
     dto.type = domain.type;
+    dto.calendarProvider = domain.calendarProvider;
     dto.startAt = domain.startAt;
+    dto.timeZone = domain.timeZone;
     dto.endAt = domain.endAt;
     dto.location = domain.location;
     dto.meetingUrl = domain.meetingUrl;

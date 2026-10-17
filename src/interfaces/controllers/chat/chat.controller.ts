@@ -67,6 +67,7 @@ export class ChatController {
     await this.organizationAccess.assertChatCreation(
       dto.recruiterId,
       dto.professionalId,
+      dto.organizationId,
       requester,
     );
     const input = ChatDtoDomainMapper.toCreateChatInput(dto);

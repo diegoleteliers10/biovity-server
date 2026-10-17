@@ -9,7 +9,10 @@ import {
 import * as crypto from 'crypto';
 import { DataSource } from 'typeorm';
 import { InjectDataSource } from '@nestjs/typeorm';
-import { IApplicationRepository } from '../repositories/application.respository';
+import type {
+  IApplicationRepository,
+  ApplicationStatusHistoryItem,
+} from '../repositories/application.respository';
 import { IJobRepository } from '../repositories/job.repository';
 import { IUserRepository } from '../repositories/user.repository';
 import { IOrganizationRepository } from '../repositories/organization.repository';
@@ -23,23 +26,17 @@ import {
   Application,
   ApplicationAnswer,
 } from '../domain/entities/application.entity';
+import { ApplicationStatus, QuestionStatus, UserType } from '../domain/enums';
 import {
-  ApplicationStatus,
-  NotificationType,
-  QuestionStatus,
-  UserType,
-} from '../domain/enums';
-import { ApplicationEntity } from '../../infrastructure/database/orm/application.entity';
+  ApplicationEntity,
+  ApplicationStatusHistoryEntity,
+  PipelineStageEntity,
+} from '../../infrastructure/database/orm';
 import { ApplicationAnswerEntity } from '../../infrastructure/database/orm/application-answer.entity';
 import { ApplicationDomainOrmMapper } from '../../shared/mappers/application/applicationDomain-orm.mapper';
 import { LOGGER_TOKEN } from '../../shared/logger/logger.service';
-import {
-  NotificationService,
-  applicationStatusLabel,
-} from '../../shared/notification';
 
 const APPLICATIONS_LINK = '/dashboard/applications';
-const MY_APPLICATIONS_LINK = '/dashboard/my-applications';
 
 @Injectable()
 export class ApplicationService implements IApplicationUseCase {
@@ -58,7 +55,6 @@ export class ApplicationService implements IApplicationUseCase {
     private readonly organizationRepository: IOrganizationRepository,
     @InjectDataSource()
     private readonly dataSource: DataSource,
-    private readonly notificationService: NotificationService,
     @Inject(LOGGER_TOKEN) private readonly logger: LoggerService,
   ) {}
 
@@ -66,7 +62,9 @@ export class ApplicationService implements IApplicationUseCase {
     return crypto.randomUUID();
   }
 
-  async createApplication(data: CreateApplicationInput): Promise<Application> {
+  async createApplication(
+    data: CreateApplicationInput,
+  ): Promise<Application | null> {
     const job = await this.jobRepository.findById(data.jobId);
     if (!job) {
       throw new NotFoundException(`Job with id ${data.jobId} not found`);
@@ -144,6 +142,18 @@ export class ApplicationService implements IApplicationUseCase {
       data.salaryCurrency,
       data.availabilityDate,
       data.resumeUrl,
+      undefined,
+      null,
+      null,
+      null,
+      null,
+      data.sourceChannel ?? 'unknown',
+      data.distributionSourceId
+        ? 'tracked_link'
+        : data.sourceChannel
+          ? 'self_reported'
+          : 'unknown',
+      data.distributionSourceId ?? null,
     );
 
     const queryRunner = this.dataSource.createQueryRunner();
@@ -152,11 +162,84 @@ export class ApplicationService implements IApplicationUseCase {
 
     let createdApplication: Application;
     try {
+      if (data.resumeUrl) {
+        const resumes = await queryRunner.manager.query<
+          Array<{ path: string | null; url: string | null }>
+        >(
+          `SELECT "cvFile"->>'path' AS path, "cvFile"->>'url' AS url
+             FROM public.resume
+            WHERE "userId" = $1::uuid
+            FOR SHARE`,
+          [data.candidateId],
+        );
+        const currentCv = resumes[0];
+        const requested = data.resumeUrl.trim().split('?')[0];
+        const currentUrl = currentCv?.url?.split('?')[0];
+        const encodedPath = currentCv?.path?.replaceAll('/', '%2F');
+        const matchesCurrentCv = Boolean(
+          currentCv?.path &&
+          (requested === currentCv.path ||
+            requested === currentUrl ||
+            requested.endsWith(`/${currentCv.path}`) ||
+            requested.toLowerCase().endsWith(`/${encodedPath?.toLowerCase()}`)),
+        );
+        if (!matchesCurrentCv || !currentCv?.path) {
+          throw new BadRequestException(
+            'resumeUrl must identify the candidate current CV.',
+          );
+        }
+        application.resumeUrl = currentCv.path;
+      }
+      if (data.distributionSourceId) {
+        const distributionSources = await queryRunner.manager.query<
+          Array<{ source_channel: Application['sourceChannel'] }>
+        >(
+          `SELECT source_channel
+           FROM job_distribution_source
+           WHERE id = $1::uuid
+             AND job_id = $2::uuid
+             AND disabled_at IS NULL
+           FOR SHARE`,
+          [data.distributionSourceId, data.jobId],
+        );
+        const distributionSource = distributionSources[0];
+        if (!distributionSource) {
+          await queryRunner.rollbackTransaction();
+          return null;
+        }
+        application.sourceChannel = distributionSource.source_channel;
+      }
+      const initialStage = await queryRunner.manager.findOne(
+        PipelineStageEntity,
+        {
+          where: {
+            jobId: data.jobId,
+            systemKey: ApplicationStatus.PENDIENTE,
+            isArchived: false,
+          },
+        },
+      );
+      if (!initialStage) {
+        throw new NotFoundException(
+          `Active pending stage not found for job ${data.jobId}`,
+        );
+      }
+      application.pipelineStageId = initialStage.id;
       const applicationOrm = ApplicationDomainOrmMapper.toOrm(application);
       const savedOrm = await queryRunner.manager.save(
         ApplicationEntity,
         applicationOrm,
       );
+
+      await queryRunner.manager.insert(ApplicationStatusHistoryEntity, {
+        applicationId: savedOrm.id,
+        previousStatus: null,
+        newStatus: savedOrm.status,
+        changedAt: savedOrm.createdAt,
+        changedById: savedOrm.candidateId,
+        newStageId: initialStage.id,
+        newStageName: initialStage.name,
+      });
 
       const savedAnswers =
         data.answers && data.answers.length > 0
@@ -173,6 +256,28 @@ export class ApplicationService implements IApplicationUseCase {
               }),
             )
           : [];
+
+      const recipients = await queryRunner.manager.query<Array<{ id: string }>>(
+        `SELECT id FROM "user"
+         WHERE "organizationId" = $1::uuid AND type = $2
+           AND id <> $3::uuid`,
+        [job.organizationId, UserType.ORGANIZATION, candidate.id],
+      );
+      for (const { id } of recipients) {
+        await queryRunner.manager.query(
+          `INSERT INTO application_created_notification_intent
+            (id, application_id, recipient_id, job_id, candidate_name, job_title)
+           VALUES ($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5, $6)`,
+          [
+            this.generateId(),
+            savedOrm.id,
+            id,
+            job.id,
+            candidate.name,
+            job.title,
+          ],
+        );
+      }
 
       await queryRunner.commitTransaction();
 
@@ -198,7 +303,7 @@ export class ApplicationService implements IApplicationUseCase {
       await queryRunner.release();
     }
 
-    await this.notifyNewApplication({
+    await this.notifyNewApplicationIntegrations({
       applicationId: createdApplication.id,
       candidateId: createdApplication.candidateId,
       candidateName: candidate.name,
@@ -243,40 +348,134 @@ export class ApplicationService implements IApplicationUseCase {
     );
   }
 
-  async updateApplicationStatus(
-    id: string,
-    status: ApplicationStatus,
-    changedById?: string | null,
-  ): Promise<Application | null> {
-    const existingApplication = await this.applicationRepository.findById(id);
-    if (!existingApplication) {
-      throw new NotFoundException(`Application with id ${id} not found`);
+  async updateApplicationStatus(input: {
+    applicationId: string;
+    status: ApplicationStatus;
+    changedById: string | null;
+    rejectionNote?: string;
+    rejectionReasonId?: string;
+  }): Promise<Application | null> {
+    const rejectionNote = input.rejectionNote?.trim() || null;
+    if (input.status !== ApplicationStatus.RECHAZADO && rejectionNote) {
+      throw new BadRequestException(
+        'A rejection note is only valid for a rejected application',
+      );
     }
 
-    if (existingApplication.status === status) {
-      return existingApplication;
-    }
-
-    const updated = await this.applicationRepository.update(
-      id,
-      { status },
-      changedById,
+    const existingApplication = await this.applicationRepository.findById(
+      input.applicationId,
     );
+    if (!existingApplication) {
+      throw new NotFoundException(
+        `Application with id ${input.applicationId} not found`,
+      );
+    }
+
+    const updated = await this.applicationRepository.update({
+      id: input.applicationId,
+      status: input.status,
+      changedById: input.changedById,
+      rejectionNote,
+      rejectionReasonId: input.rejectionReasonId ?? null,
+    });
     if (!updated) {
       return null;
     }
 
-    await this.notifyApplicationStageChange({
-      applicationId: existingApplication.id,
-      candidateId: existingApplication.candidateId,
-      jobId: existingApplication.jobId,
-      status,
-    });
-
     return updated;
   }
 
-  private async notifyNewApplication(context: {
+  async updateApplicationStage(input: {
+    applicationId: string;
+    stageId: string;
+    changedById: string | null;
+    rejectionNote?: string;
+    rejectionReasonId?: string;
+  }): Promise<Application | null> {
+    const rejectionNote = input.rejectionNote?.trim() || null;
+    const existing = await this.applicationRepository.findById(
+      input.applicationId,
+    );
+    if (!existing) {
+      throw new NotFoundException(
+        `Application with id ${input.applicationId} not found`,
+      );
+    }
+    const updated = await this.applicationRepository.transitionStage({
+      id: input.applicationId,
+      stageId: input.stageId,
+      changedById: input.changedById,
+      rejectionNote,
+      rejectionReasonId: input.rejectionReasonId ?? null,
+    });
+    return updated;
+  }
+
+  async reopenApplication(input: {
+    applicationId: string;
+    stageId: string;
+    changedById: string | null;
+    reason: string;
+  }): Promise<Application | null> {
+    const reason = input.reason.trim();
+    if (!reason) {
+      return Promise.reject(
+        new BadRequestException(
+          'A reason is required to reopen an application',
+        ),
+      );
+    }
+    return this.applicationRepository.reopen({
+      id: input.applicationId,
+      stageId: input.stageId,
+      changedById: input.changedById,
+      reason,
+    });
+  }
+
+  async updateHiringPlan(input: {
+    applicationId: string;
+    assigneeId?: string | null;
+    nextAction?: string | null;
+    targetDate?: string | null;
+  }): Promise<Application | null> {
+    const update = {
+      id: input.applicationId,
+      assigneeId: input.assigneeId,
+      nextAction:
+        typeof input.nextAction === 'string'
+          ? input.nextAction.trim() || null
+          : input.nextAction,
+      targetDate: input.targetDate,
+    };
+    if (
+      update.assigneeId === undefined &&
+      update.nextAction === undefined &&
+      update.targetDate === undefined
+    ) {
+      return Promise.reject(
+        new BadRequestException('At least one hiring plan field is required'),
+      );
+    }
+    return this.applicationRepository.updateHiringPlan(update);
+  }
+
+  async getApplicationStatusHistory(
+    applicationId: string,
+  ): Promise<ApplicationStatusHistoryItem[]> {
+    const application =
+      await this.applicationRepository.findById(applicationId);
+    if (!application) {
+      throw new NotFoundException(
+        `Application with id ${applicationId} not found`,
+      );
+    }
+    return this.applicationRepository.findStatusHistoryByApplicationId(
+      applicationId,
+    );
+  }
+
+  private async notifyNewApplicationIntegrations(context: {
     applicationId: string;
     candidateId: string;
     candidateName: string;
@@ -284,36 +483,8 @@ export class ApplicationService implements IApplicationUseCase {
     jobTitle: string;
     organizationId: string;
   }): Promise<void> {
-    // EXCEPTION. REASON: post-commit best-effort side-effect. Any failure here
-    // (recipient lookup or insert) must never break the already-committed
-    // application creation.
+    // EXCEPTION. REASON: webhook delivery is a post-commit best-effort side effect.
     try {
-      const recipients = await this.userRepository.findIdsByOrganizationId(
-        context.organizationId,
-        UserType.ORGANIZATION,
-      );
-      const targets = recipients.filter(id => id !== context.candidateId);
-      if (targets.length === 0) {
-        return;
-      }
-
-      await this.notificationService.createMany(
-        targets.map(userId => ({
-          userId,
-          type: NotificationType.APPLICATION,
-          title: 'Nueva postulacion',
-          body: `${context.candidateName} postulo a ${context.jobTitle}`,
-          link: APPLICATIONS_LINK,
-          data: {
-            applicationId: context.applicationId,
-            jobId: context.jobId,
-            candidateId: context.candidateId,
-          },
-          dedupKey: `app:${context.applicationId}:created`,
-        })),
-      );
-
-      // Webhook delivery
       const organization = await this.organizationRepository.findById(
         context.organizationId,
       );
@@ -321,7 +492,11 @@ export class ApplicationService implements IApplicationUseCase {
         const { slackWebhookUrl, discordWebhookUrl } =
           organization.integrations;
 
-        const message = `📢 *Nueva Postulación en Biovity*\nEl candidato *${context.candidateName}* se ha postulado a la oferta *${context.jobTitle}*.\nVer más aquí: http://localhost:3000${APPLICATIONS_LINK}`;
+        const applicationsUrl = new URL(
+          APPLICATIONS_LINK,
+          process.env.WEB_APP_URL ?? 'https://biovity.cl',
+        ).toString();
+        const message = `📢 *Nueva Postulación en Biovity*\nEl candidato *${context.candidateName}* se ha postulado a la oferta *${context.jobTitle}*.\nVer más aquí: ${applicationsUrl}`;
 
         if (slackWebhookUrl) {
           await this.sendWebhook(slackWebhookUrl, { text: message });
@@ -352,39 +527,6 @@ export class ApplicationService implements IApplicationUseCase {
     } catch (error) {
       this.logger.error(
         `Failed to send webhook to ${url}: ${(error as Error).message}`,
-        (error as Error).stack,
-        'ApplicationService',
-      );
-    }
-  }
-
-  private async notifyApplicationStageChange(context: {
-    applicationId: string;
-    candidateId: string;
-    jobId: string;
-    status: ApplicationStatus;
-  }): Promise<void> {
-    // EXCEPTION. REASON: post-commit best-effort side-effect. Any failure here
-    // (job lookup or insert) must never break the already-committed status
-    // update.
-    try {
-      const job = await this.jobRepository.findById(context.jobId);
-      await this.notificationService.create({
-        userId: context.candidateId,
-        type: NotificationType.APPLICATION,
-        title: 'Actualizacion de postulacion',
-        body: `Tu postulacion a ${job?.title ?? 'la vacante'} paso a ${applicationStatusLabel(context.status)}`,
-        link: MY_APPLICATIONS_LINK,
-        data: {
-          applicationId: context.applicationId,
-          jobId: context.jobId,
-          status: context.status,
-        },
-        dedupKey: `app:${context.applicationId}:status:${context.status}`,
-      });
-    } catch (error) {
-      this.logger.error(
-        `application stage notification failed: ${(error as Error).message}`,
         (error as Error).stack,
         'ApplicationService',
       );

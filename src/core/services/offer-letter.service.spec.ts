@@ -109,8 +109,8 @@ describe('OfferLetterService.createAndSend', () => {
     jobTitle: 'Engineer',
   };
 
-  it.each(['chat', 'message'] as const)(
-    'does not send a notification when the atomic write fails during %s creation',
+  it.each(['chat', 'message', 'notification intent'] as const)(
+    'rolls back the offer when the atomic write fails during %s creation',
     async failurePoint => {
       const failure = new Error(`${failurePoint} write failed`);
       let transactionRejected = false;
@@ -123,6 +123,11 @@ describe('OfferLetterService.createAndSend', () => {
             return failurePoint === 'chat'
               ? Promise.reject(failure)
               : Promise.resolve([{ id: 'chat-1' }]);
+          }
+          if (sql.includes('INSERT INTO message_notification_intent')) {
+            return failurePoint === 'notification intent'
+              ? Promise.reject(failure)
+              : Promise.resolve([]);
           }
           if (sql.includes('INSERT INTO message')) {
             return failurePoint === 'message'

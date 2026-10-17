@@ -1,33 +1,58 @@
 import { z } from 'zod';
 
-export const envSchema = z.object({
-  NODE_ENV: z
-    .enum(['development', 'test', 'production'])
-    .default('development'),
-  PORT: z.coerce.number().int().positive().default(3001),
+export const envSchema = z
+  .object({
+    NODE_ENV: z
+      .enum(['development', 'test', 'production'])
+      .default('development'),
+    PORT: z.coerce.number().int().positive().default(3001),
 
-  DB_HOST: z.string().min(1),
-  DB_PORT: z.coerce.number().int().positive(),
-  DB_USERNAME: z.string().min(1),
-  DB_PASSWORD: z.string(),
-  DB_NAME: z.string().min(1),
+    DB_HOST: z.string().min(1),
+    DB_PORT: z.coerce.number().int().positive(),
+    DB_USERNAME: z.string().min(1),
+    DB_PASSWORD: z.string(),
+    DB_NAME: z.string().min(1),
+    WEB_APP_URL: z.string().url().optional(),
+    GOOGLE_CALENDAR_CLIENT_ID: z.string().min(1).optional(),
+    GOOGLE_CALENDAR_CLIENT_SECRET: z.string().min(1).optional(),
+    GOOGLE_CALENDAR_REDIRECT_URI: z.string().url().optional(),
 
-  BETTER_AUTH_SECRET: z.string().min(1),
-  INTERNAL_API_KEY: z.string().min(1),
-  AI_ENCRYPTION_KEY: z.string().min(1),
-  RESEND_API_KEY: z.string().min(1),
+    BETTER_AUTH_SECRET: z.string().min(1),
+    INTERNAL_API_KEY: z.string().min(1),
+    AI_ENCRYPTION_KEY: z.string().min(1),
+    RESEND_API_KEY: z.string().min(1),
+    EMAIL_OUTBOX_DISPATCH_URL: z.string().url().optional(),
+    OFFER_RESPONSE_EMAIL_DISPATCH_URL: z.string().url().optional(),
+    ORGANIZATION_VERIFICATION_EMAIL_DISPATCH_URL: z.string().url().optional(),
+    EMAIL_OUTBOX_SECRET: z.string().min(1).optional(),
 
-  EMAIL_FROM: z.string().optional(),
-  ADMIN_EMAILS: z.string().optional(),
-  APP_VERSION: z.string().optional(),
-  COMMIT_HASH: z.string().optional(),
-  REGION: z.string().optional(),
-  INSTANCE_ID: z.string().optional(),
+    EMAIL_FROM: z.string().optional(),
+    ADMIN_EMAILS: z.string().optional(),
+    APP_VERSION: z.string().optional(),
+    COMMIT_HASH: z.string().optional(),
+    REGION: z.string().optional(),
+    INSTANCE_ID: z.string().optional(),
 
-  THROTTLE_LIMIT: z.coerce.number().int().positive().optional(),
-  THROTTLE_SUBSCRIPTION_LIMIT: z.coerce.number().int().positive().optional(),
-  THROTTLE_SENSITIVE_LIMIT: z.coerce.number().int().positive().optional(),
-});
+    THROTTLE_LIMIT: z.coerce.number().int().positive().optional(),
+    THROTTLE_SUBSCRIPTION_LIMIT: z.coerce.number().int().positive().optional(),
+    THROTTLE_SENSITIVE_LIMIT: z.coerce.number().int().positive().optional(),
+  })
+  .refine(
+    env => {
+      const calendarValues = [
+        env.GOOGLE_CALENDAR_CLIENT_ID,
+        env.GOOGLE_CALENDAR_CLIENT_SECRET,
+        env.GOOGLE_CALENDAR_REDIRECT_URI,
+      ];
+      return (
+        calendarValues.every(value => !value) || calendarValues.every(Boolean)
+      );
+    },
+    {
+      message: 'Google Calendar OAuth settings must be configured together.',
+      path: ['GOOGLE_CALENDAR_CLIENT_ID'],
+    },
+  );
 
 export type Env = z.infer<typeof envSchema>;
 
@@ -66,6 +91,28 @@ function warnAboutOptionalFeatureKeys(config: Record<string, unknown>): void {
   if (!config['ADMIN_EMAILS']) {
     warnings.push(
       'ADMIN_EMAILS is empty: no admins are recognized through the env fallback. Set user.type="admin" in the database or fill ADMIN_EMAILS.',
+    );
+  }
+
+  if (!config['EMAIL_OUTBOX_DISPATCH_URL'] || !config['EMAIL_OUTBOX_SECRET']) {
+    warnings.push(
+      'EMAIL_OUTBOX_DISPATCH_URL and EMAIL_OUTBOX_SECRET are not set: Next.js email outbox retries are disabled.',
+    );
+  }
+  if (
+    !config['OFFER_RESPONSE_EMAIL_DISPATCH_URL'] ||
+    !config['EMAIL_OUTBOX_SECRET']
+  ) {
+    warnings.push(
+      'OFFER_RESPONSE_EMAIL_DISPATCH_URL and EMAIL_OUTBOX_SECRET are not set: offer response email retries are disabled.',
+    );
+  }
+  if (
+    !config['ORGANIZATION_VERIFICATION_EMAIL_DISPATCH_URL'] ||
+    !config['EMAIL_OUTBOX_SECRET']
+  ) {
+    warnings.push(
+      'Organization verification email dispatch is not configured. Intents remain pending until both dispatch settings are set.',
     );
   }
 

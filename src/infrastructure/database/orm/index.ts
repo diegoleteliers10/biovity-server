@@ -1,11 +1,17 @@
 export { ApplicationEntity } from './application.entity';
 export { ApplicationStatusHistoryEntity } from './application-status-history.entity';
+export { OrganizationRejectionReasonEntity } from './organization-rejection-reason.entity';
 export { OfferLetterEntity } from './offer-letter.entity';
 export { ApplicationAnswerEntity } from './application-answer.entity';
+export { ApplicationEvaluationEntity } from './application-evaluation.entity';
+export { ApplicationNoteEntity } from './application-note.entity';
 export { ChatEntity } from './chat.entity';
 export { EventEntity, EventNoteEntity } from './event.entity';
 export { EventParticipantEntity } from './event-participant.entity';
-export { JobEntity, JobSalary, JobLocation, JobBenefits } from './job.entity';
+export { EventParticipantStatusHistoryEntity } from './event-participant-status-history.entity';
+export { EventChangeHistoryEntity } from './event-change-history.entity';
+export { JobEntity } from './job.entity';
+export type { JobSalary, JobLocation, JobBenefits } from './job.entity';
 export { JobAlertEntity } from './job-alert.entity';
 export { JobQuestionEntity } from './job-question.entity';
 export { MessageEntity } from './message.entity';

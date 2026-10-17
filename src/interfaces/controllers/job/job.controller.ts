@@ -36,6 +36,12 @@ import type { JobFilters } from '../../../core/use-cases/job/job.use-case';
 import { CurrentUser } from '../../../shared/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../../../shared/auth/better-auth-session.service';
 import { OrganizationAccessService } from '../../../shared/auth/organization-access.service';
+import { JobStatus } from '../../../core/domain/enums';
+import { JobDistributionSourceService } from '../../../core/services/job-distribution-source.service';
+import {
+  CreateJobDistributionSourceDto,
+  JobDistributionSourceResponseDto,
+} from '../../dtos/job/job-distribution-source.dto';
 
 const SORT_FIELDS = ['createdat', 'title'] as const;
 const SORT_DIRECTIONS = ['asc', 'desc'] as const;
@@ -82,7 +88,48 @@ export class JobController {
   constructor(
     private readonly jobService: JobService,
     private readonly organizationAccess: OrganizationAccessService,
+    private readonly distributionSources: JobDistributionSourceService,
   ) {}
+
+  @Post(':jobId/distribution-sources')
+  @Roles('organization')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Crear un enlace de difusión para una oferta' })
+  @ApiResponse({ status: 201, type: JobDistributionSourceResponseDto })
+  async createDistributionSource(
+    @Param('jobId', ParseUUIDPipe) jobId: string,
+    @Body() dto: CreateJobDistributionSourceDto,
+    @CurrentUser() requester: AuthenticatedUser | undefined,
+  ): Promise<JobDistributionSourceResponseDto> {
+    await this.organizationAccess.assertJobAccess(jobId, requester, 'recruit');
+    return this.distributionSources.create(jobId, dto.sourceChannel);
+  }
+
+  @Get(':jobId/distribution-sources')
+  @Roles('organization')
+  @ApiOperation({ summary: 'Listar enlaces de difusión de una oferta' })
+  @ApiResponse({ status: 200, type: [JobDistributionSourceResponseDto] })
+  async getDistributionSources(
+    @Param('jobId', ParseUUIDPipe) jobId: string,
+    @CurrentUser() requester: AuthenticatedUser | undefined,
+  ): Promise<JobDistributionSourceResponseDto[]> {
+    await this.organizationAccess.assertJobAccess(jobId, requester, 'read');
+    return this.distributionSources.list(jobId);
+  }
+
+  @Delete(':jobId/distribution-sources/:sourceId')
+  @Roles('organization')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Desactivar un enlace de difusión' })
+  @ApiResponse({ status: 204, description: 'Enlace desactivado' })
+  async disableDistributionSource(
+    @Param('jobId', ParseUUIDPipe) jobId: string,
+    @Param('sourceId', ParseUUIDPipe) sourceId: string,
+    @CurrentUser() requester: AuthenticatedUser | undefined,
+  ): Promise<void> {
+    await this.organizationAccess.assertJobAccess(jobId, requester, 'recruit');
+    await this.distributionSources.disable(jobId, sourceId);
+  }
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
@@ -103,6 +150,9 @@ export class JobController {
       requester,
       'manage',
     );
+    if (dto.status === JobStatus.ACTIVE) {
+      await this.organizationAccess.assertRecruitingEnabled(dto.organizationId);
+    }
     const input = JobDtoDomainMapper.toCreateJobInput(dto);
     const job = await this.jobService.createJob(input);
     return JobDomainDtoMapper.toDto(job);
@@ -128,6 +178,13 @@ export class JobController {
   ): Promise<JobResponseDto> {
     const result = await this.jobService.getJobByIdWithApplicationCount(id);
     if (!result || !result.job.isActive()) {
+      throw new NotFoundException('Job not found');
+    }
+    if (
+      !(await this.organizationAccess.isOrganizationVerified(
+        result.job.organizationId,
+      ))
+    ) {
       throw new NotFoundException('Job not found');
     }
     const jobDto = JobDomainDtoMapper.toDto(result.job);
@@ -160,6 +217,7 @@ export class JobController {
     const filters = {
       organizationId: query.organizationId,
       status: publicStatus,
+      publicOnly: true,
       search: query.search,
       category: query.category,
       sort: parseJobSort(query.sort),
@@ -289,6 +347,13 @@ export class JobController {
     const existingJob = await this.jobService.getJobById(id);
     if (!existingJob) throw new NotFoundException('Job not found');
     await this.organizationAccess.assertJobAccess(id, requester, 'manage');
+    if ((dto.status ?? existingJob.status) === JobStatus.ACTIVE) {
+      await this.organizationAccess.assertAccess(
+        existingJob.organizationId,
+        requester,
+        'recruit',
+      );
+    }
     if (
       dto.organizationId &&
       dto.organizationId !== existingJob.organizationId

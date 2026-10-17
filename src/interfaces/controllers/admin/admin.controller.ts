@@ -6,9 +6,13 @@ import {
   Query,
   HttpCode,
   HttpStatus,
+  ConflictException,
+  NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
 import { AdminService } from '../../../core/services/admin.service';
+import type { AuthenticatedUser } from '../../../shared/auth/better-auth-session.service';
 import { Roles } from '../../../shared/decorators/roles.decorator';
 import {
   AdminStatsResponseDto,
@@ -21,6 +25,7 @@ import {
   AdminHealthDetailedResponseDto,
   SystemBroadcastDto,
 } from '../../dtos/admin/admin.dto';
+import { CurrentUser as CurrentUserDecorator } from '../../../shared/decorators/current-user.decorator';
 
 @ApiTags('admin')
 @Roles('admin')
@@ -94,13 +99,31 @@ export class AdminController {
   @ApiResponse({ status: 200, description: 'Notificaciones enviadas' })
   async broadcastSystemNotification(
     @Body() dto: SystemBroadcastDto,
-  ): Promise<{ sent: number }> {
-    await this.adminService.broadcastSystemNotification(
+    @CurrentUserDecorator() actor: AuthenticatedUser | undefined,
+  ): Promise<{
+    broadcastId: string;
+    queued: number;
+    status: 'queued' | 'replayed';
+  }> {
+    if (!actor) return Promise.reject(new UnauthorizedException());
+    const result = await this.adminService.broadcastSystemNotification(
       dto.organizationId,
       dto.title,
       dto.body,
+      actor.id,
+      dto.requestId,
     );
-    return { sent: 1 };
+    if (result.status === 'organization_missing') {
+      return Promise.reject(
+        new NotFoundException('La organización no existe.'),
+      );
+    }
+    if (result.status === 'request_id_conflict') {
+      return Promise.reject(
+        new ConflictException('El identificador ya se usó con otro aviso.'),
+      );
+    }
+    return result;
   }
 
   @Get('health/detailed')

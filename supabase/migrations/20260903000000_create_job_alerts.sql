@@ -30,5 +30,6 @@ CREATE TABLE IF NOT EXISTS "job_alert" (
 CREATE INDEX IF NOT EXISTS "idx_job_alert_user_id" ON "job_alert" ("user_id");
 
 ALTER TABLE public.job_alert ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.job_alert FROM PUBLIC, anon, authenticated, service_role;
 
 COMMIT;

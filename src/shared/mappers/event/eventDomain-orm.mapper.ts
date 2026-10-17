@@ -14,14 +14,19 @@ export class EventDomainOrmMapper {
     entity.description = domain.description;
     entity.type = domain.type;
     entity.startAt = domain.startAt;
+    entity.timeZone = domain.timeZone;
     entity.endAt = domain.endAt;
     entity.location = domain.location;
     entity.meetingUrl = domain.meetingUrl;
     entity.status = domain.status;
+    entity.calendarProvider = domain.calendarProvider;
     entity.organizerId = domain.organizerId;
     entity.organizationId = domain.organizationId;
     entity.candidateId = domain.candidateId;
     entity.applicationId = domain.applicationId;
+    entity.pipelineStageId = domain.pipelineStageId;
+    entity.pipelineStageNameSnapshot = domain.pipelineStageNameSnapshot;
+    entity.rubricVersionId = domain.rubricVersionId;
     entity.createdAt = domain.createdAt;
     entity.updatedAt = domain.updatedAt;
     return entity;
@@ -47,6 +52,11 @@ export class EventDomainOrmMapper {
       Array.isArray(entity.participants)
         ? entity.participants.map(p => this.participantToDomain(p))
         : [],
+      entity.timeZone,
+      entity.pipelineStageId ?? null,
+      entity.pipelineStageNameSnapshot ?? null,
+      entity.rubricVersionId ?? null,
+      entity.calendarProvider ?? 'biovity',
     );
     return event;
   }

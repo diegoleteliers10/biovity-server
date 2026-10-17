@@ -3,7 +3,11 @@ import { Injectable } from '@nestjs/common';
 import { OrganizationEntity } from '../database/orm';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
-import { NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { UserEntity } from '../database/orm/user.entity';
 import { Organization } from '../../core/domain/entities/organization.entity';
 import { OrganizationDomainOrmMapper } from '../../shared/mappers/organization/organizationDomain-orm.mapper';
@@ -29,6 +33,28 @@ export class OrganizationRepositoryImpl implements IOrganizationRepository {
     ownerUserId: string,
   ): Promise<Organization> {
     return this.dataSource.transaction(async manager => {
+      const owner = await manager.findOne(UserEntity, {
+        where: { id: ownerUserId },
+        lock: { mode: 'pessimistic_write' },
+      });
+      if (!owner) throw new NotFoundException('Organization owner not found');
+      if (owner.type !== UserType.ORGANIZATION) {
+        throw new ForbiddenException(
+          'Only organization users can create an organization',
+        );
+      }
+      if (owner.organizationId) {
+        const existing = await manager.findOne(OrganizationEntity, {
+          where: { id: owner.organizationId },
+        });
+        if (!existing) {
+          throw new ConflictException(
+            'Organization owner has an invalid organization link',
+          );
+        }
+        return OrganizationDomainOrmMapper.toDomain(existing);
+      }
+
       const organizationOrm = OrganizationDomainOrmMapper.toOrm(entity);
       const savedOrganization = await manager.save(
         OrganizationEntity,
@@ -36,7 +62,7 @@ export class OrganizationRepositoryImpl implements IOrganizationRepository {
       );
       const ownerUpdate = await manager.update(
         UserEntity,
-        { id: ownerUserId },
+        { id: ownerUserId, organizationId: null },
         { organizationId: savedOrganization.id },
       );
       if (!ownerUpdate.affected)

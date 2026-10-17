@@ -5,6 +5,10 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Resume } from '../../core/domain/entities/resume.entity';
 import { ResumeDomainOrmMapper } from '../../shared/mappers/resume/resumeDomain-orm.mapper';
+import {
+  recordCandidateProfileChange,
+  resumeSearchDataChanged,
+} from './candidate-profile-change';
 
 const DEFAULT_TAKE = 50;
 
@@ -16,9 +20,15 @@ export class ResumeRepositoryImpl implements IResumeRepository {
   ) {}
 
   async create(entity: Resume): Promise<Resume> {
-    const resumeOrm = ResumeDomainOrmMapper.toOrm(entity);
-    const savedResume = await this.resumeRepository.save(resumeOrm);
-    return ResumeDomainOrmMapper.toDomain(savedResume);
+    return this.resumeRepository.manager.transaction(async manager => {
+      const savedResume = await manager
+        .getRepository(ResumeEntity)
+        .save(ResumeDomainOrmMapper.toOrm(entity));
+      if (resumeSearchDataChanged(null, savedResume)) {
+        await recordCandidateProfileChange(manager, savedResume.userId);
+      }
+      return ResumeDomainOrmMapper.toDomain(savedResume);
+    });
   }
 
   async findById(id: string): Promise<Resume | null> {
@@ -29,6 +39,7 @@ export class ResumeRepositoryImpl implements IResumeRepository {
   async findByUserId(userId: string): Promise<Resume | null> {
     const resumeOrm = await this.resumeRepository.findOne({
       where: { userId },
+      order: { updatedAt: 'DESC', createdAt: 'DESC', id: 'DESC' },
     });
     return resumeOrm ? ResumeDomainOrmMapper.toDomain(resumeOrm) : null;
   }
@@ -51,21 +62,48 @@ export class ResumeRepositoryImpl implements IResumeRepository {
   }
 
   async update(id: string, entity: Partial<Resume>): Promise<Resume | null> {
-    const existingResume = await this.resumeRepository.findOne({
-      where: { id },
-    });
-    if (!existingResume) return null;
+    return this.resumeRepository.manager.transaction(async manager => {
+      const repository = manager.getRepository(ResumeEntity);
+      const existingResume = await repository.findOne({ where: { id } });
+      if (!existingResume) return null;
 
-    const updatedResumeOrm = {
-      ...existingResume,
-      ...ResumeDomainOrmMapper.toOrm(entity as Resume),
-    };
-    const savedResume = await this.resumeRepository.save(updatedResumeOrm);
-    return ResumeDomainOrmMapper.toDomain(savedResume);
+      const mappedResume = ResumeDomainOrmMapper.toOrm({
+        ...ResumeDomainOrmMapper.toDomain(existingResume),
+        ...entity,
+      });
+      const updatedResumeOrm = { ...existingResume };
+      if (entity.summary !== undefined)
+        updatedResumeOrm.summary = mappedResume.summary;
+      if (entity.experiences !== undefined)
+        updatedResumeOrm.experiences = mappedResume.experiences;
+      if (entity.education !== undefined)
+        updatedResumeOrm.education = mappedResume.education;
+      if (entity.skills !== undefined) updatedResumeOrm.skills = mappedResume.skills;
+      if (entity.certifications !== undefined)
+        updatedResumeOrm.certifications = mappedResume.certifications;
+      if (entity.languages !== undefined)
+        updatedResumeOrm.languages = mappedResume.languages;
+      if (entity.links !== undefined) updatedResumeOrm.links = mappedResume.links;
+      if (entity.cvFile !== undefined) updatedResumeOrm.cvFile = mappedResume.cvFile;
+      const savedResume = await repository.save(updatedResumeOrm);
+      if (resumeSearchDataChanged(existingResume, savedResume)) {
+        await recordCandidateProfileChange(manager, savedResume.userId);
+      }
+      return ResumeDomainOrmMapper.toDomain(savedResume);
+    });
   }
 
   async delete(id: string): Promise<boolean> {
-    const result = await this.resumeRepository.delete(id);
-    return result.affected != null && result.affected > 0;
+    return this.resumeRepository.manager.transaction(async manager => {
+      const repository = manager.getRepository(ResumeEntity);
+      const resume = await repository.findOne({ where: { id } });
+      if (!resume) return false;
+
+      await repository.delete(id);
+      if (resumeSearchDataChanged(resume, null)) {
+        await recordCandidateProfileChange(manager, resume.userId);
+      }
+      return true;
+    });
   }
 }

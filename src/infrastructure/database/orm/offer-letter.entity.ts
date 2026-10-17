@@ -1,9 +1,4 @@
-import {
-  Column,
-  Entity,
-  Index,
-  PrimaryGeneratedColumn,
-} from 'typeorm';
+import { Column, Entity, Index, PrimaryGeneratedColumn } from 'typeorm';
 
 @Entity('offer_letter')
 @Index('idx_offer_letter_application', ['applicationId'])
@@ -31,7 +26,7 @@ export class OfferLetterEntity {
   public messageId?: string | null;
 
   @Column({ type: 'varchar', length: 20, nullable: false, default: 'sent' })
-  public status: 'sent' | 'accepted' | 'rejected';
+  public status: 'sent' | 'accepted' | 'rejected' | 'cancelled' | 'expired';
 
   @Column({ type: 'varchar', length: 200, nullable: true })
   public title?: string | null;
@@ -47,6 +42,9 @@ export class OfferLetterEntity {
 
   @Column({ name: 'responded_at', type: 'timestamptz', nullable: true })
   public respondedAt?: Date | null;
+
+  @Column({ name: 'expires_at', type: 'timestamptz', nullable: true })
+  public expiresAt?: Date | null;
 
   @Column({ name: 'created_at', type: 'timestamptz', default: () => 'now()' })
   public createdAt: Date;

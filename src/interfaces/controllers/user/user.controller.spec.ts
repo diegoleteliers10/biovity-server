@@ -2,6 +2,7 @@ import { ForbiddenException } from '@nestjs/common';
 import type { UserService } from '../../../core/services/user.service';
 import type { AuthenticatedUser } from '../../../shared/auth/better-auth-session.service';
 import type { OrganizationAccessService } from '../../../shared/auth/organization-access.service';
+import { UserType } from '../../../core/domain/enums';
 import { UserController } from './user.controller';
 
 const orphanOrganization: AuthenticatedUser = {
@@ -23,6 +24,7 @@ describe('UserController organization directory access', () => {
     getUserById: jest.fn(),
     getAllUsers: jest.fn(),
     incrementViews: jest.fn(),
+    updateUser: jest.fn(),
   };
   const organizationAccess = {
     assertAccess: jest.fn(),
@@ -56,6 +58,49 @@ describe('UserController organization directory access', () => {
       controller.getAllUsers({ type: 'organization' } as never, adminUser),
     ).resolves.toMatchObject({ data: [], total: 0 });
     expect(organizationAccess.assertAccess).not.toHaveBeenCalled();
+  });
+
+  it('allows admins to update a user type through the user service', async () => {
+    const userId = '22222222-2222-4222-8222-222222222222';
+    userService.updateUser.mockResolvedValue({
+      id: userId,
+      name: 'Admin managed user',
+      type: UserType.ADMIN,
+    });
+
+    await expect(
+      controller.updateUser(
+        userId,
+        {
+          name: 'Admin managed user',
+          type: UserType.ADMIN,
+        },
+        adminUser,
+      ),
+    ).resolves.toMatchObject({ id: userId, type: UserType.ADMIN });
+    expect(userService.updateUser).toHaveBeenCalledWith(
+      userId,
+      expect.objectContaining({
+        name: 'Admin managed user',
+        type: UserType.ADMIN,
+      }),
+    );
+  });
+
+  it('denies organization members from changing another user type', async () => {
+    const member: AuthenticatedUser = {
+      ...orphanOrganization,
+      organizationId: '55555555-5555-4555-8555-555555555555',
+    };
+
+    await expect(
+      controller.updateUser(
+        '22222222-2222-4222-8222-222222222222',
+        { type: UserType.ADMIN },
+        member,
+      ),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(userService.updateUser).not.toHaveBeenCalled();
   });
 
   it('allows organization members to read candidate contact details', async () => {

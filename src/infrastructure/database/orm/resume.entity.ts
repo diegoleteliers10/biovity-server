@@ -92,6 +92,9 @@ export class ResumeEntity {
   @Column({ type: 'json', nullable: true })
   public cvFile?: CvFileEntity | null;
 
+  @Column({ name: 'cv_version', type: 'integer', default: 0 })
+  public cvVersion = 0;
+
   @CreateDateColumn()
   public createdAt: Date = new Date();
 

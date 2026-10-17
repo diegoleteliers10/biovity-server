@@ -48,6 +48,7 @@ import { JobAlertModule } from './interfaces/controllers/job-alert/job-alert.mod
 import { SalaryModule } from './interfaces/controllers/salary/salary.module';
 import { EmailService } from './core/services/email.service';
 import { AuthModule } from './shared/auth/auth.module';
+import { CronModule } from './interfaces/controllers/cron/cron.module';
 
 @Module({
   imports: [
@@ -96,6 +97,7 @@ import { AuthModule } from './shared/auth/auth.module';
     SavedSearchModule,
     JobAlertModule,
     SalaryModule,
+    CronModule,
   ],
   controllers: [],
   providers: [

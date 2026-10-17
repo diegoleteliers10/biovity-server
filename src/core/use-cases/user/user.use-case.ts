@@ -1,4 +1,9 @@
 import { User } from '../../domain/entities/user.entity';
+import type {
+  CandidateAvailability,
+  CandidateSeniority,
+  UserType,
+} from '../../domain/enums';
 
 export interface UserFilters {
   type?: 'professional' | 'organization';
@@ -33,12 +38,14 @@ export interface IUserUseCase {
 
 export interface UpdateUserInput {
   name?: string;
-  type?: string;
+  type?: UserType;
   isEmailVerified?: boolean;
   isActive?: boolean;
   organizationId?: string;
   avatar?: string;
   profession?: string;
+  experienceLevel?: CandidateSeniority | null;
+  availability?: CandidateAvailability | null;
   birthday?: string;
   phone?: string;
   location?: {

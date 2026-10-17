@@ -10,6 +10,7 @@ import {
   HttpCode,
   HttpStatus,
   ParseUUIDPipe,
+  BadRequestException,
   ForbiddenException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
@@ -22,6 +23,10 @@ import { ApplicationDomainDtoMapper } from '../../../shared/mappers/application/
 import { ApplicationQueryDto } from '../../dtos/application/application-query.dto';
 import { ApplicationPaginatedResponseDto } from '../../dtos/application/application-paginated.dto';
 import { ApplicationStatusUpdateDto } from '../../dtos/application/application-status.dto';
+import { ApplicationReopenDto } from '../../dtos/application/application-reopen.dto';
+import { ApplicationStageUpdateDto } from '../../dtos/application/application-stage-update.dto';
+import { ApplicationHiringPlanDto } from '../../dtos/application/application-hiring-plan.dto';
+import { ApplicationStatusHistoryDto } from '../../dtos/application/application-status-history.dto';
 
 import { Roles } from '../../../shared/decorators/roles.decorator';
 import { CurrentUser } from '../../../shared/decorators/current-user.decorator';
@@ -74,9 +79,10 @@ export class ApplicationController {
           requester.type === 'admin' ||
           isAdminUser(requester) ||
           (dto.job && permissions.get(dto.job.organizationId)));
+      const recruiter = dto.job && permissions.get(dto.job.organizationId);
       return ApplicationDomainDtoMapper.toDto(
         application,
-        full ? 'full' : 'directory',
+        recruiter ? 'recruiter' : full ? 'full' : 'directory',
       );
     });
   }
@@ -102,6 +108,11 @@ export class ApplicationController {
     }
     const input = ApplicationDtoDomainMapper.toCreateApplicationInput(dto);
     const application = await this.applicationService.createApplication(input);
+    if (!application) {
+      throw new BadRequestException(
+        'El enlace de difusión no es válido o ya está desactivado.',
+      );
+    }
     return ApplicationDomainDtoMapper.toDto(application);
   }
 
@@ -114,9 +125,9 @@ export class ApplicationController {
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser() requester: AuthenticatedUser | undefined,
   ): Promise<ApplicationResponseDto | null> {
-    const application = await this.applicationService.getApplicationById(id);
-    if (application && !requester)
+    if (!requester)
       throw new ForbiddenException('Se requiere una sesión de usuario.');
+    const application = await this.applicationService.getApplicationById(id);
     if (application && requester) {
       if (
         requester.type === 'professional' &&
@@ -292,12 +303,99 @@ export class ApplicationController {
       requester,
       'recruit',
     );
-    const application = await this.applicationService.updateApplicationStatus(
+    const application = await this.applicationService.updateApplicationStatus({
+      applicationId: id,
+      status: dto.status,
+      changedById: requester?.id ?? null,
+      rejectionNote: dto.rejectionNote,
+      rejectionReasonId: dto.rejectionReasonId,
+    });
+    return application
+      ? ApplicationDomainDtoMapper.toDto(application, 'recruiter')
+      : null;
+  }
+
+  @Put(':id/stage')
+  @Roles('organization')
+  async updateApplicationStage(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: ApplicationStageUpdateDto,
+    @CurrentUser() requester: AuthenticatedUser | undefined,
+  ): Promise<ApplicationResponseDto | null> {
+    await this.organizationAccess.assertApplicationAccess(
       id,
-      dto.status,
-      requester?.id || null,
+      requester,
+      'recruit',
     );
-    return application ? ApplicationDomainDtoMapper.toDto(application) : null;
+    const application = await this.applicationService.updateApplicationStage({
+      applicationId: id,
+      stageId: dto.stageId,
+      changedById: requester?.id ?? null,
+      rejectionNote: dto.rejectionNote,
+      rejectionReasonId: dto.rejectionReasonId,
+    });
+    return application
+      ? ApplicationDomainDtoMapper.toDto(application, 'recruiter')
+      : null;
+  }
+
+  @Post(':id/reopen')
+  @Roles('organization')
+  @HttpCode(HttpStatus.OK)
+  async reopenApplication(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: ApplicationReopenDto,
+    @CurrentUser() requester: AuthenticatedUser | undefined,
+  ): Promise<ApplicationResponseDto | null> {
+    await this.organizationAccess.assertApplicationAccess(
+      id,
+      requester,
+      'recruit',
+    );
+    const application = await this.applicationService.reopenApplication({
+      applicationId: id,
+      stageId: dto.stageId,
+      changedById: requester?.id ?? null,
+      reason: dto.reason,
+    });
+    return application
+      ? ApplicationDomainDtoMapper.toDto(application, 'recruiter')
+      : null;
+  }
+
+  @Put(':id/hiring-plan')
+  @Roles('organization')
+  async updateHiringPlan(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: ApplicationHiringPlanDto,
+    @CurrentUser() requester: AuthenticatedUser | undefined,
+  ): Promise<ApplicationResponseDto | null> {
+    await this.organizationAccess.assertApplicationAccess(
+      id,
+      requester,
+      'recruit',
+    );
+    const application = await this.applicationService.updateHiringPlan({
+      applicationId: id,
+      ...dto,
+    });
+    return application
+      ? ApplicationDomainDtoMapper.toDto(application, 'recruiter')
+      : null;
+  }
+
+  @Get(':id/status-history')
+  @Roles('organization')
+  async getApplicationStatusHistory(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() requester: AuthenticatedUser | undefined,
+  ): Promise<ApplicationStatusHistoryDto[]> {
+    await this.organizationAccess.assertApplicationAccess(
+      id,
+      requester,
+      'recruit',
+    );
+    return this.applicationService.getApplicationStatusHistory(id);
   }
 
   @Delete(':id')

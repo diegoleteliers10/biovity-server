@@ -6,6 +6,7 @@ export interface JobFilters {
   search?: string;
   category?: string;
   sort?: JobSort;
+  publicOnly?: boolean;
 }
 
 export type JobSortField = 'createdAt' | 'title';

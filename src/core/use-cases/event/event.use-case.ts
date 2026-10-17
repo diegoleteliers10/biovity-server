@@ -1,5 +1,7 @@
 import { Event, EventNote } from '../../domain/entities/event.entity';
+import { EventChangeHistory } from '../../domain/entities/event-change-history';
 import { EventType, EventStatus, ParticipantStatus } from '../../domain/enums';
+import type { EventParticipantStatusHistory } from '../../repositories/event-participant.repository';
 
 export interface PaginationOptions {
   page?: number;
@@ -18,6 +20,7 @@ export interface EventFilters {
   organizerId?: string;
   organizationId?: string;
   candidateId?: string;
+  applicationId?: string;
   userId?: string;
   type?: EventType;
   status?: EventStatus;
@@ -32,13 +35,22 @@ export interface IEventUseCase {
     filters?: EventFilters,
     pagination?: PaginationOptions,
   ): Promise<PaginatedResult<Event>>;
-  updateEvent(id: string, data: UpdateEventInput): Promise<Event | null>;
+  updateEvent(
+    id: string,
+    data: UpdateEventInput,
+    actorUserId: string,
+  ): Promise<Event | null>;
   updateParticipantStatus(
     eventId: string,
     userId: string,
     status: ParticipantStatus,
   ): Promise<Event | null>;
-  deleteEvent(id: string): Promise<boolean>;
+  getParticipantStatusHistory(
+    eventId: string,
+    userId: string,
+  ): Promise<EventParticipantStatusHistory[] | null>;
+  deleteEvent(id: string, actorUserId: string): Promise<boolean>;
+  getEventChangeHistory(id: string): Promise<EventChangeHistory[]>;
   createNote(eventId: string, data: CreateNoteInput): Promise<EventNote>;
   getNotes(eventId: string): Promise<EventNote[]>;
   deleteNote(id: string): Promise<boolean>;
@@ -49,6 +61,7 @@ export interface CreateEventInput {
   description?: string;
   type: EventType;
   startAt: Date;
+  timeZone?: string;
   endAt?: Date;
   location?: string;
   meetingUrl?: string;
@@ -56,6 +69,9 @@ export interface CreateEventInput {
   organizationId?: string;
   candidateId?: string;
   applicationId?: string;
+  interviewerIds?: string[];
+  interviewerAssignments?: Array<{ userId: string; roleId: string }>;
+  calendarProvider?: 'biovity' | 'google';
 }
 
 export interface UpdateEventInput {
@@ -63,10 +79,12 @@ export interface UpdateEventInput {
   description?: string;
   type?: EventType;
   startAt?: Date;
+  timeZone?: string;
   endAt?: Date;
   location?: string;
   meetingUrl?: string;
   status?: EventStatus;
+  calendarProvider?: 'biovity' | 'google';
 }
 
 export interface CreateNoteInput {

@@ -1,8 +1,10 @@
 import {
   Injectable,
+  Optional,
+  ConflictException,
+  BadRequestException,
   NotFoundException,
   Inject,
-  LoggerService,
 } from '@nestjs/common';
 import * as crypto from 'crypto';
 import { DataSource } from 'typeorm';
@@ -10,33 +12,27 @@ import { InjectDataSource } from '@nestjs/typeorm';
 import { IEventRepository } from '../repositories/event.repository';
 import {
   IEventParticipantRepository,
+  EventParticipantStatusHistory,
+  EventInterviewerAssignment,
   EVENT_PARTICIPANT_REPOSITORY,
 } from '../repositories/event-participant.repository';
-import { IUserRepository } from '../repositories/user.repository';
 import {
   IEventUseCase,
+  EventFilters,
   CreateEventInput,
   UpdateEventInput,
   CreateNoteInput,
 } from '../use-cases/event/event.use-case';
 import { Event, EventNote } from '../domain/entities/event.entity';
 import {
-  EventStatus,
-  EventType,
-  NotificationType,
-  ParticipantStatus,
-} from '../domain/enums';
+  GENERAL_INTERVIEW_ROLE,
+  InterviewRole,
+} from '../domain/entities/pipeline-stage-rubric';
+import type { EventChangeHistory } from '../domain/entities/event-change-history';
+import { EventStatus, EventType, ParticipantStatus } from '../domain/enums';
 import { EventEntity } from '../../infrastructure/database/orm/event.entity';
 import { EventDomainOrmMapper } from '../../shared/mappers/event/eventDomain-orm.mapper';
-import { LOGGER_TOKEN } from '../../shared/logger/logger.service';
-import {
-  NotificationService,
-  eventTypeLabel,
-  formatEventDate,
-} from '../../shared/notification';
-
-const CALENDAR_LINK = '/dashboard/calendar';
-const APPLICATIONS_LINK = '/dashboard/applications';
+import { GoogleCalendarService } from './google-calendar.service';
 
 @Injectable()
 export class EventService implements IEventUseCase {
@@ -45,12 +41,10 @@ export class EventService implements IEventUseCase {
     private readonly eventRepository: IEventRepository,
     @Inject(EVENT_PARTICIPANT_REPOSITORY)
     private readonly participantRepository: IEventParticipantRepository,
-    @Inject('IUserRepository')
-    private readonly userRepository: IUserRepository,
-    private readonly notificationService: NotificationService,
     @InjectDataSource()
     private readonly dataSource: DataSource,
-    @Inject(LOGGER_TOKEN) private readonly logger: LoggerService,
+    @Optional()
+    private readonly googleCalendar?: GoogleCalendarService,
   ) {}
 
   private generateId(): string {
@@ -58,6 +52,41 @@ export class EventService implements IEventUseCase {
   }
 
   async createEvent(data: CreateEventInput): Promise<Event> {
+    if (data.calendarProvider === 'google') {
+      const isConnected =
+        this.googleCalendar &&
+        (await this.googleCalendar.isConnected(
+          data.organizationId
+            ? { kind: 'organization', id: data.organizationId }
+            : { kind: 'user', id: data.organizerId },
+        ));
+      if (!isConnected) {
+        return Promise.reject(
+          new BadRequestException(
+            'Conecta Google Calendar antes de guardar el evento allí.',
+          ),
+        );
+      }
+    }
+    const legacyAssignments = data.interviewerIds ?? [];
+    const requestedAssignments =
+      data.interviewerAssignments ??
+      legacyAssignments.map(userId => ({
+        userId,
+        roleId: GENERAL_INTERVIEW_ROLE.id,
+      }));
+    if (
+      (data.interviewerAssignments?.length && legacyAssignments.length) ||
+      new Set(requestedAssignments.map(assignment => assignment.userId))
+        .size !== requestedAssignments.length ||
+      (data.type !== EventType.INTERVIEW && requestedAssignments.length > 0)
+    ) {
+      return Promise.reject(
+        new BadRequestException(
+          'Las asignaciones de entrevistadores no son válidas.',
+        ),
+      );
+    }
     const event = new Event(
       this.generateId(),
       data.title,
@@ -74,6 +103,12 @@ export class EventService implements IEventUseCase {
       data.applicationId || null,
       new Date(),
       new Date(),
+      [],
+      data.timeZone ?? 'America/Santiago',
+      null,
+      null,
+      null,
+      data.calendarProvider ?? 'biovity',
     );
 
     const queryRunner = this.dataSource.createQueryRunner();
@@ -82,6 +117,43 @@ export class EventService implements IEventUseCase {
 
     let createdId: string;
     try {
+      let allowedRoles: InterviewRole[] = [GENERAL_INTERVIEW_ROLE];
+      if (data.type === EventType.INTERVIEW && data.applicationId) {
+        const stageRows = await queryRunner.query(
+          `SELECT stage.id AS pipeline_stage_id,
+                  stage.name AS pipeline_stage_name_snapshot,
+                  stage.current_rubric_version_id AS rubric_version_id,
+                  rubric.roles
+           FROM application candidate_application
+           JOIN pipeline_stage stage
+             ON stage.id = candidate_application.pipeline_stage_id
+           LEFT JOIN pipeline_stage_rubric_version rubric
+             ON rubric.id = stage.current_rubric_version_id
+           WHERE candidate_application.id = $1::uuid
+           FOR SHARE OF candidate_application, stage`,
+          [data.applicationId],
+        );
+        const stage = stageRows[0];
+        if (stage) {
+          event.pipelineStageId = stage.pipeline_stage_id;
+          event.pipelineStageNameSnapshot = stage.pipeline_stage_name_snapshot;
+          event.rubricVersionId = stage.rubric_version_id;
+          allowedRoles = stage.roles ?? allowedRoles;
+        }
+      }
+      const assignments: EventInterviewerAssignment[] = [];
+      for (const requested of requestedAssignments) {
+        const role = allowedRoles.find(item => item.id === requested.roleId);
+        if (!role || requested.userId === data.candidateId) {
+          await queryRunner.rollbackTransaction();
+          return Promise.reject(
+            new BadRequestException(
+              'El rol de entrevista o la persona asignada no es válido.',
+            ),
+          );
+        }
+        assignments.push({ ...requested, roleLabel: role.label });
+      }
       const saved = await queryRunner.manager.save(
         EventEntity,
         EventDomainOrmMapper.toOrm(event),
@@ -92,7 +164,40 @@ export class EventService implements IEventUseCase {
         saved.id,
         saved.organizerId,
         saved.candidateId,
+        [],
+        data.type === EventType.INTERVIEW,
+        assignments,
       );
+      await queryRunner.manager.query(
+        `INSERT INTO event_lifecycle_notification_intent
+          (kind, event_id, participant_id, recipient_id, event_title, event_type,
+           event_start_at, event_time_zone, actor_user_id, actor_name, dedup_key)
+         SELECT 'created', event.id, participant.id, participant.user_id,
+                event.title, event.type, event."startAt", event."timeZone",
+                event."organizerId", organizer.name,
+                'event:' || event.id::text || ':created:' || participant.user_id::text
+         FROM event
+         JOIN event_participant participant ON participant.event_id = event.id
+         JOIN "user" organizer ON organizer.id = event."organizerId"
+         WHERE event.id = $1::uuid
+           AND participant.user_id <> event."organizerId"
+           AND participant.status <> 'declined'
+         ON CONFLICT (dedup_key) DO NOTHING`,
+        [saved.id],
+      );
+      if (data.type === EventType.INTERVIEW) {
+        await queryRunner.manager.query(
+          `INSERT INTO interview_reminder_notification_intent
+            (event_id, participant_id, scheduled_start_at, available_at)
+           SELECT event.id, participant.id, event."startAt",
+                  event."startAt" - interval '24 hours'
+           FROM event
+           JOIN event_participant participant ON participant.event_id = event.id
+           WHERE event.id = $1::uuid AND event."startAt" > now()
+           ON CONFLICT (event_id, participant_id, scheduled_start_at) DO NOTHING`,
+          [saved.id],
+        );
+      }
       await queryRunner.commitTransaction();
     } catch (error) {
       await queryRunner.rollbackTransaction();
@@ -102,11 +207,10 @@ export class EventService implements IEventUseCase {
     }
 
     const created = await this.eventRepository.findById(createdId);
-    if (created) {
-      await this.notifyInterviewCreated(created);
-      return created;
-    }
-    return event;
+    const savedEvent = created ?? event;
+    if (this.googleCalendar && savedEvent.calendarProvider === 'google')
+      await this.googleCalendar.syncEvent(savedEvent);
+    return savedEvent;
   }
 
   async getEventById(id: string): Promise<Event | null> {
@@ -114,16 +218,7 @@ export class EventService implements IEventUseCase {
   }
 
   async getEvents(
-    filters?: {
-      organizerId?: string;
-      organizationId?: string;
-      candidateId?: string;
-      userId?: string;
-      type?: EventType;
-      status?: EventStatus;
-      from?: Date;
-      to?: Date;
-    },
+    filters?: EventFilters,
     pagination?: { page?: number; limit?: number },
   ): Promise<{
     data: Event[];
@@ -135,76 +230,97 @@ export class EventService implements IEventUseCase {
     return this.eventRepository.findAll(filters, pagination);
   }
 
-  async updateEvent(id: string, data: UpdateEventInput): Promise<Event | null> {
-    const existing = await this.eventRepository.findById(id);
-    if (!existing) {
-      throw new NotFoundException(`Event with id ${id} not found`);
+  async updateEvent(
+    id: string,
+    data: UpdateEventInput,
+    actorUserId: string,
+  ): Promise<Event | null> {
+    let previousEvent: Event | null = null;
+    if (data.calendarProvider === 'google') {
+      const currentEvent = await this.eventRepository.findById(id);
+      if (!currentEvent)
+        return Promise.reject(
+          new NotFoundException(`Event with id ${id} not found`),
+        );
+      const isConnected =
+        this.googleCalendar &&
+        (await this.googleCalendar.isConnected(
+          currentEvent.organizationId
+            ? { kind: 'organization', id: currentEvent.organizationId }
+            : { kind: 'user', id: currentEvent.organizerId },
+        ));
+      if (!isConnected) {
+        return Promise.reject(
+          new BadRequestException(
+            'Conecta Google Calendar antes de guardar el evento allí.',
+          ),
+        );
+      }
+      previousEvent = currentEvent;
+    } else if (data.calendarProvider === 'biovity') {
+      previousEvent = await this.eventRepository.findById(id);
     }
-
     const partial: Partial<Event> = {};
     if (data.title !== undefined) partial.title = data.title;
     if (data.description !== undefined) partial.description = data.description;
     if (data.type !== undefined) partial.type = data.type;
+    if (data.timeZone !== undefined) partial.timeZone = data.timeZone;
     if (data.startAt !== undefined) partial.startAt = data.startAt;
     if (data.endAt !== undefined) partial.endAt = data.endAt;
     if (data.location !== undefined) partial.location = data.location;
     if (data.meetingUrl !== undefined) partial.meetingUrl = data.meetingUrl;
     if (data.status !== undefined) partial.status = data.status;
+    if (data.calendarProvider !== undefined)
+      partial.calendarProvider = data.calendarProvider;
 
-    const updated = await this.eventRepository.update(id, partial);
-    if (!updated) {
-      return null;
-    }
-
-    const wasCancelled =
-      data.status === EventStatus.CANCELLED &&
-      existing.status !== EventStatus.CANCELLED;
-
-    // EXCEPTION. REASON: best-effort side-effect after successful update.
-    try {
-      if (wasCancelled) {
-        await this.notifyEventCancelled(
-          updated.id,
-          updated.title,
-          updated.organizerId,
-        );
-      } else {
-        await this.notifyEventUpdated(updated, updated.organizerId);
-      }
-    } catch (error) {
-      this.logNotificationFailure(
-        wasCancelled ? 'event-cancelled' : 'event-updated',
-        error,
-      );
-    }
-
-    return updated;
-  }
-
-  async deleteEvent(id: string): Promise<boolean> {
-    const existing = await this.eventRepository.findById(id);
-    if (!existing) {
+    const result = await this.eventRepository.updateWithHistory(
+      id,
+      partial,
+      actorUserId,
+    );
+    if (result.kind === 'not_found') {
       throw new NotFoundException(`Event with id ${id} not found`);
     }
-
-    const wasAlreadyCancelled = existing.status === EventStatus.CANCELLED;
-    await this.eventRepository.update(id, {
-      status: EventStatus.CANCELLED,
-    });
-
-    if (!wasAlreadyCancelled) {
-      try {
-        await this.notifyEventCancelled(
-          existing.id,
-          existing.title,
-          existing.organizerId,
-        );
-      } catch (error) {
-        this.logNotificationFailure('event-cancelled', error);
-      }
+    if (result.kind === 'closed') {
+      throw new ConflictException(
+        'No puedes cambiar un evento completado o cancelado.',
+      );
     }
+    if (result.kind === 'unchanged') return result.event;
 
+    if (this.googleCalendar && result.event.calendarProvider === 'google')
+      await this.googleCalendar.syncEvent(result.event);
+    else if (
+      this.googleCalendar &&
+      result.event.calendarProvider === 'biovity' &&
+      previousEvent?.calendarProvider === 'google'
+    )
+      await this.googleCalendar.removeEventFromGoogle(previousEvent);
+    return result.event;
+  }
+
+  async deleteEvent(id: string, actorUserId: string): Promise<boolean> {
+    const result = await this.eventRepository.cancelWithHistory(
+      id,
+      actorUserId,
+    );
+    if (result.kind === 'not_found') {
+      throw new NotFoundException(`Event with id ${id} not found`);
+    }
+    if (result.kind === 'closed') {
+      throw new ConflictException(
+        'No puedes cancelar un evento que ya se completó.',
+      );
+    }
+    if (result.kind === 'unchanged') return true;
+
+    if (this.googleCalendar && result.event.calendarProvider === 'google')
+      await this.googleCalendar.syncEvent(result.event);
     return true;
+  }
+
+  async getEventChangeHistory(id: string): Promise<EventChangeHistory[]> {
+    return this.eventRepository.findChangeHistory(id);
   }
 
   async updateParticipantStatus(
@@ -222,171 +338,40 @@ export class EventService implements IEventUseCase {
     // so the path userId is trusted. Wire a Passport JWT strategy + guard and
     // compare against req.user.id before shipping to production.
 
-    const existingParticipant =
-      await this.participantRepository.findByEventAndUser(eventId, userId);
-    if (!existingParticipant) {
+    const change = await this.participantRepository.updateStatus(
+      eventId,
+      userId,
+      status,
+      userId,
+    );
+    if (!change) {
       throw new NotFoundException(
         `Participant ${userId} not found in event ${eventId}`,
       );
     }
-
-    if (existingParticipant.status === status) {
-      return this.eventRepository.findById(eventId);
-    }
-
-    const fromStatus = existingParticipant.status;
-
-    const updated = await this.participantRepository.updateStatus(
-      eventId,
-      userId,
-      status,
-    );
-    if (!updated) {
-      throw new NotFoundException(
-        `Failed to update participant ${userId} in event ${eventId}`,
+    if (change.kind === 'closed') {
+      throw new ConflictException(
+        'La respuesta ya no se puede cambiar porque el evento comenzó o terminó.',
       );
     }
 
-    // EXCEPTION. REASON: best-effort side-effect after successful update.
-    try {
-      await this.notifyOrganizerRsvp(event, userId, fromStatus, status);
-    } catch (error) {
-      this.logNotificationFailure('rsvp', error);
+    if (change.kind === 'unchanged') {
+      return this.eventRepository.findById(eventId);
     }
 
     return this.eventRepository.findById(eventId);
   }
 
-  private async notifyInterviewCreated(event: Event): Promise<void> {
-    if (!event.candidateId || event.candidateId === event.organizerId) {
-      return;
-    }
-
-    // EXCEPTION. REASON: post-commit best-effort side-effect.
-    try {
-      const orgName = await this.userName(event.organizerId);
-      await this.notificationService.create({
-        userId: event.candidateId,
-        type: NotificationType.INTERVIEW,
-        title: 'Nueva entrevista',
-        body: `${orgName} agendo ${eventTypeLabel(event.type)}: ${event.title} para ${formatEventDate(event.startAt)}`,
-        link: CALENDAR_LINK,
-        data: { eventId: event.id, eventType: event.type },
-        dedupKey: `event:${event.id}:created`,
-      });
-    } catch (error) {
-      this.logNotificationFailure('interview-created', error);
-    }
-  }
-
-  private async notifyEventUpdated(
-    event: Event,
-    excludeUserId: string,
-  ): Promise<void> {
-    // EXCEPTION. REASON: post-commit best-effort side-effect.
-    try {
-      const userIds = await this.participantRepository.findUserIdsByEventId(
-        event.id,
-        [ParticipantStatus.DECLINED],
-      );
-      const recipients = userIds.filter(id => id !== excludeUserId);
-      if (recipients.length === 0) {
-        return;
-      }
-
-      await this.notificationService.createMany(
-        recipients.map(userId => ({
-          userId,
-          type: NotificationType.INTERVIEW,
-          title: 'Evento actualizado',
-          body: `La entrevista '${event.title}' fue actualizada`,
-          link: CALENDAR_LINK,
-          data: { eventId: event.id },
-          dedupKey: `event:${event.id}:updated:${event.updatedAt.getTime()}`,
-        })),
-      );
-    } catch (error) {
-      this.logNotificationFailure('event-updated', error);
-    }
-  }
-
-  private async notifyEventCancelled(
+  async getParticipantStatusHistory(
     eventId: string,
-    title: string,
-    excludeUserId: string,
-  ): Promise<void> {
-    // EXCEPTION. REASON: post-commit best-effort side-effect.
-    try {
-      const userIds =
-        await this.participantRepository.findUserIdsByEventId(eventId);
-      const recipients = userIds.filter(id => id !== excludeUserId);
-      if (recipients.length === 0) {
-        return;
-      }
-
-      await this.notificationService.createMany(
-        recipients.map(userId => ({
-          userId,
-          type: NotificationType.INTERVIEW,
-          title: 'Evento cancelado',
-          body: `'${title}' fue cancelado`,
-          link: CALENDAR_LINK,
-          data: { eventId },
-          dedupKey: `event:${eventId}:cancelled`,
-        })),
-      );
-    } catch (error) {
-      this.logNotificationFailure('event-cancelled', error);
-    }
-  }
-
-  private async notifyOrganizerRsvp(
-    event: Event,
     userId: string,
-    fromStatus: ParticipantStatus,
-    toStatus: ParticipantStatus,
-  ): Promise<void> {
-    // EXCEPTION. REASON: post-commit best-effort side-effect.
-    try {
-      const participantName = await this.userName(userId);
-      await this.notificationService.create({
-        userId: event.organizerId,
-        type: NotificationType.INTERVIEW,
-        title: 'Respuesta de invitacion',
-        body: `${participantName} ${this.rsvpVerb(toStatus)} '${event.title}'`,
-        link: APPLICATIONS_LINK,
-        data: { eventId: event.id, userId, status: toStatus },
-        dedupKey: `event:${event.id}:rsvp:${userId}:${fromStatus}:${toStatus}`,
-      });
-    } catch (error) {
-      this.logNotificationFailure('rsvp', error);
-    }
-  }
-
-  private async userName(userId: string): Promise<string> {
-    const user = await this.userRepository.findById(userId);
-    return user?.name ?? 'Alguien';
-  }
-
-  private rsvpVerb(status: ParticipantStatus): string {
-    switch (status) {
-      case ParticipantStatus.ACCEPTED:
-        return 'acepto';
-      case ParticipantStatus.DECLINED:
-        return 'rechazo';
-      case ParticipantStatus.PENDING:
-        return 'marco como pendiente';
-      default:
-        return 'actualizo su respuesta a';
-    }
-  }
-
-  private logNotificationFailure(operation: string, error: unknown): void {
-    this.logger.error(
-      `event notification failed (${operation}): ${(error as Error).message}`,
-      (error as Error).stack,
-      'EventService',
+  ): Promise<EventParticipantStatusHistory[] | null> {
+    const participant = await this.participantRepository.findByEventAndUser(
+      eventId,
+      userId,
     );
+    if (!participant) return null;
+    return this.participantRepository.findStatusHistory(eventId, userId);
   }
 
   async createNote(eventId: string, data: CreateNoteInput): Promise<EventNote> {

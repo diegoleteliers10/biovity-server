@@ -19,6 +19,11 @@ export class Event {
     public createdAt: Date = new Date(),
     public updatedAt: Date = new Date(),
     public participants: EventParticipant[] = [],
+    public timeZone: string = 'America/Santiago',
+    public pipelineStageId: string | null = null,
+    public pipelineStageNameSnapshot: string | null = null,
+    public rubricVersionId: string | null = null,
+    public calendarProvider: 'biovity' | 'google' = 'biovity',
   ) {}
 
   public isActive(): boolean {

@@ -114,6 +114,10 @@ DB_PORT=5432
 DB_USERNAME=postgres
 DB_PASSWORD=tu_password
 DB_NAME=biovity
+WEB_APP_URL=https://biovity.cl
+GOOGLE_CALENDAR_CLIENT_ID=
+GOOGLE_CALENDAR_CLIENT_SECRET=
+GOOGLE_CALENDAR_REDIRECT_URI=https://biovity.cl/oauth2callback
 
 # JWT
 JWT_SECRET=tu_secreto_jwt
@@ -122,6 +126,8 @@ JWT_SECRET=tu_secreto_jwt
 # SUPABASE_URL=
 # SUPABASE_ANON_KEY=
 ```
+
+Google Calendar usa OAuth como integración de perfil. Agrega la URL de callback exacta a los URI autorizados del cliente OAuth. Usa `https://biovity.cl/oauth2callback` en producción y `https://localhost:3000/oauth2callback` en desarrollo. Next.js reenvía el callback al backend. La clave `AI_ENCRYPTION_KEY` cifra los tokens de actualización guardados en PostgreSQL.
 
 ## Comandos disponibles
 

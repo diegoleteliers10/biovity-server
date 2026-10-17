@@ -50,6 +50,7 @@ const SELECT_COLUMNS = `
   (
     SELECT COUNT(*) FROM job j
     WHERE j."organizationId" = o.id AND j.status = 'active'
+      AND o.verification_status = 'verified'
   ) AS "activeJobsCount"
 `;
 
@@ -94,7 +95,8 @@ export class OrganizationPublicService {
     const rows = await this.dataSource.query<OrganizationPublicRow[]>(
       `SELECT ${SELECT_COLUMNS}
        FROM organization o
-       WHERE o.slug = $1 ${isUuid ? 'OR o.id = $2::uuid' : ''}
+       WHERE o.verification_status = 'verified'
+         AND (o.slug = $1 ${isUuid ? 'OR o.id = $2::uuid' : ''})
        LIMIT 1`,
       isUuid ? [slugOrId, slugOrId] : [slugOrId],
     );
@@ -109,12 +111,14 @@ export class OrganizationPublicService {
       this.dataSource.query<OrganizationPublicRow[]>(
         `SELECT ${SELECT_COLUMNS}
          FROM organization o
+         WHERE o.verification_status = 'verified'
          ORDER BY "activeJobsCount" DESC, o."createdAt" DESC
          LIMIT $1 OFFSET $2`,
         [limit, skip],
       ),
       this.dataSource.query<Array<{ count: string }>>(
-        `SELECT COUNT(*) AS count FROM organization`,
+        `SELECT COUNT(*) AS count FROM organization
+         WHERE verification_status = 'verified'`,
       ),
     ]);
     const total = Number(totalResult[0]?.count) || 0;

@@ -17,6 +17,10 @@ export class ChatResponseDto {
   professionalId: string;
 
   @IsOptional()
+  @IsUUID()
+  organizationId: string | null;
+
+  @IsOptional()
   @IsString()
   lastMessage?: string;
 

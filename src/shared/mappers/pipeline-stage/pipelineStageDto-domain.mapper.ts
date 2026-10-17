@@ -1,11 +1,13 @@
 import { CreatePipelineStageDto } from '../../../interfaces/dtos/pipeline-stage/create-pipeline-stage.dto';
 import { UpdatePipelineStageDto } from '../../../interfaces/dtos/pipeline-stage/update-pipeline-stage.dto';
+import { ApplicationStatus } from '../../../core/domain/enums';
 
 export interface CreatePipelineStageInput {
   jobId: string;
   name: string;
   order: number;
   color?: string;
+  statusProjection?: ApplicationStatus;
 }
 
 export interface UpdatePipelineStageInput {
@@ -20,6 +22,7 @@ export class PipelineStageDtoDomainMapper {
       name: dto.name,
       order: dto.order ?? 0,
       color: dto.color,
+      statusProjection: dto.statusProjection,
     };
   }
 

@@ -10,7 +10,11 @@ import {
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { OrganizationResponseDto } from '../organization/organization-response.dto';
-import { UserType } from '../../../core/domain/enums';
+import {
+  CandidateAvailability,
+  CandidateSeniority,
+  UserType,
+} from '../../../core/domain/enums';
 
 export class UserLocationDto {
   @ApiPropertyOptional({ example: 'Santiago', description: 'Ciudad' })
@@ -161,6 +165,16 @@ export class UserResponseDto {
   @IsOptional()
   @IsString()
   profession?: string;
+
+  @ApiPropertyOptional({ enum: CandidateSeniority })
+  @IsOptional()
+  @IsEnum(CandidateSeniority)
+  experienceLevel?: CandidateSeniority | null;
+
+  @ApiPropertyOptional({ enum: CandidateAvailability })
+  @IsOptional()
+  @IsEnum(CandidateAvailability)
+  availability?: CandidateAvailability | null;
 
   @ApiPropertyOptional({
     example: '1990-01-01',

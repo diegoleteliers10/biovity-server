@@ -16,10 +16,7 @@ export class EmailService {
     const fromEmail = process.env.EMAIL_FROM || 'Biovity <no-reply@biovity.cl>';
 
     if (!this.resend) {
-      console.log(
-        `[EmailService Mock] To: ${to}, Subject: ${subject}, Body: ${body.slice(0, 100)}...`,
-      );
-      return;
+      return Promise.reject(new Error('RESEND_API_KEY is not configured'));
     }
 
     const { error } = await this.resend.emails.send({
@@ -31,7 +28,9 @@ export class EmailService {
 
     if (error) {
       console.error('[EmailService] Error sending email via Resend:', error);
-      throw new Error(`Failed to send email: ${error.message}`);
+      return Promise.reject(
+        new Error(`Failed to send email: ${error.message}`),
+      );
     }
   }
 }

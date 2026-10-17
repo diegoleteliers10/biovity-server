@@ -20,6 +20,8 @@ export class UserDomainDtoMapper {
     dto.organizationId = domain.organizationId;
     dto.avatar = domain.avatar;
     dto.profession = domain.profession;
+    dto.experienceLevel = domain.experienceLevel;
+    dto.availability = domain.availability;
     dto.birthday = domain.birthday;
     dto.phone = domain.phone;
     dto.createdAt = domain.createdAt;

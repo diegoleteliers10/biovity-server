@@ -10,10 +10,6 @@ import {
   UserType,
   JobStatus,
 } from '../../infrastructure/database/orm';
-import { OrganizationMemberEntity } from '../../infrastructure/database/orm/organization-member.entity';
-import { NotificationType } from '../domain/enums';
-import { NotificationService } from '../../shared/notification/notification.service';
-import { CreateNotificationInput } from '../../shared/notification/notification.types';
 
 export interface AdminStats {
   users: {
@@ -36,6 +32,12 @@ export interface AdminStats {
     totalOrganizations: number;
   };
 }
+
+export type SystemBroadcastResult =
+  | { status: 'queued'; broadcastId: string; queued: number }
+  | { status: 'replayed'; broadcastId: string; queued: number }
+  | { status: 'organization_missing' }
+  | { status: 'request_id_conflict' };
 
 export interface RegistrationDataPoint {
   date: string;
@@ -100,10 +102,7 @@ export class AdminService {
     private readonly jobRepo: Repository<JobEntity>,
     @InjectRepository(OrganizationEntity)
     private readonly organizationRepo: Repository<OrganizationEntity>,
-    @InjectRepository(OrganizationMemberEntity)
-    private readonly organizationMemberRepo: Repository<OrganizationMemberEntity>,
     private readonly dataSource: DataSource,
-    private readonly notificationService: NotificationService,
   ) {}
 
   async getAdminStats(): Promise<AdminStats> {
@@ -428,19 +427,123 @@ export class AdminService {
     organizationId: string,
     title: string,
     body: string,
-  ): Promise<void> {
-    const members = await this.organizationMemberRepo.find({
-      where: { organizationId },
+    actorUserId: string,
+    requestId: string,
+  ): Promise<SystemBroadcastResult> {
+    return this.dataSource.transaction(async manager => {
+      const existing = await manager.query<
+        Array<{
+          id: string;
+          organizationId: string;
+          title: string;
+          body: string;
+        }>
+      >(
+        `SELECT id, organization_id AS "organizationId", title, body
+         FROM system_notification_broadcast
+         WHERE actor_user_id = $1::uuid AND request_id = $2::uuid
+         FOR UPDATE`,
+        [actorUserId, requestId],
+      );
+      const prior = existing[0];
+      if (prior) {
+        if (
+          prior.organizationId !== organizationId ||
+          prior.title !== title ||
+          prior.body !== body
+        ) {
+          return { status: 'request_id_conflict' } as const;
+        }
+        const counts = await manager.query<Array<{ count: number }>>(
+          `SELECT count(*)::int AS count
+           FROM system_notification_broadcast_intent
+           WHERE broadcast_id = $1::uuid`,
+          [prior.id],
+        );
+        return {
+          status: 'replayed',
+          broadcastId: prior.id,
+          queued: Number(counts[0]?.count ?? 0),
+        } as const;
+      }
+
+      const organizations = await manager.query<Array<{ id: string }>>(
+        'SELECT id FROM organization WHERE id = $1::uuid',
+        [organizationId],
+      );
+      if (organizations.length === 0) {
+        return { status: 'organization_missing' } as const;
+      }
+
+      const inserted = await manager.query<Array<{ id: string }>>(
+        `INSERT INTO system_notification_broadcast
+          (organization_id, actor_user_id, request_id, title, body)
+         VALUES ($1::uuid, $2::uuid, $3::uuid, $4, $5)
+         ON CONFLICT (actor_user_id, request_id) DO NOTHING
+         RETURNING id`,
+        [organizationId, actorUserId, requestId, title, body],
+      );
+      if (inserted.length === 0) {
+        const concurrent = await manager.query<
+          Array<{
+            id: string;
+            organizationId: string;
+            title: string;
+            body: string;
+          }>
+        >(
+          `SELECT id, organization_id AS "organizationId", title, body
+           FROM system_notification_broadcast
+           WHERE actor_user_id = $1::uuid AND request_id = $2::uuid
+           FOR UPDATE`,
+          [actorUserId, requestId],
+        );
+        const committed = concurrent[0];
+        if (
+          !committed ||
+          committed.organizationId !== organizationId ||
+          committed.title !== title ||
+          committed.body !== body
+        ) {
+          return { status: 'request_id_conflict' } as const;
+        }
+        const counts = await manager.query<Array<{ count: number }>>(
+          `SELECT count(*)::int AS count
+           FROM system_notification_broadcast_intent
+           WHERE broadcast_id = $1::uuid`,
+          [committed.id],
+        );
+        return {
+          status: 'replayed',
+          broadcastId: committed.id,
+          queued: Number(counts[0]?.count ?? 0),
+        } as const;
+      }
+
+      const intents = await manager.query<Array<{ id: string }>>(
+        `INSERT INTO system_notification_broadcast_intent
+          (broadcast_id, recipient_id)
+         SELECT $1::uuid, recipients.user_id
+         FROM (
+           SELECT account.id AS user_id
+           FROM "user" account
+           WHERE account."organizationId" = $2::uuid AND account."isActive" IS TRUE
+           UNION
+           SELECT member.user_id
+           FROM organization_member member
+           JOIN "user" account ON account.id = member.user_id
+           WHERE member.organization_id = $2::uuid AND account."isActive" IS TRUE
+         ) recipients
+         ON CONFLICT (broadcast_id, recipient_id) DO NOTHING
+         RETURNING id`,
+        [inserted[0].id, organizationId],
+      );
+      return {
+        status: 'queued',
+        broadcastId: inserted[0].id,
+        queued: intents.length,
+      } as const;
     });
-
-    const inputs: CreateNotificationInput[] = members.map(member => ({
-      userId: member.userId,
-      type: NotificationType.SYSTEM,
-      title,
-      body,
-    }));
-
-    await this.notificationService.createMany(inputs);
   }
 
   private async getRecentUsersCount(

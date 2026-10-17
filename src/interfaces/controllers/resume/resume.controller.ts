@@ -21,6 +21,12 @@ import { ResumeCreateDto } from '../../dtos/resume/resume-create.dto';
 import { ResumeUpdateDto } from '../../dtos/resume/resume-update.dto';
 import { ResumeResponseDto } from '../../dtos/resume/resume-response.dto';
 import { ResumeDomainDtoMapper } from '../../../shared/mappers/resume/resumeDomain-dto.mapper';
+import { ResumeCvLifecycleService } from '../../../core/services/resume-cv-lifecycle.service';
+import {
+  CreateCvUploadReservationDto,
+  DeleteCvDto,
+  FinalizeCvUploadDto,
+} from '../../dtos/resume/resume-cv-lifecycle.dto';
 import { CurrentUser } from '../../../shared/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../../../shared/auth/better-auth-session.service';
 import { isAdminUser } from '../../../shared/auth/better-auth-session.service';
@@ -36,6 +42,7 @@ export class ResumeController {
   constructor(
     private readonly resumeService: ResumeService,
     private readonly organizationAccess: OrganizationAccessService,
+    private readonly cvLifecycle: ResumeCvLifecycleService,
   ) {}
 
   @Post()
@@ -128,6 +135,52 @@ export class ResumeController {
     return ResumeDomainDtoMapper.toDto(resume);
   }
 
+  @Post(':id/cv-upload-reservations')
+  @Roles('professional')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Reservar una ruta para cargar un CV' })
+  async reserveCvUpload(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: CreateCvUploadReservationDto,
+    @CurrentUser() requester: AuthenticatedUser | undefined,
+  ) {
+    await this.organizationAccess.assertResumeAccess(id, requester, 'manage');
+    return this.cvLifecycle.reserve(id, dto.expectedVersion);
+  }
+
+  @Post(':id/cv-upload-reservations/:reservationId/finalize')
+  @Roles('professional')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Confirmar la carga de un CV' })
+  async finalizeCvUpload(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('reservationId', ParseUUIDPipe) reservationId: string,
+    @Body() dto: FinalizeCvUploadDto,
+    @CurrentUser() requester: AuthenticatedUser | undefined,
+  ): Promise<ResumeResponseDto> {
+    await this.organizationAccess.assertResumeAccess(id, requester, 'manage');
+    const resume = await this.cvLifecycle.finalize(id, reservationId, dto);
+    return ResumeDomainDtoMapper.toDto(resume);
+  }
+
+  @Delete(':id/cv')
+  @Roles('professional')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Eliminar el CV del currículum' })
+  async deleteCv(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: DeleteCvDto,
+    @CurrentUser() requester: AuthenticatedUser | undefined,
+  ): Promise<ResumeResponseDto> {
+    await this.organizationAccess.assertResumeAccess(id, requester, 'manage');
+    const resume = await this.cvLifecycle.delete(
+      id,
+      dto.expectedPath,
+      dto.expectedVersion,
+    );
+    return ResumeDomainDtoMapper.toDto(resume);
+  }
+
   @Delete(':id')
   @Roles('professional')
   @HttpCode(HttpStatus.NO_CONTENT)
@@ -140,6 +193,6 @@ export class ResumeController {
     @CurrentUser() requester: AuthenticatedUser | undefined,
   ): Promise<void> {
     await this.organizationAccess.assertResumeAccess(id, requester, 'manage');
-    await this.resumeService.deleteResume(id);
+    await this.cvLifecycle.deleteResume(id);
   }
 }

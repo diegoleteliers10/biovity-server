@@ -18,6 +18,7 @@ export interface IChatUseCase {
   getChatByParticipants(
     recruiterId: string,
     professionalId: string,
+    organizationId?: string,
   ): Promise<Chat | null>;
   updateChat(id: string, data: UpdateChatInput): Promise<Chat | null>;
   archiveForParticipant(
@@ -37,6 +38,7 @@ export interface IChatUseCase {
 export interface CreateChatInput {
   recruiterId: string;
   professionalId: string;
+  organizationId: string;
   lastMessage?: string;
 }
 

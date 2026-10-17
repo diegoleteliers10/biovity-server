@@ -7,6 +7,8 @@ import {
   ValidateNested,
   IsObject,
   IsEnum,
+  IsInt,
+  Min,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { SkillLevel, LanguageLevel } from '../../../core/domain/enums';
@@ -157,6 +159,10 @@ export class ResumeResponseDto {
   @ValidateNested()
   @Type(() => CvFileDto)
   cvFile?: CvFileDto | null;
+
+  @IsInt()
+  @Min(0)
+  cvVersion: number;
 
   @IsDate()
   @Type(() => Date)

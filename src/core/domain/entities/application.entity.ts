@@ -1,4 +1,8 @@
 import { ApplicationStatus } from '../enums';
+import type {
+  ApplicationSourceChannel,
+  ApplicationSourceMethod,
+} from '../application-source';
 
 export class ApplicationAnswer {
   constructor(
@@ -26,5 +30,12 @@ export class Application {
     public availabilityDate?: string,
     public resumeUrl?: string,
     public answers?: ApplicationAnswer[],
+    public pipelineStageId: string | null = null,
+    public assigneeId: string | null = null,
+    public nextAction: string | null = null,
+    public targetDate: string | null = null,
+    public sourceChannel: ApplicationSourceChannel = 'unknown',
+    public sourceMethod: ApplicationSourceMethod = 'unknown',
+    public distributionSourceId: string | null = null,
   ) {}
 }

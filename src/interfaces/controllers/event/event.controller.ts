@@ -21,6 +21,8 @@ import {
   ApiQuery,
 } from '@nestjs/swagger';
 import { EventService } from '../../../core/services/event.service';
+import { ParticipantStatus } from '../../../core/domain/enums';
+import type { EventChangeHistory } from '../../../core/domain/entities/event-change-history';
 import { EventDtoDomainMapper } from '../../../shared/mappers/event/eventDto-domain.mapper';
 import { EventDomainDtoMapper } from '../../../shared/mappers/event/eventDomain-dto.mapper';
 import { CurrentUser } from '../../../shared/decorators/current-user.decorator';
@@ -76,6 +78,74 @@ export class EventController {
     return EventDomainDtoMapper.toDto(event);
   }
 
+  @Get(':id/change-history')
+  @ApiOperation({ summary: 'Obtener historial de cambios del evento' })
+  @ApiParam({ name: 'id', type: 'string', format: 'uuid' })
+  @ApiResponse({ status: 200, description: 'Historial de cambios' })
+  async getEventChangeHistory(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() requester: AuthenticatedUser | undefined,
+  ): Promise<{ eventId: string; entries: EventChangeHistory[] }> {
+    if (!requester)
+      throw new ForbiddenException('Se requiere una sesión de usuario.');
+    await this.organizationAccess.assertEventAccess(id, requester, 'manage');
+    const entries = await this.eventService.getEventChangeHistory(id);
+    return { eventId: id, entries };
+  }
+
+  @Get(':id/participants/:userId/status-history')
+  @ApiOperation({
+    summary: 'Obtener historial de respuesta de un participante',
+  })
+  @ApiParam({ name: 'id', type: 'string', format: 'uuid' })
+  @ApiParam({ name: 'userId', type: 'string', format: 'uuid' })
+  @ApiResponse({ status: 200, description: 'Historial de respuesta' })
+  async getParticipantStatusHistory(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('userId', ParseUUIDPipe) userId: string,
+    @CurrentUser() requester: AuthenticatedUser | undefined,
+  ): Promise<{
+    eventId: string;
+    userId: string;
+    entries: Array<{
+      id: string;
+      fromStatus: ParticipantStatus;
+      toStatus: ParticipantStatus;
+      changedAt: Date;
+    }>;
+  }> {
+    const event = await this.organizationAccess.assertEventAccess(
+      id,
+      requester,
+      'read',
+    );
+    if (!requester)
+      throw new ForbiddenException('Se requiere una sesión de usuario.');
+
+    const isAdmin = requester.type === 'admin' || isAdminUser(requester);
+    if (
+      requester.id !== userId &&
+      requester.id !== event.organizerId &&
+      !isAdmin
+    ) {
+      if (!event.organizationId) {
+        throw new ForbiddenException('No puedes consultar esta respuesta.');
+      }
+      await this.organizationAccess.assertAccess(
+        event.organizationId,
+        requester,
+        'read',
+      );
+    }
+
+    const entries = await this.eventService.getParticipantStatusHistory(
+      id,
+      userId,
+    );
+    if (!entries) throw new NotFoundException('Participant not found in event');
+    return { eventId: id, userId, entries };
+  }
+
   @Get()
   @ApiOperation({ summary: 'Listar eventos con filtros y paginación' })
   @ApiQuery({ name: 'userId', required: false, type: String })
@@ -96,6 +166,22 @@ export class EventController {
     if (!requester)
       throw new ForbiddenException('Se requiere una sesión de usuario.');
     const isAdmin = requester.type === 'admin' || isAdminUser(requester);
+    if (query.applicationId) {
+      if (query.organizationId) {
+        await this.organizationAccess.assertApplicationOrganizationAccess(
+          query.applicationId,
+          query.organizationId,
+          requester,
+          'read',
+        );
+      } else {
+        await this.organizationAccess.assertApplicationAccess(
+          query.applicationId,
+          requester,
+          'read',
+        );
+      }
+    }
     const filters = {
       userId: isAdmin
         ? query.userId
@@ -109,6 +195,7 @@ export class EventController {
           : undefined,
       organizationId: query.organizationId,
       candidateId: isAdmin ? query.candidateId : undefined,
+      applicationId: query.applicationId,
       type: query.type,
       status: query.status,
       from: query.from ? new Date(query.from) : undefined,
@@ -143,6 +230,7 @@ export class EventController {
   @ApiParam({ name: 'id', type: 'string', format: 'uuid' })
   @ApiResponse({ status: 200, description: 'Evento actualizado' })
   @ApiResponse({ status: 404, description: 'Evento no encontrado' })
+  @ApiResponse({ status: 409, description: 'El evento ya está cerrado' })
   async updateEvent(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: EventUpdateDto,
@@ -150,7 +238,9 @@ export class EventController {
   ): Promise<EventResponseDto> {
     await this.organizationAccess.assertEventAccess(id, requester, 'manage');
     const input = EventDtoDomainMapper.toUpdateEventInput(dto);
-    const event = await this.eventService.updateEvent(id, input);
+    if (!requester)
+      throw new ForbiddenException('Se requiere una sesión de usuario.');
+    const event = await this.eventService.updateEvent(id, input, requester.id);
     if (!event) throw new NotFoundException('Event not found');
     return EventDomainDtoMapper.toDto(event);
   }
@@ -161,12 +251,15 @@ export class EventController {
   @ApiParam({ name: 'id', type: 'string', format: 'uuid' })
   @ApiResponse({ status: 204, description: 'Evento eliminado' })
   @ApiResponse({ status: 404, description: 'Evento no encontrado' })
+  @ApiResponse({ status: 409, description: 'El evento ya está completado' })
   async deleteEvent(
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser() requester: AuthenticatedUser | undefined,
   ): Promise<void> {
     await this.organizationAccess.assertEventAccess(id, requester, 'manage');
-    await this.eventService.deleteEvent(id);
+    if (!requester)
+      throw new ForbiddenException('Se requiere una sesión de usuario.');
+    await this.eventService.deleteEvent(id, requester.id);
   }
 
   @Patch(':id/participants/:userId')
@@ -174,6 +267,7 @@ export class EventController {
   @ApiParam({ name: 'id', type: 'string', format: 'uuid' })
   @ApiParam({ name: 'userId', type: 'string', format: 'uuid' })
   @ApiResponse({ status: 200, description: 'RSVP actualizado' })
+  @ApiResponse({ status: 409, description: 'El periodo de respuesta terminó' })
   @ApiResponse({ status: 404, description: 'Evento no encontrado' })
   async updateParticipantStatus(
     @Param('id', ParseUUIDPipe) id: string,

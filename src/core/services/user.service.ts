@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, Inject } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
 import {
   IUserRepository,
   UserFilters,
@@ -7,7 +7,6 @@ import {
 } from '../repositories/user.repository';
 import { IUserUseCase, UpdateUserInput } from '../use-cases/user/user.use-case';
 import { User } from '../domain/entities/user.entity';
-import { UserType } from '../domain/enums';
 
 @Injectable()
 export class UserService implements IUserUseCase {
@@ -32,26 +31,7 @@ export class UserService implements IUserUseCase {
   }
 
   async updateUser(id: string, data: UpdateUserInput): Promise<User | null> {
-    const existingUser = await this.userRepository.findById(id);
-    if (!existingUser) {
-      throw new NotFoundException(`User with id ${id} not found`);
-    }
-
-    const updatedUser: Partial<User> = {
-      ...existingUser,
-      name: data.name ?? existingUser.name,
-      type: data.type ? (data.type as UserType) : existingUser.type,
-      isEmailVerified: data.isEmailVerified ?? existingUser.isEmailVerified,
-      isActive: data.isActive ?? existingUser.isActive,
-      organizationId: data.organizationId ?? existingUser.organizationId,
-      avatar: data.avatar ?? existingUser.avatar,
-      profession: data.profession ?? existingUser.profession,
-      birthday: data.birthday ?? existingUser.birthday,
-      phone: data.phone ?? existingUser.phone,
-      location: data.location ?? existingUser.location,
-    };
-
-    return this.userRepository.update(id, updatedUser);
+    return this.userRepository.update(id, data);
   }
 
   async incrementViews(id: string): Promise<User | null> {
