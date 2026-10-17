@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
+import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import {
   UserEntity,
@@ -102,6 +102,7 @@ export class AdminService {
     private readonly jobRepo: Repository<JobEntity>,
     @InjectRepository(OrganizationEntity)
     private readonly organizationRepo: Repository<OrganizationEntity>,
+    @InjectDataSource()
     private readonly dataSource: DataSource,
   ) {}
 

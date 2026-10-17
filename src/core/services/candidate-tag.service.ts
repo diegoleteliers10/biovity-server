@@ -4,7 +4,7 @@ import {
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
+import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 import { CandidateTagEntity } from '../../infrastructure/database/orm/candidate-tag.entity';
 import { CandidateTagAssignmentEntity } from '../../infrastructure/database/orm/candidate-tag-assignment.entity';
@@ -18,6 +18,7 @@ export class CandidateTagService {
     private readonly tagRepo: Repository<CandidateTagEntity>,
     @InjectRepository(CandidateTagAssignmentEntity)
     private readonly assignmentRepo: Repository<CandidateTagAssignmentEntity>,
+    @InjectDataSource()
     private readonly dataSource: DataSource,
   ) {}
 

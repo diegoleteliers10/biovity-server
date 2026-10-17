@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { InjectDataSource } from '@nestjs/typeorm';
 import { createHmac, timingSafeEqual } from 'crypto';
 import { DataSource } from 'typeorm';
 
@@ -57,7 +58,7 @@ export function resolveUserRole(user: AuthenticatedUser): UserRole {
  */
 @Injectable()
 export class BetterAuthSessionService {
-  constructor(private readonly dataSource: DataSource) {}
+  constructor(@InjectDataSource() private readonly dataSource: DataSource) {}
 
   async validateSessionCookie(
     cookieValue: string | undefined,

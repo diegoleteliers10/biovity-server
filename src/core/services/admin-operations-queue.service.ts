@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import { OperationsQueueQueryDto } from '../../interfaces/dtos/admin/operations-queue.dto';
 
@@ -94,7 +95,7 @@ export type OperationsQueuePage = {
 
 @Injectable()
 export class AdminOperationsQueueService {
-  constructor(private readonly dataSource: DataSource) {}
+  constructor(@InjectDataSource() private readonly dataSource: DataSource) {}
 
   async list(
     query: OperationsQueueQueryDto,

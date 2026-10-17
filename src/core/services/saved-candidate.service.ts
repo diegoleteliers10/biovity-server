@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
+import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 import { SavedCandidateEntity } from '../../infrastructure/database/orm/saved-candidate.entity';
 import { UserEntity } from '../../infrastructure/database/orm/user.entity';
@@ -21,6 +21,7 @@ export class SavedCandidateService {
   constructor(
     @InjectRepository(SavedCandidateEntity)
     private readonly repo: Repository<SavedCandidateEntity>,
+    @InjectDataSource()
     private readonly dataSource: DataSource,
   ) {}
 
