@@ -12,7 +12,26 @@ type BroadcastIntent = {
   recipientId: string;
 };
 
-type DeliveryOutcome = 'accepted' | 'suppressed' | 'not_processing' | 'retrying' | 'retry_failed';
+type SuppressionReason =
+  | 'broadcast_or_recipient_missing'
+  | 'recipient_inactive'
+  | 'organization_membership_missing'
+  | 'in_app_channel_disabled'
+  | 'system_event_disabled';
+
+type DeliveryOutcome =
+  | { intentId: string; broadcastId: string; status: 'accepted' }
+  | {
+      intentId: string;
+      broadcastId: string;
+      status: 'suppressed';
+      reason: SuppressionReason;
+    }
+  | {
+      intentId: string;
+      broadcastId: string;
+      status: 'not_processing' | 'retrying' | 'retry_failed';
+    };
 
 type DispatchSummary = {
   ok: boolean;
@@ -24,6 +43,7 @@ type DispatchSummary = {
   retrying: number;
   retryFailed: number;
   notProcessing: number;
+  outcomes: DeliveryOutcome[];
 };
 
 const EMPTY_SUMMARY: DispatchSummary = {
@@ -36,6 +56,7 @@ const EMPTY_SUMMARY: DispatchSummary = {
   retrying: 0,
   retryFailed: 0,
   notProcessing: 0,
+  outcomes: [],
 };
 
 const errorMessage = (cause: unknown): string =>
@@ -60,7 +81,10 @@ export class SystemBroadcastNotificationDispatcherService {
     @Inject(LOGGER_TOKEN) private readonly logger: LoggerService,
   ) {}
 
-  @Cron(CronExpression.EVERY_MINUTE, { disabled: process.env.VERCEL === '1' })
+  @Cron(CronExpression.EVERY_MINUTE, {
+    disabled:
+      process.env.NODE_ENV === 'production' || process.env.VERCEL === '1',
+  })
   async dispatch(): Promise<DispatchSummary> {
     const recovered = await this.dataSource
       .query<Array<{ status: 'retry' | 'dead' }>>(
@@ -77,7 +101,7 @@ export class SystemBroadcastNotificationDispatcherService {
       )
       .then(
         rows => ({ kind: 'recovered' as const, rows }),
-        cause => ({ kind: 'failed' as const, cause }),
+        (cause: unknown) => ({ kind: 'failed' as const, cause }),
       );
     if (recovered.kind === 'failed') {
       this.logger.error(
@@ -85,8 +109,12 @@ export class SystemBroadcastNotificationDispatcherService {
       );
       return { ...EMPTY_SUMMARY, ok: false };
     }
-    const recoveredCount = recovered.rows.filter(row => row.status === 'retry').length;
-    const deadCount = recovered.rows.filter(row => row.status === 'dead').length;
+    const recoveredCount = recovered.rows.filter(
+      row => row.status === 'retry',
+    ).length;
+    const deadCount = recovered.rows.filter(
+      row => row.status === 'dead',
+    ).length;
 
     const claimed = await this.dataSource
       .query<BroadcastIntent[]>(
@@ -110,14 +138,19 @@ export class SystemBroadcastNotificationDispatcherService {
       )
       .then(
         intents => ({ kind: 'claimed' as const, intents }),
-        cause => ({ kind: 'failed' as const, cause }),
+        (cause: unknown) => ({ kind: 'failed' as const, cause }),
       );
 
     if (claimed.kind === 'failed') {
       this.logger.error(
         `System broadcast notification claim failed: ${errorMessage(claimed.cause)}`,
       );
-      return { ...EMPTY_SUMMARY, ok: false, recovered: recoveredCount, dead: deadCount };
+      return {
+        ...EMPTY_SUMMARY,
+        ok: false,
+        recovered: recoveredCount,
+        dead: deadCount,
+      };
     }
 
     const outcomes: DeliveryOutcome[] = [];
@@ -127,17 +160,24 @@ export class SystemBroadcastNotificationDispatcherService {
     const summary: DispatchSummary = {
       ok:
         deadCount === 0 &&
-        !outcomes.includes('retrying') &&
-        !outcomes.includes('retry_failed') &&
-        !outcomes.includes('not_processing'),
+        !outcomes.some(outcome => outcome.status === 'retrying') &&
+        !outcomes.some(outcome => outcome.status === 'retry_failed') &&
+        !outcomes.some(outcome => outcome.status === 'not_processing'),
       recovered: recoveredCount,
       dead: deadCount,
       claimed: claimed.intents.length,
-      accepted: outcomes.filter(outcome => outcome === 'accepted').length,
-      suppressed: outcomes.filter(outcome => outcome === 'suppressed').length,
-      retrying: outcomes.filter(outcome => outcome === 'retrying').length,
-      retryFailed: outcomes.filter(outcome => outcome === 'retry_failed').length,
-      notProcessing: outcomes.filter(outcome => outcome === 'not_processing').length,
+      accepted: outcomes.filter(outcome => outcome.status === 'accepted')
+        .length,
+      suppressed: outcomes.filter(outcome => outcome.status === 'suppressed')
+        .length,
+      retrying: outcomes.filter(outcome => outcome.status === 'retrying')
+        .length,
+      retryFailed: outcomes.filter(outcome => outcome.status === 'retry_failed')
+        .length,
+      notProcessing: outcomes.filter(
+        outcome => outcome.status === 'not_processing',
+      ).length,
+      outcomes,
     };
     this.logger.log(
       `System broadcast notification dispatch completed: ${JSON.stringify(summary)}`,
@@ -172,8 +212,25 @@ export class SystemBroadcastNotificationDispatcherService {
         );
         const broadcast = rows[0];
         if (!broadcast || !broadcast.isActive) {
-          const updated = await this.setStatus(manager, intent.id, 'suppressed');
-          return updated ? ('suppressed' as const) : ('not_processing' as const);
+          const updated = await this.setStatus(
+            manager,
+            intent.id,
+            'suppressed',
+          );
+          return updated
+            ? ({
+                intentId: intent.id,
+                broadcastId: intent.broadcastId,
+                status: 'suppressed',
+                reason: broadcast
+                  ? 'recipient_inactive'
+                  : 'broadcast_or_recipient_missing',
+              } as const)
+            : ({
+                intentId: intent.id,
+                broadcastId: intent.broadcastId,
+                status: 'not_processing',
+              } as const);
         }
 
         const isOwner =
@@ -194,17 +251,42 @@ export class SystemBroadcastNotificationDispatcherService {
           broadcast.notification_preferences,
           'events',
         );
-        if (
-          members.length === 0 ||
-          channels?.in_app === false ||
-          events?.system === false
-        ) {
-          const updated = await this.setStatus(manager, intent.id, 'suppressed');
-          return updated ? ('suppressed' as const) : ('not_processing' as const);
+        const suppressionReason: SuppressionReason | undefined =
+          members.length === 0
+            ? 'organization_membership_missing'
+            : channels?.in_app === false
+              ? 'in_app_channel_disabled'
+              : events?.system === false
+                ? 'system_event_disabled'
+                : undefined;
+        if (suppressionReason) {
+          const updated = await this.setStatus(
+            manager,
+            intent.id,
+            'suppressed',
+          );
+          return updated
+            ? ({
+                intentId: intent.id,
+                broadcastId: intent.broadcastId,
+                status: 'suppressed',
+                reason: suppressionReason,
+              } as const)
+            : ({
+                intentId: intent.id,
+                broadcastId: intent.broadcastId,
+                status: 'not_processing',
+              } as const);
         }
 
         const updated = await this.setStatus(manager, intent.id, 'accepted');
-        if (!updated) return 'not_processing' as const;
+        if (!updated) {
+          return {
+            intentId: intent.id,
+            broadcastId: intent.broadcastId,
+            status: 'not_processing',
+          } as const;
+        }
 
         const dedupKey = `system_broadcast:${intent.broadcastId}:${intent.recipientId}`;
         await manager.query(
@@ -239,11 +321,15 @@ export class SystemBroadcastNotificationDispatcherService {
             }),
           ],
         );
-        return 'accepted' as const;
+        return {
+          intentId: intent.id,
+          broadcastId: intent.broadcastId,
+          status: 'accepted',
+        } as const;
       })
       .then(
         result => ({ kind: 'delivered' as const, result }),
-        cause => ({ kind: 'failed' as const, cause }),
+        (cause: unknown) => ({ kind: 'failed' as const, cause }),
       );
 
     if (delivery.kind === 'delivered') return delivery.result;
@@ -262,21 +348,33 @@ export class SystemBroadcastNotificationDispatcherService {
       )
       .then(
         rows => ({ kind: 'updated' as const, rows }),
-        cause => ({ kind: 'failed' as const, cause }),
+        (cause: unknown) => ({ kind: 'failed' as const, cause }),
       );
     if (updated.kind === 'failed') {
       this.logger.error(
         `System broadcast notification retry update failed for ${intent.id}: ${errorMessage(updated.cause)}`,
       );
-      return 'retry_failed';
+      return {
+        intentId: intent.id,
+        broadcastId: intent.broadcastId,
+        status: 'retry_failed',
+      };
     }
     if (updated.rows.length === 0) {
       this.logger.error(
         `System broadcast notification retry update skipped for ${intent.id}: intent was no longer processing`,
       );
-      return 'retry_failed';
+      return {
+        intentId: intent.id,
+        broadcastId: intent.broadcastId,
+        status: 'retry_failed',
+      };
     }
-    return updated.rows[0].status === 'dead' ? 'retry_failed' : 'retrying';
+    return {
+      intentId: intent.id,
+      broadcastId: intent.broadcastId,
+      status: updated.rows[0].status === 'dead' ? 'retry_failed' : 'retrying',
+    };
   }
 
   private async setStatus(
