@@ -16,7 +16,17 @@ import { SystemBroadcastNotificationDispatcherService } from '../../shared/notif
 type JobResult = {
   job: string;
   status: 'fulfilled' | 'rejected';
+  details?: unknown;
 };
+
+type Job = {
+  name: string;
+  run: () => Promise<unknown>;
+  includeResult?: boolean;
+};
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  value !== null && typeof value === 'object' && !Array.isArray(value);
 
 @Injectable()
 export class ScheduledJobsDispatcherService {
@@ -37,47 +47,69 @@ export class ScheduledJobsDispatcherService {
   ) {}
 
   async dispatch(): Promise<{ ok: boolean; jobs: JobResult[] }> {
-    const jobs = [
-      [
-        'application_status_notifications',
-        () => this.notificationService.dispatchApplicationStatusNotifications(),
-      ],
-      [
-        'application_created_notifications',
-        () => this.applicationCreated.dispatch(),
-      ],
-      ['event_change_notifications', () => this.eventChange.dispatch()],
-      ['event_lifecycle_notifications', () => this.eventLifecycle.dispatch()],
-      ['interview_reminders', () => this.interviewReminder.dispatch()],
-      ['message_notifications', () => this.message.dispatch()],
-      ['saved_search_alerts', () => this.savedSearch.dispatch()],
-      ['system_broadcast_notifications', () => this.systemBroadcast.dispatch()],
-      ['email_outbox', () => this.emailOutbox.dispatch()],
-      ['offer_expiry', () => this.offerLetter.expireDueOffers()],
-      ['offer_response_emails', () => this.offerResponseEmail.dispatch()],
-      [
-        'organization_verification_emails',
-        () => this.organizationVerificationEmail.dispatch(),
-      ],
-      [
-        'hiring_plan_reminders',
-        () => this.notificationService.sendHiringPlanReminders(),
-      ],
-      [
-        'notification_deduplication_cleanup',
-        () => this.notificationService.deleteExpiredDeduplicationKeys(),
-      ],
-      [
-        'candidate_retention',
-        () => this.candidateDataLifecycle.processExpiredCandidates(),
-      ],
-    ] as const;
+    const jobs: Job[] = [
+      {
+        name: 'application_status_notifications',
+        run: () => this.notificationService.dispatchApplicationStatusNotifications(),
+      },
+      {
+        name: 'application_created_notifications',
+        run: () => this.applicationCreated.dispatch(),
+      },
+      { name: 'event_change_notifications', run: () => this.eventChange.dispatch() },
+      {
+        name: 'event_lifecycle_notifications',
+        run: () => this.eventLifecycle.dispatch(),
+      },
+      { name: 'interview_reminders', run: () => this.interviewReminder.dispatch() },
+      { name: 'message_notifications', run: () => this.message.dispatch() },
+      { name: 'saved_search_alerts', run: () => this.savedSearch.dispatch() },
+      {
+        name: 'system_broadcast_notifications',
+        run: () => this.systemBroadcast.dispatch(),
+        includeResult: true,
+      },
+      { name: 'email_outbox', run: () => this.emailOutbox.dispatch() },
+      { name: 'offer_expiry', run: () => this.offerLetter.expireDueOffers() },
+      {
+        name: 'offer_response_emails',
+        run: () => this.offerResponseEmail.dispatch(),
+      },
+      {
+        name: 'organization_verification_emails',
+        run: () => this.organizationVerificationEmail.dispatch(),
+      },
+      {
+        name: 'hiring_plan_reminders',
+        run: () => this.notificationService.sendHiringPlanReminders(),
+      },
+      {
+        name: 'notification_deduplication_cleanup',
+        run: () => this.notificationService.deleteExpiredDeduplicationKeys(),
+      },
+      {
+        name: 'candidate_retention',
+        run: () => this.candidateDataLifecycle.processExpiredCandidates(),
+      },
+    ];
 
-    const results = await Promise.allSettled(jobs.map(([, run]) => run()));
-    const jobResults = results.map((result, index): JobResult => ({
-      job: jobs[index][0],
-      status: result.status,
-    }));
+    const results = await Promise.allSettled(jobs.map(job => job.run()));
+    const jobResults = results.map((result, index): JobResult => {
+      const job = jobs[index];
+      if (result.status === 'rejected') {
+        return { job: job.name, status: 'rejected' };
+      }
+      const details = job.includeResult ? result.value : undefined;
+      const failedBroadcast =
+        job.name === 'system_broadcast_notifications' &&
+        isRecord(details) &&
+        details.ok === false;
+      return {
+        job: job.name,
+        status: failedBroadcast ? 'rejected' : 'fulfilled',
+        ...(details === undefined ? {} : { details }),
+      };
+    });
 
     return {
       ok: jobResults.every(result => result.status === 'fulfilled'),
