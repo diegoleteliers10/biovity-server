@@ -12,6 +12,35 @@ type BroadcastIntent = {
   recipientId: string;
 };
 
+type DeliveryOutcome = 'accepted' | 'suppressed' | 'not_processing' | 'retrying' | 'retry_failed';
+
+type DispatchSummary = {
+  ok: boolean;
+  recovered: number;
+  dead: number;
+  claimed: number;
+  accepted: number;
+  suppressed: number;
+  retrying: number;
+  retryFailed: number;
+  notProcessing: number;
+};
+
+const EMPTY_SUMMARY: DispatchSummary = {
+  ok: true,
+  recovered: 0,
+  dead: 0,
+  claimed: 0,
+  accepted: 0,
+  suppressed: 0,
+  retrying: 0,
+  retryFailed: 0,
+  notProcessing: 0,
+};
+
+const errorMessage = (cause: unknown): string =>
+  cause instanceof Error ? cause.message : String(cause);
+
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   value !== null && typeof value === 'object' && !Array.isArray(value);
 
@@ -32,23 +61,32 @@ export class SystemBroadcastNotificationDispatcherService {
   ) {}
 
   @Cron(CronExpression.EVERY_MINUTE, { disabled: process.env.VERCEL === '1' })
-  async dispatch(): Promise<void> {
+  async dispatch(): Promise<DispatchSummary> {
     const recovered = await this.dataSource
-      .query(
+      .query<Array<{ status: 'retry' | 'dead' }>>(
         `UPDATE system_notification_broadcast_intent
-         SET status = 'dead', locked_at = NULL,
-             last_error_code = 'attempt_limit_reached', updated_at = now()
-         WHERE status = 'processing' AND attempt_count >= 8
-           AND locked_at < now() - interval '5 minutes'`,
+         SET status = CASE WHEN attempt_count >= 8 THEN 'dead' ELSE 'retry' END,
+             available_at = CASE WHEN attempt_count >= 8 THEN available_at ELSE now() END,
+             locked_at = NULL,
+             last_error_code = CASE WHEN attempt_count >= 8
+               THEN 'attempt_limit_reached' ELSE 'stale_processing_recovered' END,
+             updated_at = now()
+         WHERE status = 'processing'
+           AND (locked_at IS NULL OR locked_at < now() - interval '5 minutes')
+         RETURNING status`,
       )
       .then(
-        () => 'ok' as const,
-        () => 'failed' as const,
+        rows => ({ kind: 'recovered' as const, rows }),
+        cause => ({ kind: 'failed' as const, cause }),
       );
-    if (recovered === 'failed') {
-      this.logger.error('system broadcast notification recovery failed');
-      return;
+    if (recovered.kind === 'failed') {
+      this.logger.error(
+        `System broadcast notification recovery failed: ${errorMessage(recovered.cause)}`,
+      );
+      return { ...EMPTY_SUMMARY, ok: false };
     }
+    const recoveredCount = recovered.rows.filter(row => row.status === 'retry').length;
+    const deadCount = recovered.rows.filter(row => row.status === 'dead').length;
 
     const claimed = await this.dataSource
       .query<BroadcastIntent[]>(
@@ -56,9 +94,7 @@ export class SystemBroadcastNotificationDispatcherService {
         WITH due AS (
           SELECT id
           FROM system_notification_broadcast_intent
-          WHERE ((status IN ('pending', 'retry') AND available_at <= now())
-             OR (status = 'processing' AND attempt_count < 8
-               AND locked_at < now() - interval '5 minutes'))
+          WHERE status IN ('pending', 'retry') AND available_at <= now()
           ORDER BY available_at, created_at
           LIMIT 25
           FOR UPDATE SKIP LOCKED
@@ -73,20 +109,44 @@ export class SystemBroadcastNotificationDispatcherService {
       `,
       )
       .then(
-        intents => ({ intents }),
-        () => ({ intents: null }),
+        intents => ({ kind: 'claimed' as const, intents }),
+        cause => ({ kind: 'failed' as const, cause }),
       );
 
-    if (!claimed.intents) {
-      this.logger.error('system broadcast notification claim failed');
-      return;
+    if (claimed.kind === 'failed') {
+      this.logger.error(
+        `System broadcast notification claim failed: ${errorMessage(claimed.cause)}`,
+      );
+      return { ...EMPTY_SUMMARY, ok: false, recovered: recoveredCount, dead: deadCount };
     }
 
-    for (const intent of claimed.intents) await this.deliver(intent);
+    const outcomes: DeliveryOutcome[] = [];
+    for (const intent of claimed.intents) {
+      outcomes.push(await this.deliver(intent));
+    }
+    const summary: DispatchSummary = {
+      ok:
+        deadCount === 0 &&
+        !outcomes.includes('retrying') &&
+        !outcomes.includes('retry_failed') &&
+        !outcomes.includes('not_processing'),
+      recovered: recoveredCount,
+      dead: deadCount,
+      claimed: claimed.intents.length,
+      accepted: outcomes.filter(outcome => outcome === 'accepted').length,
+      suppressed: outcomes.filter(outcome => outcome === 'suppressed').length,
+      retrying: outcomes.filter(outcome => outcome === 'retrying').length,
+      retryFailed: outcomes.filter(outcome => outcome === 'retry_failed').length,
+      notProcessing: outcomes.filter(outcome => outcome === 'not_processing').length,
+    };
+    this.logger.log(
+      `System broadcast notification dispatch completed: ${JSON.stringify(summary)}`,
+    );
+    return summary;
   }
 
-  private async deliver(intent: BroadcastIntent): Promise<void> {
-    const outcome = await this.dataSource
+  private async deliver(intent: BroadcastIntent): Promise<DeliveryOutcome> {
+    const delivery = await this.dataSource
       .transaction(async manager => {
         const rows = await manager.query<
           Array<{
@@ -112,8 +172,8 @@ export class SystemBroadcastNotificationDispatcherService {
         );
         const broadcast = rows[0];
         if (!broadcast || !broadcast.isActive) {
-          await this.setStatus(manager, intent.id, 'suppressed');
-          return 'suppressed' as const;
+          const updated = await this.setStatus(manager, intent.id, 'suppressed');
+          return updated ? ('suppressed' as const) : ('not_processing' as const);
         }
 
         const isOwner =
@@ -139,17 +199,12 @@ export class SystemBroadcastNotificationDispatcherService {
           channels?.in_app === false ||
           events?.system === false
         ) {
-          await this.setStatus(manager, intent.id, 'suppressed');
-          return 'suppressed' as const;
+          const updated = await this.setStatus(manager, intent.id, 'suppressed');
+          return updated ? ('suppressed' as const) : ('not_processing' as const);
         }
 
-        const processing = await manager.query<Array<{ id: string }>>(
-          `SELECT id FROM system_notification_broadcast_intent
-           WHERE id = $1::uuid AND status = 'processing'
-           FOR UPDATE`,
-          [intent.id],
-        );
-        if (processing.length === 0) return 'not_processing' as const;
+        const updated = await this.setStatus(manager, intent.id, 'accepted');
+        if (!updated) return 'not_processing' as const;
 
         const dedupKey = `system_broadcast:${intent.broadcastId}:${intent.recipientId}`;
         await manager.query(
@@ -184,48 +239,58 @@ export class SystemBroadcastNotificationDispatcherService {
             }),
           ],
         );
-        await this.setStatus(manager, intent.id, 'accepted');
         return 'accepted' as const;
       })
       .then(
-        result => ({ kind: result }),
-        () => ({ kind: 'failed' as const }),
+        result => ({ kind: 'delivered' as const, result }),
+        cause => ({ kind: 'failed' as const, cause }),
       );
 
-    if (outcome.kind !== 'failed') return;
+    if (delivery.kind === 'delivered') return delivery.result;
     this.logger.error(
-      `System broadcast notification delivery failed for ${intent.id}`,
+      `System broadcast notification delivery failed for ${intent.id} (${intent.broadcastId}): ${errorMessage(delivery.cause)}`,
     );
     const updated = await this.dataSource
-      .query(
+      .query<Array<{ status: 'retry' | 'dead' }>>(
         `UPDATE system_notification_broadcast_intent
          SET status = CASE WHEN attempt_count >= 8 THEN 'dead' ELSE 'retry' END,
              available_at = now() + LEAST(3600, power(2, attempt_count) * 30) * interval '1 second',
              locked_at = NULL, last_error_code = 'delivery_failed', updated_at = now()
-         WHERE id = $1::uuid AND status = 'processing'`,
+         WHERE id = $1::uuid AND status = 'processing'
+         RETURNING status`,
         [intent.id],
       )
       .then(
-        () => 'updated' as const,
-        () => 'failed' as const,
+        rows => ({ kind: 'updated' as const, rows }),
+        cause => ({ kind: 'failed' as const, cause }),
       );
-    if (updated === 'failed') {
+    if (updated.kind === 'failed') {
       this.logger.error(
-        `System broadcast notification retry update failed for ${intent.id}`,
+        `System broadcast notification retry update failed for ${intent.id}: ${errorMessage(updated.cause)}`,
       );
+      return 'retry_failed';
     }
+    if (updated.rows.length === 0) {
+      this.logger.error(
+        `System broadcast notification retry update skipped for ${intent.id}: intent was no longer processing`,
+      );
+      return 'retry_failed';
+    }
+    return updated.rows[0].status === 'dead' ? 'retry_failed' : 'retrying';
   }
 
   private async setStatus(
     manager: EntityManager,
     intentId: string,
     status: 'accepted' | 'suppressed',
-  ): Promise<void> {
-    await manager.query(
+  ): Promise<boolean> {
+    const rows = await manager.query<Array<{ id: string }>>(
       `UPDATE system_notification_broadcast_intent
        SET status = $2, locked_at = NULL, last_error_code = NULL, updated_at = now()
-       WHERE id = $1::uuid AND status = 'processing'`,
+       WHERE id = $1::uuid AND status = 'processing'
+       RETURNING id`,
       [intentId, status],
     );
+    return rows.length > 0;
   }
 }
