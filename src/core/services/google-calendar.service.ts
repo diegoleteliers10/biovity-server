@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectDataSource } from '@nestjs/typeorm';
-import { Result } from 'better-result';
 import { createHash, randomBytes } from 'crypto';
 import { google } from 'googleapis';
 import type { DataSource } from 'typeorm';
@@ -17,6 +16,19 @@ const GOOGLE_CALENDAR_SCOPES = [
 
 type CalendarOwner =
   { kind: 'user'; id: string } | { kind: 'organization'; id: string };
+
+type PromiseOutcome<T> =
+  | { kind: 'ok'; value: T }
+  | { kind: 'error'; error: unknown };
+
+function capturePromise<T>(
+  operation: () => Promise<T>,
+): Promise<PromiseOutcome<T>> {
+  return Promise.resolve().then(operation).then(
+    value => ({ kind: 'ok', value }),
+    error => ({ kind: 'error', error }),
+  );
+}
 
 type GoogleCalendarConnectionRow = {
   refresh_token_ciphertext: string;
@@ -123,11 +135,8 @@ export class GoogleCalendarService {
 
     const oauth = this.createOAuthClient();
     if (!oauth) return 'failed';
-    const tokenResult = await Result.tryPromise({
-      try: () => oauth.getToken(code),
-      catch: cause => cause,
-    });
-    if (tokenResult.isErr()) return 'failed';
+    const tokenResult = await capturePromise(() => oauth.getToken(code));
+    if (tokenResult.kind === 'error') return 'failed';
 
     const owner: CalendarOwner = {
       kind: oauthState.owner_type,
@@ -139,11 +148,10 @@ export class GoogleCalendarService {
     if (!refreshToken) return 'failed';
 
     oauth.setCredentials(tokens);
-    const profileResult = await Result.tryPromise({
-      try: () => google.oauth2({ version: 'v2', auth: oauth }).userinfo.get(),
-      catch: cause => cause,
-    });
-    if (profileResult.isErr()) return 'failed';
+    const profileResult = await capturePromise(() =>
+      google.oauth2({ version: 'v2', auth: oauth }).userinfo.get(),
+    );
+    if (profileResult.kind === 'error') return 'failed';
     const accountEmail = profileResult.value.data.email;
     if (!accountEmail) return 'failed';
 
@@ -205,7 +213,7 @@ export class GoogleCalendarService {
       connection.calendarId,
       oauth,
     );
-    if (syncResult.isErr()) {
+    if (syncResult.kind === 'error') {
       await this.updateSyncStatus(
         event.id,
         'failed',
@@ -269,8 +277,8 @@ export class GoogleCalendarService {
     );
     await this.updateSyncStatus(
       event.id,
-      removed.isOk() ? 'not_connected' : 'failed',
-      removed.isErr() ? this.errorMessage(removed.error) : null,
+      removed.kind === 'ok' ? 'not_connected' : 'failed',
+      removed.kind === 'error' ? this.errorMessage(removed.error) : null,
       null,
     );
   }
@@ -279,19 +287,20 @@ export class GoogleCalendarService {
     event: Event,
     calendarId: string,
     oauth: InstanceType<typeof google.auth.OAuth2>,
-  ): Promise<Result<'synced' | 'cancelled', unknown>> {
+  ): Promise<PromiseOutcome<'synced' | 'cancelled'>> {
     const calendar = google.calendar({ version: 'v3', auth: oauth });
     const eventId = createHash('sha256')
       .update(`biovity:${event.id}`)
       .digest('hex');
     if (event.status === EventStatus.CANCELLED) {
-      const deleted = await Result.tryPromise({
-        try: () => calendar.events.delete({ calendarId, eventId }),
-        catch: cause => cause,
-      });
-      return deleted.isOk() || this.isGoogleErrorCode(deleted.error, 404)
-        ? Result.ok('cancelled')
-        : Result.err(deleted.error);
+      const deleted = await capturePromise(() =>
+        calendar.events.delete({ calendarId, eventId }),
+      );
+      if (deleted.kind === 'ok') return { kind: 'ok', value: 'cancelled' };
+      if (this.isGoogleErrorCode(deleted.error, 404)) {
+        return { kind: 'ok', value: 'cancelled' };
+      }
+      return deleted;
     }
 
     const requestBody = {
@@ -315,33 +324,31 @@ export class GoogleCalendarService {
       },
       extendedProperties: { private: { biovityEventId: event.id } },
     };
-    const existing = await Result.tryPromise({
-      try: () => calendar.events.get({ calendarId, eventId }),
-      catch: cause => cause,
-    });
-    if (existing.isErr() && !this.isGoogleErrorCode(existing.error, 404)) {
-      return Result.err(existing.error);
+    const existing = await capturePromise(() =>
+      calendar.events.get({ calendarId, eventId }),
+    );
+    if (
+      existing.kind === 'error' &&
+      !this.isGoogleErrorCode(existing.error, 404)
+    ) {
+      return existing;
     }
-    if (existing.isOk()) {
-      const update = await Result.tryPromise({
-        try: () => calendar.events.patch({ calendarId, eventId, requestBody }),
-        catch: cause => cause,
-      });
-      return update.isOk() ? Result.ok('synced') : Result.err(update.error);
+    if (existing.kind === 'ok') {
+      const update = await capturePromise(() =>
+        calendar.events.patch({ calendarId, eventId, requestBody }),
+      );
+      return update.kind === 'ok' ? { kind: 'ok', value: 'synced' } : update;
     }
 
-    const insert = await Result.tryPromise({
-      try: () => calendar.events.insert({ calendarId, requestBody }),
-      catch: cause => cause,
-    });
-    if (insert.isOk()) return Result.ok('synced');
-    if (!this.isGoogleErrorCode(insert.error, 409))
-      return Result.err(insert.error);
-    const update = await Result.tryPromise({
-      try: () => calendar.events.patch({ calendarId, eventId, requestBody }),
-      catch: cause => cause,
-    });
-    return update.isOk() ? Result.ok('synced') : Result.err(update.error);
+    const insert = await capturePromise(() =>
+      calendar.events.insert({ calendarId, requestBody }),
+    );
+    if (insert.kind === 'ok') return { kind: 'ok', value: 'synced' };
+    if (!this.isGoogleErrorCode(insert.error, 409)) return insert;
+    const update = await capturePromise(() =>
+      calendar.events.patch({ calendarId, eventId, requestBody }),
+    );
+    return update.kind === 'ok' ? { kind: 'ok', value: 'synced' } : update;
   }
 
   async syncUpcomingEvents(owner: CalendarOwner): Promise<number> {
