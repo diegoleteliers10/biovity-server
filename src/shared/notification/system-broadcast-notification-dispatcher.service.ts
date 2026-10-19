@@ -185,6 +185,96 @@ export class SystemBroadcastNotificationDispatcherService {
     return summary;
   }
 
+  async dispatchIntent(intentId: string): Promise<
+    | { intentId: string; status: 'not_found' }
+    | { intentId: string; status: 'not_ready'; currentStatus: string }
+    | { intentId: string; status: 'dead' }
+    | DeliveryOutcome
+    | { intentId: string; status: 'failed'; stage: 'recovery' | 'claim' }
+  > {
+    const recovered = await this.dataSource
+      .query<Array<{ status: 'retry' | 'dead' }>>(
+        `UPDATE system_notification_broadcast_intent
+         SET status = CASE WHEN attempt_count >= 8 THEN 'dead' ELSE 'retry' END,
+             available_at = CASE WHEN attempt_count >= 8 THEN available_at ELSE now() END,
+             locked_at = NULL,
+             last_error_code = CASE WHEN attempt_count >= 8
+               THEN 'attempt_limit_reached' ELSE 'stale_processing_recovered' END,
+             updated_at = now()
+         WHERE id = $1::uuid
+           AND status = 'processing'
+           AND (locked_at IS NULL OR locked_at < now() - interval '5 minutes')
+         RETURNING status`,
+        [intentId],
+      )
+      .then(
+        rows => ({ kind: 'recovered' as const, rows }),
+        (cause: unknown) => ({ kind: 'failed' as const, cause }),
+      );
+    if (recovered.kind === 'failed') {
+      this.logger.error(
+        `System broadcast notification recovery failed for ${intentId}: ${errorMessage(recovered.cause)}`,
+      );
+      return { intentId, status: 'failed', stage: 'recovery' };
+    }
+    if (recovered.rows[0]?.status === 'dead') {
+      return { intentId, status: 'dead' };
+    }
+
+    const claimed = await this.dataSource
+      .query<BroadcastIntent[]>(
+        `UPDATE system_notification_broadcast_intent
+         SET status = 'processing', attempt_count = attempt_count + 1,
+             locked_at = now(), updated_at = now()
+         WHERE id = $1::uuid
+           AND status IN ('pending', 'retry')
+           AND available_at <= now()
+         RETURNING id, broadcast_id AS "broadcastId",
+           recipient_id AS "recipientId"`,
+        [intentId],
+      )
+      .then(
+        intents => ({ kind: 'claimed' as const, intents }),
+        (cause: unknown) => ({ kind: 'failed' as const, cause }),
+      );
+    if (claimed.kind === 'failed') {
+      this.logger.error(
+        `System broadcast notification claim failed for ${intentId}: ${errorMessage(claimed.cause)}`,
+      );
+      return { intentId, status: 'failed', stage: 'claim' };
+    }
+
+    const intent = claimed.intents[0];
+    if (!intent) {
+      const current = await this.dataSource
+        .query<Array<{ status: string }>>(
+          `SELECT status FROM system_notification_broadcast_intent
+           WHERE id = $1::uuid`,
+          [intentId],
+        )
+        .then(
+          rows => ({ kind: 'found' as const, rows }),
+          (cause: unknown) => ({ kind: 'failed' as const, cause }),
+        );
+      if (current.kind === 'failed') {
+        this.logger.error(
+          `System broadcast notification state lookup failed for ${intentId}: ${errorMessage(current.cause)}`,
+        );
+        return { intentId, status: 'failed', stage: 'claim' };
+      }
+      const currentStatus = current.rows[0]?.status;
+      return currentStatus
+        ? { intentId, status: 'not_ready', currentStatus }
+        : { intentId, status: 'not_found' };
+    }
+
+    const outcome = await this.deliver(intent);
+    this.logger.log(
+      `System broadcast notification targeted dispatch: ${JSON.stringify(outcome)}`,
+    );
+    return outcome;
+  }
+
   private async deliver(intent: BroadcastIntent): Promise<DeliveryOutcome> {
     const delivery = await this.dataSource
       .transaction(async manager => {
