@@ -30,7 +30,13 @@ type DeliveryOutcome =
   | {
       intentId: string;
       broadcastId: string;
-      status: 'not_processing' | 'retrying' | 'retry_failed';
+      status: 'not_processing';
+    }
+  | {
+      intentId: string;
+      broadcastId: string;
+      status: 'retrying' | 'retry_failed';
+      errorCode: string;
     };
 
 type DispatchSummary = {
@@ -61,6 +67,15 @@ const EMPTY_SUMMARY: DispatchSummary = {
 
 const errorMessage = (cause: unknown): string =>
   cause instanceof Error ? cause.message : String(cause);
+
+const databaseErrorCode = (cause: unknown): string => {
+  if (!isRecord(cause)) return 'delivery_failed';
+  const driverError = recordField(cause, 'driverError');
+  const code = cause.code ?? driverError?.code;
+  return typeof code === 'string' && /^[A-Z0-9_]{1,80}$/.test(code)
+    ? code
+    : 'delivery_failed';
+};
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -302,19 +317,21 @@ export class SystemBroadcastNotificationDispatcherService {
         );
         const broadcast = rows[0];
         if (!broadcast || !broadcast.isActive) {
+          const reason: SuppressionReason = broadcast
+            ? 'recipient_inactive'
+            : 'broadcast_or_recipient_missing';
           const updated = await this.setStatus(
             manager,
             intent.id,
             'suppressed',
+            reason,
           );
           return updated
             ? ({
                 intentId: intent.id,
                 broadcastId: intent.broadcastId,
                 status: 'suppressed',
-                reason: broadcast
-                  ? 'recipient_inactive'
-                  : 'broadcast_or_recipient_missing',
+                reason,
               } as const)
             : ({
                 intentId: intent.id,
@@ -354,6 +371,7 @@ export class SystemBroadcastNotificationDispatcherService {
             manager,
             intent.id,
             'suppressed',
+            suppressionReason,
           );
           return updated
             ? ({
@@ -423,18 +441,19 @@ export class SystemBroadcastNotificationDispatcherService {
       );
 
     if (delivery.kind === 'delivered') return delivery.result;
+    const failureCode = databaseErrorCode(delivery.cause);
     this.logger.error(
-      `System broadcast notification delivery failed for ${intent.id} (${intent.broadcastId}): ${errorMessage(delivery.cause)}`,
+      `System broadcast notification delivery failed for ${intent.id} (${intent.broadcastId}) [${failureCode}]: ${errorMessage(delivery.cause)}`,
     );
     const updated = await this.dataSource
       .query<Array<{ status: 'retry' | 'dead' }>>(
         `UPDATE system_notification_broadcast_intent
          SET status = CASE WHEN attempt_count >= 8 THEN 'dead' ELSE 'retry' END,
              available_at = now() + LEAST(3600, power(2, attempt_count) * 30) * interval '1 second',
-             locked_at = NULL, last_error_code = 'delivery_failed', updated_at = now()
+             locked_at = NULL, last_error_code = $2, updated_at = now()
          WHERE id = $1::uuid AND status = 'processing'
          RETURNING status`,
-        [intent.id],
+        [intent.id, failureCode],
       )
       .then(
         rows => ({ kind: 'updated' as const, rows }),
@@ -448,6 +467,7 @@ export class SystemBroadcastNotificationDispatcherService {
         intentId: intent.id,
         broadcastId: intent.broadcastId,
         status: 'retry_failed',
+        errorCode: 'retry_state_update_failed',
       };
     }
     if (updated.rows.length === 0) {
@@ -458,12 +478,14 @@ export class SystemBroadcastNotificationDispatcherService {
         intentId: intent.id,
         broadcastId: intent.broadcastId,
         status: 'retry_failed',
+        errorCode: 'intent_not_processing',
       };
     }
     return {
       intentId: intent.id,
       broadcastId: intent.broadcastId,
       status: updated.rows[0].status === 'dead' ? 'retry_failed' : 'retrying',
+      errorCode: failureCode,
     };
   }
 
@@ -471,13 +493,14 @@ export class SystemBroadcastNotificationDispatcherService {
     manager: EntityManager,
     intentId: string,
     status: 'accepted' | 'suppressed',
+    errorCode: SuppressionReason | null = null,
   ): Promise<boolean> {
     const rows = await manager.query<Array<{ id: string }>>(
       `UPDATE system_notification_broadcast_intent
-       SET status = $2, locked_at = NULL, last_error_code = NULL, updated_at = now()
+       SET status = $2, locked_at = NULL, last_error_code = $3, updated_at = now()
        WHERE id = $1::uuid AND status = 'processing'
        RETURNING id`,
-      [intentId, status],
+      [intentId, status, errorCode],
     );
     return rows.length > 0;
   }
