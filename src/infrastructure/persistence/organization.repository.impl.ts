@@ -97,6 +97,7 @@ export class OrganizationRepositoryImpl implements IOrganizationRepository {
       }
       const newOwner = await manager.findOne(UserEntity, {
         where: { id: newOwnerUserId },
+        lock: { mode: 'pessimistic_write' },
       });
       if (!newOwner || newOwner.type !== UserType.ORGANIZATION) {
         throw new NotFoundException('New owner must be an organization user');
