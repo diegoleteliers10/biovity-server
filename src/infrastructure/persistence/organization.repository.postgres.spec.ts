@@ -30,6 +30,7 @@ describeLocalPostgres(
   'OrganizationRepositoryImpl with local PostgreSQL',
   () => {
     const schema = `organization_test_${randomUUID().replaceAll('-', '')}`;
+    const applicationName = `org_transfer_${randomUUID().replaceAll('-', '')}`;
     const ownerId = randomUUID();
     const nextOwnerId = randomUUID();
     let admin: DataSource;
@@ -86,7 +87,9 @@ describeLocalPostgres(
         schema,
         // Match the runtime DataSource's legacy null handling.
         invalidWhereValuesBehavior: { null: 'ignore', undefined: 'ignore' },
-        extra: { options: `-c search_path=${schema},public` },
+        extra: {
+          options: `-c search_path=${schema} -c application_name=${applicationName}`,
+        },
         entities: [
           new EntitySchema<OrganizationEntity>({
             target: OrganizationEntity,
@@ -186,6 +189,89 @@ describeLocalPostgres(
         { id: ownerId, organizationId: results[0].id },
       ]);
     });
+
+    it('allows only one concurrent transfer of a member to a different organization', async () => {
+      const otherOwnerId = randomUUID();
+      await user(ownerId);
+      await user(otherOwnerId);
+      await user(nextOwnerId);
+      const firstOrganization = await repository.createWithOwner(
+        organization(),
+        ownerId,
+      );
+      const secondOrganization = await repository.createWithOwner(
+        organization(),
+        otherOwnerId,
+      );
+      await dataSource.query(
+        `INSERT INTO organization_member (organization_id, user_id, role)
+         VALUES ($1, $2, 'recruiter'), ($3, $2, 'recruiter')`,
+        [firstOrganization.id, nextOwnerId, secondOrganization.id],
+      );
+
+      const blocker = dataSource.createQueryRunner();
+      await blocker.connect();
+      await blocker.startTransaction();
+      await blocker.query('SELECT id FROM "user" WHERE id = $1 FOR UPDATE', [
+        nextOwnerId,
+      ]);
+
+      const attempts = [
+        repository.transferOwner(firstOrganization.id, ownerId, nextOwnerId),
+        repository.transferOwner(
+          secondOrganization.id,
+          otherOwnerId,
+          nextOwnerId,
+        ),
+      ].map(promise =>
+        promise.then(
+          () => ({ succeeded: true as const }),
+          error => ({ succeeded: false as const, error }),
+        ),
+      );
+
+      let waitingPids: Array<{ pid: number }> = [];
+      try {
+        const deadline = Date.now() + 5000;
+        while (waitingPids.length < 2 && Date.now() < deadline) {
+          waitingPids = await admin.query(
+            `SELECT pid FROM pg_stat_activity
+             WHERE application_name = $1 AND state = 'active'
+               AND wait_event_type = 'Lock' AND pid <> pg_backend_pid()`,
+            [applicationName],
+          );
+          if (waitingPids.length < 2)
+            await new Promise(resolve => setTimeout(resolve, 25));
+        }
+      } finally {
+        await blocker.rollbackTransaction();
+        await blocker.release();
+      }
+
+      const results = await Promise.all(attempts);
+      const ownerCounts = await dataSource.query(
+        `SELECT organization.id, COUNT("user".id)::int AS owner_count
+         FROM organization
+         LEFT JOIN "user" ON "user"."organizationId" = organization.id
+         WHERE organization.id = ANY($1::uuid[])
+         GROUP BY organization.id`,
+        [[firstOrganization.id, secondOrganization.id]],
+      );
+      expect({
+        blockedTransfers: waitingPids.length,
+        successfulTransfers: results.filter(result => result.succeeded).length,
+        ownerCounts: Object.fromEntries(
+          ownerCounts.map(({ id, owner_count }) => [id, owner_count]),
+        ),
+      }).toEqual({
+        blockedTransfers: 2,
+        successfulTransfers: 1,
+        ownerCounts: {
+          [firstOrganization.id]: 1,
+          [secondOrganization.id]: 1,
+        },
+      });
+    }, 10000);
 
     it.each([
       ['missing owner', null, 'Organization owner not found'],
