@@ -102,4 +102,45 @@ describe('UserRepositoryImpl candidate updates', () => {
     });
     expect(save).not.toHaveBeenCalled();
   });
+
+  it('keeps the existing primary key and omitted columns for a name-only update', async () => {
+    const existingCandidate = {
+      id: 'candidate-id',
+      email: 'candidate@example.test',
+      name: 'Original name',
+      type: UserType.PROFESSIONAL,
+      isEmailVerified: true,
+      isActive: true,
+      organizationId: 'organization-id',
+      profileViews: 7,
+    } as UserEntity;
+    const findOne = jest.fn().mockResolvedValue(existingCandidate);
+    const save = jest
+      .fn()
+      .mockImplementation((entity: UserEntity) => Promise.resolve(entity));
+    const manager = {
+      getRepository: jest.fn().mockReturnValue({ findOne, save }),
+      query: jest.fn().mockResolvedValue(undefined),
+    } as unknown as EntityManager;
+    const transaction = jest.fn(
+      (operation: (manager: EntityManager) => Promise<unknown>) =>
+        operation(manager),
+    );
+    const repository = {
+      manager: { transaction },
+    } as unknown as Repository<UserEntity>;
+    const userRepository = new UserRepositoryImpl(repository);
+
+    await userRepository.update('candidate-id', { name: 'New name' });
+
+    expect(save).toHaveBeenCalledTimes(1);
+    const saved = save.mock.calls[0][0] as UserEntity;
+    expect(saved.id).toBe('candidate-id');
+    expect(saved.email).toBe('candidate@example.test');
+    expect(saved.type).toBe(UserType.PROFESSIONAL);
+    expect(saved.isEmailVerified).toBe(true);
+    expect(saved.organizationId).toBe('organization-id');
+    expect(saved.profileViews).toBe(7);
+    expect(saved.name).toBe('New name');
+  });
 });
