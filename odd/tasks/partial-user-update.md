@@ -47,9 +47,10 @@ Make partial user updates save the existing user instead of attempting an insert
 
 ## Checks
 
-- Run the focused repository test before and after the fix, using the runner configured by the project.
-- Re-run Helen's isolated PostgreSQL case after the fix.
-- Run `git diff --check`.
+- `npx jest user.repository.impl`: RED before the fix, then 3 passed.
+- `npx tsc --noEmit`: passed.
+- Isolated local PostgreSQL reproduction: partial update without `id` succeeds and preserves omitted fields; explicit `null` still clears.
+- Plain `git diff --check` reports the source file's existing CRLF endings. The `cr-at-eol` check passes without mixed line endings.
 
 ## Progress and next step
 
@@ -65,5 +66,6 @@ Make partial user updates save the existing user instead of attempting an insert
   - Explicit `avatar: null`: column became NULL, other columns unchanged.
 - BI-131-04: `npx tsc --noEmit` exits clean.
 - `git diff --check` flags the CRLF line endings of `user.repository.impl.ts` (stored as CRLF in the index). With `cr-at-eol` declared — `git -c core.whitespace=...,cr-at-eol diff --check` — it is clean, and the file keeps 302 CRLF lines with no mixed endings.
-- Commit: the work-unit commit that contains this file (`git log -1 --stat`). No push, PR, merge, tag, or publication.
-- Next: independent review of the diff, then Diego decides on remote publication.
+- Commit: `758bc500bdd1a554b765a3f6fa8620a59409d946` on `fix/agents-131-partial-user-update`, based on local `development`.
+- Parent spot check: `./node_modules/.bin/jest user.repository.impl` → 3 passed.
+- No push or PR was made. Get Diego's explicit GitHub authorization before publication.
