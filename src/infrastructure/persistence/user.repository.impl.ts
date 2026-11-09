@@ -73,6 +73,15 @@ const CANDIDATE_EXPERIENCE_YEARS = `(
 const normalizeSkillFilter = (value: string): string =>
   value.normalize('NFKC').trim().replace(/\s+/g, ' ').toLowerCase();
 
+// Undefined means "leave the stored column alone". UserDomainOrmMapper.toOrm
+// assigns every column, so a Partial<User> would otherwise blank the primary
+// key and turn a partial update into an insert.
+function definedColumns(entity: UserEntity): Partial<UserEntity> {
+  return Object.fromEntries(
+    Object.entries(entity).filter(([, value]) => value !== undefined),
+  ) as Partial<UserEntity>;
+}
+
 @Injectable()
 export class UserRepositoryImpl implements IUserRepository {
   constructor(
@@ -270,7 +279,8 @@ export class UserRepositoryImpl implements IUserRepository {
 
       const updatedUserOrm = {
         ...existingUser,
-        ...UserDomainOrmMapper.toOrm(entity as User),
+        ...definedColumns(UserDomainOrmMapper.toOrm(entity as User)),
+        id: existingUser.id,
       };
       const savedUser = await repository.save(updatedUserOrm);
       if (candidateSearchProfileChanged(existingUser, savedUser)) {
